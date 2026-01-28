@@ -1,0 +1,258 @@
+.waitlist-container {
+    padding: 60px 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.waitlist-content {
+    text-align: center;
+}
+
+.waitlist-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    background: #000;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+}
+
+.waitlist-content h2 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 16px 0;
+}
+
+.waitlist-description {
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0 0 24px 0;
+}
+
+.social-proof {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.avatars {
+    display: flex;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: -8px;
+    border: 2px solid #fff;
+}
+
+.avatar:first-child {
+    margin-left: 0;
+}
+
+.social-proof span {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.waitlist-form {
+    margin-bottom: 32px;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 14px 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.input-group input:focus {
+    border-color: #000;
+}
+
+.input-group input::placeholder {
+    color: #9ca3af;
+}
+
+.input-group button {
+    padding: 14px 28px;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.input-group button:hover {
+    background: #1a1a1a;
+}
+
+.input-group button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: #ef4444;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px 0;
+    text-align: left;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.benefits-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #374151;
+}
+
+.benefits-list li svg {
+    width: 18px;
+    height: 18px;
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.privacy-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* Success State */
+.waitlist-success {
+    text-align: center;
+    padding: 40px 0;
+}
+
+.success-icon {
+    width: 64px;
+    height: 64px;
+    background: #000;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.success-icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+.waitlist-success h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 8px 0;
+}
+
+.waitlist-success p {
+    color: #6b7280;
+    font-size: 15px;
+    margin: 0 0 8px 0;
+}
+
+.position {
+    font-size: 14px;
+    color: #9ca3af;
+    margin-bottom: 32px !important;
+}
+
+.share-section {
+    padding: 24px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.share-prompt {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 12px !important;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.share-btn {
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+
+.share-btn:hover {
+    opacity: 0.9;
+}
+
+.share-btn.twitter {
+    background: #1da1f2;
+    color: #fff;
+}
+
+.share-btn.linkedin {
+    background: #0077b5;
+    color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .waitlist-content h2 {
+        font-size: 26px;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group button {
+        width: 100%;
+    }
+}

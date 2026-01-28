@@ -1,0 +1,463 @@
+/* Landing Page - Minimal Black & White Theme */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.landing {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Subtle gradient overlay */
+.landing::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.03), transparent);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Navigation */
+.nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    width: 100%;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    font-size: 20px;
+    color: #fff;
+}
+
+.logo-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-links a {
+    color: #888;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #fff;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-links a:hover {
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+.nav-links svg {
+    fill: #888;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-links a:hover svg {
+    fill: #fff;
+    transform: rotate(360deg) scale(1.1);
+}
+
+/* Hero Section */
+.hero {
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 80px 32px 40px;
+    text-align: center;
+    width: 100%;
+}
+
+.hero h1 {
+    font-size: 44px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    color: #fff;
+    white-space: nowrap;
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.logo-inline {
+    display: inline-block;
+    color: #fff;
+    font-size: 40px;
+    vertical-align: middle;
+    margin: 0 6px;
+    animation: float 3s ease-in-out infinite;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logo-inline:hover {
+    animation: none;
+    transform: rotate(180deg) scale(1.2);
+}
+
+.hero-subtitle {
+    font-size: 16px;
+    color: #666;
+    line-height: 1.6;
+    max-width: 480px;
+    margin: 0 auto 32px;
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s backwards;
+}
+
+/* Install Command Box */
+.install-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 14px;
+    margin-bottom: 16px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s backwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.install-box::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: -1;
+}
+
+.install-box:hover::before {
+    opacity: 1;
+    animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.install-box:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 255, 255, 0.05);
+}
+
+.install-box .prompt {
+    color: #666;
+    transition: color 0.3s;
+}
+
+.install-box:hover .prompt {
+    color: #888;
+}
+
+.install-box code {
+    color: #fff;
+}
+
+.copy-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #666;
+    cursor: pointer;
+    padding: 6px;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.copy-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1) rotate(5deg);
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+.more-options {
+    display: block;
+    color: #888;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s backwards;
+    position: relative;
+    display: inline-block;
+}
+
+.more-options::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #fff;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.more-options:hover {
+    color: #fff;
+    transform: translateX(4px);
+}
+
+.more-options:hover::after {
+    width: 100%;
+}
+
+/* CTA Section */
+.cta-section {
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Terminal Demo - Transparent Glass */
+.demo-section {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    width: 100%;
+}
+
+.demo-terminal {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 700px;
+    padding: 32px;
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s backwards;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.demo-terminal:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 48px rgba(255, 255, 255, 0.03);
+    transform: translateY(-4px);
+}
+
+.terminal-ascii {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.terminal-ascii pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 9px;
+    line-height: 1.15;
+    color: #fff;
+    display: inline-block;
+}
+
+.terminal-tips {
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #888;
+}
+
+.terminal-tips strong {
+    color: #fff;
+}
+
+.terminal-tips code {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.terminal-input {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.prompt-arrow {
+    color: #fff;
+    font-weight: bold;
+}
+
+.input-placeholder {
+    color: #444;
+    font-size: 13px;
+}
+
+.terminal-status {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #444;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Footer */
+.footer {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    width: 100%;
+}
+
+.footer-brand {
+    color: #444;
+    font-size: 13px;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-links a {
+    color: #888;
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: #fff;
+}
+
+.footer-links .divider {
+    color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 32px;
+        white-space: normal;
+    }
+
+    .logo-inline {
+        font-size: 28px;
+    }
+
+    .terminal-ascii pre {
+        font-size: 6px;
+    }
+
+    .terminal-status {
+        flex-direction: column;
+        gap: 4px;
+    }
+}

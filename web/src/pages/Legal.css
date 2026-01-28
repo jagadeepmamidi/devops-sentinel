@@ -1,0 +1,147 @@
+/* Legal Pages - Minimal Black & White Theme */
+
+.legal-page {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+}
+
+.legal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legal-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #fff;
+}
+
+.legal-nav-brand span:first-child {
+    font-size: 20px;
+}
+
+.legal-nav-brand span:last-child {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.legal-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 32px 80px;
+}
+
+.legal-content h1 {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -1px;
+}
+
+.legal-content .last-updated {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 48px;
+}
+
+.legal-content h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 40px 0 16px;
+    color: #fff;
+}
+
+.legal-content p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #aaa;
+    margin-bottom: 16px;
+}
+
+.legal-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+}
+
+.legal-content li {
+    font-size: 15px;
+    color: #aaa;
+    padding: 8px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.legal-content li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #666;
+}
+
+.legal-content a {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.legal-content a:hover {
+    opacity: 0.7;
+}
+
+.legal-footer {
+    text-align: center;
+    padding: 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #666;
+    font-size: 14px;
+}
+
+.legal-footer a {
+    color: #888;
+    text-decoration: none;
+    margin: 0 16px;
+}
+
+.legal-footer a:hover {
+    color: #fff;
+}
+
+.legal-toc {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+}
+
+.legal-toc h3 {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.legal-toc ul {
+    margin: 0;
+}
+
+.legal-toc li {
+    padding: 6px 0;
+}
+
+.legal-toc a {
+    color: #888;
+    text-decoration: none;
+}
+
+.legal-toc a:hover {
+    color: #fff;
+}

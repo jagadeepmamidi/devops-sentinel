@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devops-sentinel"
+version = "0.1.1"
+description = "Autonomous SRE agents that watch your services, detect anomalies, and generate blameless postmortems"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "jagadeep.mamidi", email = "jagadeep.mamidi@gmail.com"}
+]
+keywords = ["devops", "sre", "monitoring", "incident-management", "ai", "postmortem"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+]
+requires-python = ">=3.10"
+
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+    "httpx>=0.25",
+    "aiohttp>=3.9",
+    "python-dotenv>=1.0",
+    "supabase>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+]
+ai = [
+    "openai>=1.0",
+    "anthropic>=0.18",
+]
+all = [
+    "devops-sentinel[dev,ai]",
+]
+
+[project.scripts]
+sentinel = "src.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/jagadeepmamidi/devops-sentinel"
+Documentation = "https://devops-sentinel.dev/docs"
+Repository = "https://github.com/jagadeepmamidi/devops-sentinel"
+Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
+
+[tool.setuptools]
+packages = ["src", "src.cli", "src.core", "src.api", "src.auth", "src.integrations", "src.ml", "src.notifications", "src.setup", "src.tools"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

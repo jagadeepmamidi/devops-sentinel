@@ -1,0 +1,194 @@
+/* About Page - Minimal Black & White Theme */
+
+.about-page {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    padding: 0;
+}
+
+.about-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.about-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #fff;
+}
+
+.about-nav-brand span:first-child {
+    font-size: 20px;
+}
+
+.about-nav-brand span:last-child {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.about-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 80px 32px;
+}
+
+.about-content h1 {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+}
+
+.about-content .subtitle {
+    font-size: 20px;
+    color: #888;
+    margin-bottom: 60px;
+    line-height: 1.6;
+}
+
+.about-section {
+    margin-bottom: 60px;
+}
+
+.about-section h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.about-section p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #aaa;
+    margin-bottom: 16px;
+}
+
+.about-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.about-section li {
+    font-size: 16px;
+    color: #aaa;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.about-section li::before {
+    content: '→';
+    color: #fff;
+}
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.team-member {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+}
+
+.team-member .avatar {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.team-member h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.team-member p {
+    font-size: 14px;
+    color: #666;
+}
+
+.tech-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.tech-tag {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: #888;
+}
+
+.contact-section {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    margin-top: 60px;
+}
+
+.contact-section h2 {
+    margin-bottom: 16px;
+}
+
+.contact-section p {
+    color: #888;
+    margin-bottom: 24px;
+}
+
+.contact-section a {
+    color: #fff;
+    text-decoration: none;
+    border-bottom: 1px solid #fff;
+    padding-bottom: 2px;
+    transition: opacity 0.2s;
+}
+
+.contact-section a:hover {
+    opacity: 0.7;
+}
+
+.about-footer {
+    text-align: center;
+    padding: 40px 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #666;
+    font-size: 14px;
+}
+
+.about-footer a {
+    color: #888;
+    text-decoration: none;
+    margin: 0 16px;
+}
+
+.about-footer a:hover {
+    color: #fff;
+}

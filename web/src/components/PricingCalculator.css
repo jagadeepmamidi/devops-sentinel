@@ -1,0 +1,299 @@
+.pricing-calculator {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.calculator-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.calculator-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 8px 0;
+}
+
+.calculator-header p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.calculator-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.calculator-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.input-section label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.label-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.label-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+}
+
+.input-section input[type="range"] {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.input-section input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #000;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.plan-recommendation {
+    background: #f9fafb;
+    border: 2px solid #000;
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+}
+
+.recommendation-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #000;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.plan-recommendation h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 16px 0;
+}
+
+.price-display {
+    margin-bottom: 20px;
+}
+
+.price-display .price {
+    font-size: 48px;
+    font-weight: 700;
+    color: #000;
+}
+
+.price-display .period {
+    font-size: 16px;
+    color: #6b7280;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px 0;
+    text-align: left;
+}
+
+.feature-list li {
+    padding: 8px 0;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.feature-list li:last-child {
+    border-bottom: none;
+}
+
+.feature-list li::before {
+    content: '✓';
+    margin-right: 10px;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.cta-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.cta-button:hover {
+    background: #1a1a1a;
+}
+
+/* Comparison Section */
+.comparison-section {
+    margin-bottom: 24px;
+}
+
+.comparison-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 16px 0;
+}
+
+.comparison-table {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.comparison-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.comparison-row:last-child {
+    border-bottom: none;
+}
+
+.comparison-row.header {
+    background: #f9fafb;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.comparison-row.competitor {
+    font-size: 14px;
+    color: #374151;
+}
+
+.comparison-row.competitor.total {
+    background: #fef2f2;
+    font-weight: 600;
+}
+
+.comparison-row.competitor.total .cost {
+    color: #ef4444;
+}
+
+.comparison-row.sentinel {
+    background: #f0fdf4;
+    font-weight: 600;
+}
+
+.comparison-row.sentinel .cost {
+    color: #10b981;
+}
+
+.cost {
+    font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+.savings-callout {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #000;
+    color: #fff;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.savings-amount {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.savings-percent {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Yearly Discount */
+.yearly-discount {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px 24px;
+}
+
+.discount-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.discount-badge {
+    padding: 4px 10px;
+    background: #10b981;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+.discount-text {
+    font-size: 14px;
+    color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .calculator-body {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .pricing-calculator {
+        padding: 24px;
+    }
+
+    .price-display .price {
+        font-size: 36px;
+    }
+}

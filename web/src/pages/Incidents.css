@@ -1,0 +1,80 @@
+/* Incidents Page Styles */
+
+.filter-tabs {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.filter-tab {
+    padding: var(--space-sm) var(--space-md);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-tab:hover {
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
+
+.filter-tab.active {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: white;
+}
+
+.incidents-table {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 0.5fr 0.5fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-tertiary);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 0.5fr 0.5fr;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--border-color);
+    font-size: 14px;
+    align-items: center;
+}
+
+.table-row:hover {
+    background: var(--bg-tertiary);
+}
+
+.service-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.service-cell strong {
+    margin-bottom: 2px;
+}
+
+.service-cell small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.date-cell {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
