@@ -6,7 +6,7 @@
 
 **Autonomous SRE Agent System** - Reduce Mean Time to Detection (MTTD) from minutes to under 10 seconds.
 
-**[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel.dev/docs) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
+**[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
 
 ## Features
 

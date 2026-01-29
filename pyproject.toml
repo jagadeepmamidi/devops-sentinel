@@ -55,7 +55,7 @@ sentinel = "src.cli.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/jagadeepmamidi/devops-sentinel"
-Documentation = "https://devops-sentinel.dev/docs"
+Documentation = "https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/"
 Repository = "https://github.com/jagadeepmamidi/devops-sentinel"
 Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
 
