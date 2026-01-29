@@ -1,6 +1,12 @@
 # DevOps Sentinel
 
+[![PyPI version](https://img.shields.io/pypi/v/devops-sentinel.svg)](https://pypi.org/project/devops-sentinel/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Autonomous SRE Agent System** - Reduce Mean Time to Detection (MTTD) from minutes to under 10 seconds.
+
+**[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel.dev/docs) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
 
 ## Features
 
