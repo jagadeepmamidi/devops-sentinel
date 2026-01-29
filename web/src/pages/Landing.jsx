@@ -1,16 +1,9 @@
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import './Landing.css'
 
 export default function Landing() {
-    const navigate = useNavigate()
-    const { user } = useAuth()
     const [copied, setCopied] = useState(false)
-
-    if (user) {
-        navigate('/dashboard')
-    }
 
     const copyCommand = () => {
         navigator.clipboard.writeText('pip install devops-sentinel')
@@ -56,7 +49,7 @@ export default function Landing() {
                 </div>
 
                 <div className="cta-section">
-                    <Link to="/auth?mode=signup" className="more-options">
+                    <Link to="/docs" className="more-options">
                         Get started →
                     </Link>
                 </div>
