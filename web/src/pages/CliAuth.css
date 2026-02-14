@@ -2,27 +2,8 @@
 
 .cli-auth-page {
   min-height: 100vh;
-  position: relative;
-  color: #eaf2ff;
-  overflow: hidden;
-  background:
-    radial-gradient(1100px 520px at 8% -10%, rgba(255, 162, 79, 0.14), transparent 70%),
-    radial-gradient(1000px 500px at 95% -16%, rgba(42, 183, 255, 0.15), transparent 68%),
-    linear-gradient(180deg, #0a1323 0%, #060b16 52%, #03060d 100%);
-}
-
-.cli-auth-page::before {
-  content: '';
-  position: absolute;
-  inset: -220px -20px auto -20px;
-  height: 560px;
-  background:
-    linear-gradient(90deg, rgba(105, 146, 194, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(105, 146, 194, 0.06) 1px, transparent 1px);
-  background-size: 50px 50px;
-  transform: perspective(1000px) rotateX(67deg);
-  opacity: 0.3;
-  pointer-events: none;
+  color: #e9f1fb;
+  background: linear-gradient(180deg, #0d1218 0%, #090d12 100%);
 }
 
 .cli-auth-page .skip-link {
@@ -44,24 +25,17 @@
 }
 
 .mesh-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 16% 82%, rgba(46, 151, 245, 0.12), transparent 38%),
-    radial-gradient(circle at 78% 70%, rgba(87, 220, 173, 0.08), transparent 34%);
-  pointer-events: none;
+  display: none;
 }
 
 .cli-auth-shell {
-  position: relative;
-  z-index: 2;
-  max-width: 1080px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 26px 20px 50px;
+  padding: 24px 20px 42px;
   font-family: 'Space Grotesk', sans-serif;
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
   grid-template-areas:
     'header header'
     'hero terminal';
@@ -78,55 +52,45 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #edf3ff;
+  color: #edf5ff;
   text-decoration: none;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .brand-dot {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #d8ebff, #9fbad8);
-  color: #071120;
   font-size: 12px;
   font-weight: 700;
+  background: #d8e8f8;
+  color: #08111d;
 }
 
 .flow-tag {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.11em;
-  border: 1px solid rgba(135, 169, 204, 0.3);
+  border: 1px solid rgba(150, 172, 198, 0.22);
   border-radius: 999px;
-  padding: 6px 12px;
-  color: #9fb8d6;
-  background: rgba(10, 18, 33, 0.68);
-  animation: tagPulse 4.8s ease-in-out infinite;
+  padding: 6px 10px;
+  color: #9fb2c8;
+  background: #111821;
 }
 
 .hero-card,
 .terminal-card {
-  border: 1px solid rgba(138, 170, 206, 0.24);
-  border-radius: 16px;
-  background: rgba(10, 17, 30, 0.76);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(150, 172, 198, 0.22);
+  border-radius: 12px;
+  background: #111821;
 }
 
 .hero-card {
   grid-area: hero;
-  padding: 22px;
-  animation: cliFadeUp 0.55s ease both;
-  transition: transform 0.24s ease, border-color 0.24s ease;
-}
-
-.hero-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(162, 197, 232, 0.36);
+  padding: 18px;
 }
 
 .eyebrow {
@@ -134,142 +98,116 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #88a8cd;
+  color: #88a6c5;
 }
 
 .hero-card h1 {
   margin: 10px 0 10px;
-  font-size: clamp(1.7rem, 3.6vw, 2.6rem);
-  line-height: 1.04;
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  line-height: 1.08;
   letter-spacing: -0.02em;
 }
 
 .subtext {
   margin: 0;
-  color: #adc3de;
+  color: #9fb2c8;
   line-height: 1.58;
 }
 
 .flow-steps {
-  margin-top: 18px;
+  margin-top: 16px;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
-  color: #cce2fc;
-}
-
-.flow-steps > div {
-  animation: cliFadeUp 0.48s ease both;
-}
-
-.flow-steps > div:nth-child(1) {
-  animation-delay: 0.12s;
-}
-
-.flow-steps > div:nth-child(2) {
-  animation-delay: 0.18s;
-}
-
-.flow-steps > div:nth-child(3) {
-  animation-delay: 0.24s;
+  font-size: 0.78rem;
+  color: #ccdef3;
 }
 
 .auth-actions {
   display: flex;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 18px;
   flex-wrap: wrap;
 }
 
 .action {
   text-decoration: none;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: 9px;
+  padding: 9px 13px;
   font-weight: 600;
   font-size: 0.9rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.action:hover {
-  transform: translateY(-1px);
 }
 
 .action.primary {
-  background: linear-gradient(140deg, #ecf6ff, #bfdcff);
+  background: #e7f0fb;
   color: #071428;
-  box-shadow: 0 12px 22px rgba(114, 176, 237, 0.25);
+}
+
+.action.primary:hover {
+  background: #f5f9ff;
 }
 
 .action.secondary {
-  border: 1px solid rgba(136, 170, 206, 0.34);
-  background: rgba(10, 19, 34, 0.8);
-  color: #d6e8fc;
+  border: 1px solid rgba(150, 172, 198, 0.22);
+  background: #121d28;
+  color: #d8e7f8;
 }
 
 .action.secondary:hover {
-  border-color: rgba(169, 208, 246, 0.44);
-  box-shadow: 0 10px 18px rgba(7, 15, 27, 0.42);
+  background: #172534;
 }
 
 .action.disabled {
   pointer-events: none;
-  opacity: 0.48;
+  opacity: 0.5;
 }
 
 .warning {
-  margin-top: 14px;
-  border: 1px solid rgba(242, 182, 81, 0.36);
-  background: rgba(104, 71, 24, 0.28);
-  border-radius: 10px;
-  padding: 10px 12px;
+  margin-top: 12px;
+  border: 1px solid rgba(240, 183, 90, 0.35);
+  background: rgba(102, 71, 28, 0.25);
+  border-radius: 9px;
+  padding: 10px;
   font-size: 0.82rem;
   color: #ffd8a1;
 }
 
 .auth-note {
-  margin: 12px 0 0;
-  font-size: 0.84rem;
-  color: #9fb7d4;
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: #9db1c8;
 }
 
 .terminal-card {
   grid-area: terminal;
-  padding: 16px;
-  animation: cliFadeUp 0.55s ease 0.12s both;
-  transition: transform 0.24s ease, border-color 0.24s ease;
-}
-
-.terminal-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(162, 197, 232, 0.36);
+  padding: 14px;
 }
 
 .terminal-title {
   margin: 0 0 8px;
-  color: #8eadcf;
-  font-size: 0.76rem;
+  color: #8ea6c2;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .terminal-card pre {
   margin: 0;
-  border: 1px solid rgba(129, 163, 197, 0.24);
-  background: rgba(7, 11, 19, 0.8);
-  border-radius: 10px;
+  border: 1px solid rgba(132, 156, 184, 0.22);
+  background: #0d141c;
+  border-radius: 9px;
   padding: 10px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   white-space: pre-wrap;
-  line-height: 1.56;
-  color: #d8e9fc;
+  line-height: 1.55;
+  color: #d0e2f7;
 }
 
 .device-fallback {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(133, 165, 197, 0.24);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(132, 156, 184, 0.2);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -278,45 +216,23 @@
 
 .device-fallback p {
   margin: 0;
-  color: #adc4de;
+  color: #9fb2c8;
   font-size: 0.78rem;
 }
 
 .copy-device-btn {
-  border: 1px solid rgba(133, 166, 202, 0.38);
-  background: rgba(12, 20, 34, 0.88);
-  color: #eaf2ff;
+  border: 1px solid rgba(132, 156, 184, 0.24);
+  background: #121d28;
+  color: #d8e7f8;
   border-radius: 8px;
-  padding: 8px 11px;
+  padding: 8px 10px;
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  transition: background 0.2s ease;
 }
 
 .copy-device-btn:hover {
-  background: rgba(17, 31, 52, 0.96);
-}
-
-@keyframes cliFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tagPulse {
-  0%,
-  100% {
-    border-color: rgba(135, 169, 204, 0.3);
-  }
-  50% {
-    border-color: rgba(163, 199, 236, 0.5);
-  }
+  background: #172534;
 }
 
 @media (max-width: 860px) {
@@ -343,7 +259,7 @@
 
   .hero-card,
   .terminal-card {
-    padding: 16px;
+    padding: 14px;
   }
 
   .auth-actions {
