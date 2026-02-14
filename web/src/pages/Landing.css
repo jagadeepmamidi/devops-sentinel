@@ -1,5 +1,5 @@
 .landing-page {
-  background: linear-gradient(180deg, #0e151d 0%, #0a0f14 100%);
+  background: #000;
 }
 
 .landing-hero-grid {
@@ -20,7 +20,7 @@
   gap: 8px;
   border: 1px solid var(--site-border);
   border-radius: var(--radius-sm);
-  background: #101923;
+  background: #070b10;
   padding: 8px 10px;
   font-family: var(--font-mono);
   font-size: 0.82rem;
@@ -37,7 +37,7 @@
 .landing-copy-btn {
   border: 1px solid var(--site-border);
   border-radius: 7px;
-  background: #142231;
+  background: #0c1722;
   color: #d9e8f9;
   font-size: 11px;
   font-weight: 700;
@@ -46,12 +46,14 @@
 }
 
 .landing-copy-btn:hover {
-  background: #1a2d40;
+  background: #142334;
 }
 
 .landing-terminal-preview {
   padding: 0;
   overflow: hidden;
+  background: #05080d !important;
+  border-color: rgba(166, 189, 214, 0.3);
 }
 
 .landing-terminal-header {
@@ -77,10 +79,11 @@
   margin: 0;
   padding: 14px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   line-height: 1.58;
-  color: #d3e5fb;
+  color: #cfe4ff;
   white-space: pre-wrap;
+  text-shadow: 0 0 8px rgba(143, 198, 251, 0.12);
 }
 
 .landing-steps-grid {

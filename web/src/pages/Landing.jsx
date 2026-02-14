@@ -75,10 +75,16 @@ export default function Landing() {
           <div className="site-card soft landing-terminal-preview">
             <div className="landing-terminal-header">
               <span className="landing-dot" />
-              <span>sentinel.live</span>
+              <span>devops-sentinel@terminal</span>
             </div>
             <pre className="landing-terminal-content" aria-label="Sample terminal output">
-{`$ sentinel monitor https://api.example.com/health
+{` ____              ____               _____            _   _             _
+|  _ \\  _____   __ / ___|  ___  _ __  |_   _|___   ___ | |_(_)_ __   __ _| |
+| | | |/ _ \\ \\ / / \\___ \\ / _ \\| '_ \\   | |/ _ \\ / _ \\| __| | '_ \\ / _\` | |
+| |_| |  __/\\ V /   ___) | (_) | | | |  | | (_) | (_) | |_| | | | | (_| | |
+|____/ \\___| \\_/   |____/ \\___/|_| |_|  |_|\\___/ \\___/ \\__|_|_| |_|\\__,_|_|
+
+$ sentinel monitor https://api.example.com/health
 [PASS] /health 200 in 94ms
 [PASS] /ready 200 in 88ms
 [WARN] latency p95 above threshold
