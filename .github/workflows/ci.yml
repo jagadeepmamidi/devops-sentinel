@@ -22,7 +22,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
           pip install -e ".[dev]"
+          python -c "import fastapi; print('fastapi', fastapi.__version__)"
       
       - name: Run tests
         run: |
