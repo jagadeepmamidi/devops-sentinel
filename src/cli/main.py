@@ -28,7 +28,13 @@ from .auth import login, logout, whoami, is_logged_in, get_current_user
 from .projects import projects
 from .services import services
 from .db import get_db
+from ..core.postmortem_generator import PostmortemGenerator
 from .. import __version__
+
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None
 
 # Rich for beautiful output
 try:
@@ -310,36 +316,60 @@ def postmortem():
 @click.pass_context
 def postmortem_generate(ctx, incident_id, output):
     """Generate an AI-powered postmortem for an incident."""
-    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Generating postmortem for {incident_id}...")
+    
+    # Get database connection
+    db = get_db()
+    if not db.connected:
+        click.echo(click.style("Error: Database not connected. Check configuration.", fg='red'))
+        return
+
+    # Fetch incident
+    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Fetching incident {incident_id}...")
+    incident = db.get_incident(incident_id)
+    if not incident:
+        click.echo(click.style(f"Error: Incident {incident_id} not found.", fg='red'))
+        return
+
+    # Fetch events
+    events = db.get_incident_events(incident_id)
+
     click.echo("  Analyzing incident timeline...")
     click.echo("  Identifying root cause...")
     click.echo("  Generating action items...")
-    
-    # Demo postmortem
-    postmortem_text = f"""
-# Incident Postmortem: {incident_id}
 
-## Summary
-Service degradation affecting API response times.
+    # Initialize AI
+    ai_client = None
+    if ChatOpenAI:
+        openrouter_key = os.getenv('OPENROUTER_API_KEY')
+        openai_key = os.getenv('OPENAI_API_KEY')
+        api_key = openrouter_key or openai_key
 
-## Timeline
-- 10:30 - Anomaly detected in response latency
-- 10:32 - Alert triggered, on-call notified
-- 10:45 - Root cause identified
-- 11:00 - Fix deployed
-- 11:05 - Service recovered
+        base_url = "https://openrouter.ai/api/v1" if openrouter_key else None
 
-## Root Cause
-Database connection pool exhaustion due to leaked connections.
+        default_model = 'google/gemini-pro' if openrouter_key else 'gpt-3.5-turbo'
+        model = os.getenv('DEFAULT_MODEL', default_model)
 
-## Resolution
-Increased connection pool size and added connection leak detection.
+        if api_key:
+             ai_client = ChatOpenAI(
+                 api_key=api_key,
+                 base_url=base_url,
+                 model=model,
+                 temperature=0.2
+             )
 
-## Action Items
-1. [ ] Add connection pool monitoring
-2. [ ] Implement automatic connection cleanup
-3. [ ] Update runbook for similar incidents
-"""
+    if not ai_client:
+        click.echo(click.style("  WARN: No AI provider configured. Using templates.", fg='yellow'))
+
+    # Generate
+    generator = PostmortemGenerator(ai_client)
+
+    # Run async generation
+    async def run_generate():
+        resolution = incident.get('resolution_notes')
+        return await generator.generate(incident, events, resolution=resolution)
+
+    result = asyncio.run(run_generate())
+    postmortem_text = result['markdown']
     
     if output:
         Path(output).write_text(postmortem_text)
