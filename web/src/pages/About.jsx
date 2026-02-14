@@ -1,67 +1,65 @@
-import { Link } from 'react-router-dom'
+import SiteTopNav from '../components/site/SiteTopNav'
+import SiteFooter from '../components/site/SiteFooter'
 import './About.css'
+
+const NAV_LINKS = [
+  { to: '/docs', label: 'Docs' },
+  {
+    href: 'https://github.com/jagadeepmamidi/devops-sentinel',
+    label: 'GitHub',
+    external: true,
+  },
+]
+
+const FOOTER_LINKS = [
+  { to: '/privacy', label: 'Privacy' },
+  { to: '/terms', label: 'Terms' },
+  { to: '/docs', label: 'Docs' },
+]
 
 export default function About() {
   return (
-    <div className="about-page">
-      <a className="about-skip-link" href="#about-main">Skip to content</a>
-      <div className="about-grid-overlay" aria-hidden="true" />
+    <div className="site-page about-page">
+      <a className="site-skip-link" href="#about-main">Skip to content</a>
 
-      <nav className="about-nav">
-        <Link to="/" className="about-nav-brand">
-          <span className="about-brand-dot">S</span>
-          <span>DevOps Sentinel</span>
-        </Link>
-        <div className="about-nav-links">
-          <Link to="/docs">Docs</Link>
-          <a
-            href="https://github.com/jagadeepmamidi/devops-sentinel"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            GitHub
-          </a>
-        </div>
-      </nav>
+      <SiteTopNav links={NAV_LINKS} />
 
-      <main id="about-main" className="about-main">
-        <header className="about-hero">
-          <p className="about-eyebrow">About DevOps Sentinel</p>
-          <h1>Built for operators who run incident response from the terminal</h1>
-          <p className="about-subtitle">
-            DevOps Sentinel is an autonomous SRE assistant that watches your services, detects
-            anomalies, and helps teams respond with consistent workflows and actionable context.
+      <main id="about-main" className="site-main site-container about-main-wrap">
+        <section className="site-card about-hero">
+          <p className="site-label">About DevOps Sentinel</p>
+          <h1 className="site-title">Built for reliable incident response from terminal</h1>
+          <p className="site-text">
+            DevOps Sentinel helps engineering teams monitor services, detect anomalies, and run
+            consistent remediation workflows without leaving the CLI.
           </p>
-          <div className="about-command">
-            <span>$</span>
+          <div className="site-code-pill">
+            <span className="dollar">$</span>
             <code>sentinel setup && sentinel monitor https://api.example.com/health</code>
           </div>
-        </header>
+        </section>
 
-        <section className="about-section">
+        <section className="site-card about-section">
           <h2>Mission</h2>
-          <p>
-            On-call should not mean constant firefighting. DevOps Sentinel focuses on practical
-            reliability workflows that reduce noise, shorten time to detection, and improve
-            incident quality over time.
+          <p className="site-text">
+            On-call should be structured, fast, and measurable. We focus on reducing noise,
+            improving triage quality, and shortening time to resolution.
           </p>
         </section>
 
-        <section className="about-section">
-          <h2>What It Covers</h2>
+        <section className="site-card about-section">
+          <h2>Core capabilities</h2>
           <ul className="about-list">
             <li>Real-time service health monitoring</li>
             <li>AI-assisted anomaly detection and triage</li>
             <li>Incident correlation across services and deployments</li>
-            <li>Terminal-first runbooks and guided response flow</li>
-            <li>Post-incident summaries for team learning</li>
-            <li>CLI ergonomics for local and remote environments</li>
+            <li>Terminal-first runbooks and operational workflow</li>
+            <li>Post-incident summaries and team learning loops</li>
           </ul>
         </section>
 
-        <section className="about-section">
+        <section className="site-card about-section">
           <h2>Technology</h2>
-          <p>Built with practical, production-ready technologies:</p>
+          <p className="site-text">Built with practical, production-ready tools:</p>
           <div className="about-tech-stack">
             <span className="about-tech-tag">Python</span>
             <span className="about-tech-tag">FastAPI</span>
@@ -72,29 +70,14 @@ export default function About() {
           </div>
         </section>
 
-        <section className="about-section">
-          <h2>Open Source</h2>
-          <p>
-            DevOps Sentinel is open source and community-driven. Clear docs, reproducible workflows,
-            and collaborative iteration are part of the roadmap.
-          </p>
-        </section>
-
-        <section className="about-contact">
-          <h2>Get in Touch</h2>
-          <p>Questions, feedback, or contributions:</p>
+        <section className="site-card soft about-contact">
+          <h2>Contact</h2>
+          <p className="site-text">Questions, feedback, or contributions:</p>
           <a href="mailto:jagadeep.mamidi@gmail.com">jagadeep.mamidi@gmail.com</a>
         </section>
       </main>
 
-      <footer className="about-footer">
-        <div className="about-footer-links">
-          <Link to="/privacy">Privacy</Link>
-          <Link to="/terms">Terms</Link>
-          <Link to="/docs">Docs</Link>
-        </div>
-        <p>Copyright 2026 DevOps Sentinel. All rights reserved.</p>
-      </footer>
+      <SiteFooter links={FOOTER_LINKS} text="Copyright 2026 DevOps Sentinel" />
     </div>
   )
 }
