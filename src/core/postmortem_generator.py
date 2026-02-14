@@ -13,7 +13,8 @@ import logging
 try:
     from langchain_core.messages import SystemMessage, HumanMessage
     LANGCHAIN_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    logging.warning(f"LangChain not available: {e}")
     LANGCHAIN_AVAILABLE = False
 
 
