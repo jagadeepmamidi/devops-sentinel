@@ -7,6 +7,14 @@ Generate structured postmortems from incident data using AI
 
 from datetime import datetime
 from typing import Dict, List, Optional
+import json
+import logging
+
+try:
+    from langchain_core.messages import SystemMessage, HumanMessage
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
 
 
 class PostmortemGenerator:
@@ -123,15 +131,15 @@ class PostmortemGenerator:
             severity=severity,
             duration=duration,
             author='DevOps Sentinel AI',
-            summary=sections['summary'],
-            impact=sections['impact'],
+            summary=sections.get('summary', 'N/A'),
+            impact=sections.get('impact', 'N/A'),
             timeline=timeline,
-            root_cause=sections['root_cause'],
-            contributing_factors=sections['contributing_factors'],
-            what_went_well=sections['what_went_well'],
-            improvements=sections['improvements'],
-            action_items=sections['action_items'],
-            lessons=sections['lessons']
+            root_cause=sections.get('root_cause', 'N/A'),
+            contributing_factors=sections.get('contributing_factors', 'N/A'),
+            what_went_well=sections.get('what_went_well', 'N/A'),
+            improvements=sections.get('improvements', 'N/A'),
+            action_items=sections.get('action_items', 'N/A'),
+            lessons=sections.get('lessons', 'N/A')
         )
         
         return {
@@ -149,10 +157,75 @@ class PostmortemGenerator:
         resolution: Optional[str]
     ) -> Dict:
         """Generate sections using AI"""
-        # Would call OpenAI/Claude here
-        # For now, use intelligent templates
-        return self._generate_template_sections(incident, events, resolution)
-    
+        if not LANGCHAIN_AVAILABLE:
+            return self._generate_template_sections(incident, events, resolution)
+
+        prompt = self._construct_prompt(incident, events, resolution)
+
+        try:
+            messages = [
+                SystemMessage(content="You are an expert Site Reliability Engineer (SRE). Your task is to generate a comprehensive, blameless incident postmortem based on the provided incident details and timeline."),
+                HumanMessage(content=prompt)
+            ]
+
+            response = await self.ai_client.ainvoke(messages)
+            content = response.content
+
+            # Attempt to parse JSON
+            # Sometimes LLMs wrap JSON in markdown code blocks
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].strip()
+
+            return json.loads(content)
+
+        except Exception as e:
+            logging.error(f"Error generating AI postmortem: {e}")
+            # Fallback to template
+            return self._generate_template_sections(incident, events, resolution)
+
+    def _construct_prompt(self, incident: Dict, events: List[Dict], resolution: Optional[str]) -> str:
+        """Construct the prompt for the AI."""
+        service = incident.get('service_name', 'Unknown Service')
+        title = incident.get('title', 'Untitled Incident')
+        severity = incident.get('severity', 'Unknown')
+        description = incident.get('description', 'No description provided.')
+
+        # Fallback to incident resolution if not provided
+        resolution_text = resolution or incident.get('resolution_notes') or 'None'
+
+        events_str = "\n".join([f"- {e.get('timestamp', 'Unknown Time')}: {e.get('description', 'Event')}" for e in events])
+
+        return f"""
+Please generate a postmortem for the following incident in JSON format.
+
+**Incident Details:**
+- Service: {service}
+- Title: {title}
+- Severity: {severity}
+- Description: {description}
+- Resolution Notes: {resolution_text}
+
+**Timeline:**
+{events_str}
+
+**Requirements:**
+1. Be blameless. Focus on systems and processes, not individuals.
+2. Be professional and concise.
+3. Provide the output as a valid JSON object with the following keys:
+   - "summary": A brief summary of the incident.
+   - "impact": The impact on users and the business.
+   - "root_cause": The technical root cause.
+   - "contributing_factors": Factors that contributed to the incident.
+   - "what_went_well": Positive aspects of the response.
+   - "improvements": Areas for improvement.
+   - "action_items": A markdown table of action items (Priority, Action, Owner, Due).
+   - "lessons": Key lessons learned.
+
+**JSON Output:**
+"""
+
     def _generate_template_sections(
         self,
         incident: Dict,

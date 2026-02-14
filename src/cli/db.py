@@ -196,6 +196,17 @@ class SentinelDB:
         self.client.table('incidents').update(updates).eq('id', incident_id).execute()
         return True
     
+    def get_incident_events(self, incident_id: str) -> List[Dict]:
+        """Get timeline events for an incident."""
+        if not self.client:
+            return []
+
+        try:
+            result = self.client.table('incident_events').select('*').eq('incident_id', incident_id).order('timestamp').execute()
+            return result.data or []
+        except Exception:
+            return []
+
     # Health checks
     def log_health_check(self, service_id: str, status_code: int, response_time_ms: int, is_healthy: bool, error: str = '') -> bool:
         """Log a health check result."""
