@@ -18,7 +18,7 @@ import uvicorn
 
 # App config
 APP_NAME = "DevOps Sentinel API"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 
 @asynccontextmanager
@@ -38,11 +38,17 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# CORS settings
+cors_origins = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",") if o.strip()]
+cors_allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() in {"1", "true", "yes"}
+if "*" in cors_origins and cors_allow_credentials:
+    cors_allow_credentials = False
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"]
 )
@@ -76,6 +82,11 @@ async def root():
         "status": "running",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "version": APP_VERSION, "timestamp": datetime.utcnow().isoformat()}
 
 
 @app.get("/api/status")

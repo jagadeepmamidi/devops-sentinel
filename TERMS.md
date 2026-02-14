@@ -1,7 +1,7 @@
 # Terms of Service for DevOps Sentinel
 
-**Last Updated**: January 27, 2026  
-**Effective Date**: January 27, 2026
+**Last Updated**: February 14, 2026
+**Effective Date**: February 14, 2026
 
 ---
 
@@ -25,10 +25,10 @@ DevOps Sentinel is a **self-hosted, open-source SRE monitoring platform** that:
 
 ### 2.2 What DevOps Sentinel Is NOT
 
-❌ **Not a SaaS**: We don't host your data  
-❌ **Not a managed service**: You deploy and run it  
-❌ **Not guaranteed uptime**: Open source, no SLA  
-❌ **Not a replacement for human judgment**: AI is assistive, not autonomous
+[NO] **Not a SaaS**: We don't host your data
+[NO] **Not a managed service**: You deploy and run it
+[NO] **Not guaranteed uptime**: Open source, no SLA
+[NO] **Not a replacement for human judgment**: AI is assistive, not autonomous
 
 ---
 
@@ -37,12 +37,12 @@ DevOps Sentinel is a **self-hosted, open-source SRE monitoring platform** that:
 ### 3.1 Software License
 
 DevOps Sentinel is released under the **MIT License**:
-- ✅ Use for any purpose (commercial or personal)
-- ✅ Modify the source code
-- ✅ Distribute copies
-- ✅ Sublicense
-- ❌ No warranty provided
-- ❌ Authors not liable for damages
+- [YES] Use for any purpose (commercial or personal)
+- [YES] Modify the source code
+- [YES] Distribute copies
+- [YES] Sublicense
+- [NO] No warranty provided
+- [NO] Authors not liable for damages
 
 **Full License**: See `LICENSE` file in the GitHub repository.
 
@@ -119,10 +119,10 @@ DevOps Sentinel uses AI to generate:
 - Remediation recommendations
 
 **Important**:
-- ❗ AI can make mistakes
-- ❗ Always verify AI suggestions before acting
-- ❗ Human judgment is required
-- ❗ We are not liable for AI-generated errors
+- [IMPORTANT] AI can make mistakes
+- [IMPORTANT] Always verify AI suggestions before acting
+- [IMPORTANT] Human judgment is required
+- [IMPORTANT] We are not liable for AI-generated errors
 
 ### 6.2 ML Model Training
 
@@ -135,7 +135,7 @@ Machine learning models (anomaly detection, incident similarity) are:
 
 ## 7. Disclaimers & Limitations
 
-### 7.1 No Warranty
+[IMPORTANT] **No Warranty** - Use at your own risk
 
 DevOps Sentinel is provided **"AS IS" without warranty of any kind**:
 - No guarantee of uptime
@@ -241,7 +241,7 @@ We may update these Terms of Service when:
 - Legal requirements change
 - Community feedback
 
-**Notification**: Changes announced in `CHANGELOG.md` and GitHub releases.
+**Notification**: Changes announced in GitHub releases and repository documentation updates.
 
 ---
 
@@ -270,7 +270,7 @@ However, we reserve the right to:
 
 ### 13.1 Jurisdiction
 
-These Terms are governed by the laws of **[Your Jurisdiction]**.
+These Terms are governed by the laws applicable in your jurisdiction.
 
 **Disputes**: Resolved through arbitration or local courts.
 
@@ -311,25 +311,25 @@ constitute the **entire agreement** between you and DevOps Sentinel.
 
 ## 17. Contact & Reporting
 
-**Project**: DevOps Sentinel  
-**GitHub**: [https://github.com/yourusername/devops_sentinel](https://github.com/yourusername/devops_sentinel)  
-**Issues**: [GitHub Issues](https://github.com/yourusername/devops_sentinel/issues)  
-**Security**: `security@devops-sentinel.dev`  
-**Legal**: `legal@devops-sentinel.dev`
+**Project**: DevOps Sentinel
+**GitHub**: [https://github.com/jagadeepmamidi/devops-sentinel](https://github.com/jagadeepmamidi/devops-sentinel)
+**Issues**: [GitHub Issues](https://github.com/jagadeepmamidi/devops-sentinel/issues)
+**Security Reporting**: Use GitHub Security Advisories or open a private security report through GitHub.
 
 ---
 
 ## Summary
 
-📜 **MIT Licensed** - Use freely, modify, distribute  
-🏠 **Self-Hosted** - You control everything  
-💾 **You Own Your Data** - 100% yours  
-⚠️ **No Warranty** - Use at your own risk  
-🤝 **Community-Driven** - Open source support  
-🔒 **Privacy-First** - We don't collect data  
+[INFO] **MIT Licensed** - Use freely, modify, distribute
+[INFO] **Self-Hosted** - You control everything
+[INFO] **You Own Your Data** - 100% yours
+[IMPORTANT] **No Warranty** - Use at your own risk
+[INFO] **Community-Driven** - Open source support
+[INFO] **Privacy-First** - We don't collect data
 
 **By using DevOps Sentinel, you acknowledge that you've read and agree to these Terms of Service.**
 
 ---
 
 _DevOps Sentinel is not affiliated with PagerDuty, Datadog, New Relic, or any other commercial SRE platform._
+

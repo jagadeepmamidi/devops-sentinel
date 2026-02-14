@@ -1,7 +1,7 @@
 # Privacy Policy for DevOps Sentinel
 
-**Last Updated**: January 27, 2026  
-**Effective Date**: January 27, 2026
+**Last Updated**: February 14, 2026
+**Effective Date**: February 14, 2026
 
 ---
 
@@ -9,7 +9,7 @@
 
 DevOps Sentinel is designed with **privacy as a core principle**. Unlike commercial SRE platforms that collect and store your data on their servers, DevOps Sentinel keeps all your data **in your own infrastructure**.
 
-**TL;DR**: We don't store, see, or sell your data. You own everything.
+**TL;DR**: Core operational data is designed to stay in your infrastructure. You control your project data and integrations.
 
 ---
 
@@ -35,11 +35,11 @@ All operational data remains in **your own Supabase instance**:
 
 When using AI features, we send **minimal context** to AI providers:
 
-- **OpenRouter/AI Models**: 
+- **OpenRouter/AI Models**:
   - Incident summaries for postmortem generation
   - Error messages for root cause analysis
   - Service names (no sensitive data)
-  
+
 **What We Don't Send**:
 - Credentials, API keys, secrets
 - Personal information
@@ -125,11 +125,11 @@ DevOps Sentinel does **not use cookies** for tracking.
 
 Since you own all the data:
 
-✅ **Right to Access**: You have full access to all your data in Supabase  
-✅ **Right to Delete**: Delete your Supabase project anytime  
-✅ **Right to Export**: Export all data from Supabase (JSON, CSV, SQL)  
-✅ **Right to Portability**: Self-hosted, take it anywhere  
-✅ **Right to Opt-Out**: Disable any feature or integration
+- [YES] **Right to Access**: You have full access to all your data in Supabase
+- [YES] **Right to Delete**: Delete your Supabase project anytime
+- [YES] **Right to Export**: Export all data from Supabase (JSON, CSV, SQL)
+- [YES] **Right to Portability**: Self-hosted, take it anywhere
+- [YES] **Right to Opt-Out**: Disable any feature or integration
 
 ---
 
@@ -142,7 +142,7 @@ DevOps Sentinel is intended for **professional use by DevOps teams**. We do not 
 ## Open Source Transparency
 
 DevOps Sentinel is **open source** (MIT License):
-- Audit the code: [GitHub Repository](https://github.com/yourusername/devops_sentinel)
+- Audit the code: [GitHub Repository](https://github.com/jagadeepmamidi/devops-sentinel)
 - See exactly what data is collected
 - Verify no hidden tracking
 - Contribute improvements
@@ -156,7 +156,7 @@ We may update this privacy policy to reflect:
 - Legal requirements
 - Community feedback
 
-**Change Notification**: Major changes will be announced via GitHub releases and documented in `CHANGELOG.md`.
+**Change Notification**: Major changes will be announced via GitHub releases and repository documentation updates.
 
 ---
 
@@ -167,7 +167,7 @@ Since data is in **your** Supabase instance:
 - **Supabase**: Has its own breach notification procedures
 - **DevOps Sentinel Code**: Open source, can be audited for vulnerabilities
 
-**Security Issues**: Report to `security@devops-sentinel.dev` (or create a private GitHub security advisory)
+**Security Issues**: Create a private GitHub security advisory in the repository.
 
 ---
 
@@ -186,19 +186,20 @@ Since data is in **your** Supabase instance:
 
 ## Contact Us
 
-**Open Source Project**: DevOps Sentinel  
-**GitHub**: [https://github.com/yourusername/devops_sentinel](https://github.com/yourusername/devops_sentinel)  
-**Issues**: [GitHub Issues](https://github.com/yourusername/devops_sentinel/issues)  
-**Security**: `security@devops-sentinel.dev`
+**Open Source Project**: DevOps Sentinel
+**GitHub**: [https://github.com/jagadeepmamidi/devops-sentinel](https://github.com/jagadeepmamidi/devops-sentinel)
+**Issues**: [GitHub Issues](https://github.com/jagadeepmamidi/devops-sentinel/issues)
+**Security**: Use GitHub Security Advisories for responsible disclosure.
 
 ---
 
 ## Summary
 
-🔒 **Your data stays with you** (in your Supabase)  
-🚫 **We don't store, see, or sell your data**  
-🔓 **Open source & auditable**  
-✅ **GDPR & CCPA friendly by design**  
-🛡️ **Privacy-first architecture**
+[INFO] **Your data stays with you** (in your Supabase)
+[NO] **We don't store, see, or sell your data**
+[INFO] **Open source & auditable**
+[YES] **GDPR & CCPA friendly by design**
+[INFO] **Privacy-first architecture**
 
 **DevOps Sentinel: The privacy-respecting SRE co-pilot.**
+

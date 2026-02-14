@@ -7,8 +7,7 @@ Usage:
     sentinel monitor <url>           - Monitor a URL for health
     sentinel incidents list          - List recent incidents
     sentinel postmortem <id>         - View/generate postmortem
-    sentinel status                  - Show service status
-    sentinel deploy <service> <ver>  - Register deployment
+    sentinel status                  - Show configuration and connectivity
     sentinel config                  - Show configuration
 """
 
@@ -17,17 +16,19 @@ import asyncio
 import httpx
 import os
 import sys
+import subprocess
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Auth module
-from .auth import login, logout, whoami, is_logged_in, get_current_user, get_access_token
+from .auth import login, logout, whoami, is_logged_in, get_current_user
 
 # Projects and Services modules
 from .projects import projects
 from .services import services
+from .db import get_db
+from .. import __version__
 
 # Rich for beautiful output
 try:
@@ -50,40 +51,27 @@ console = Console() if RICH_AVAILABLE else None
 def print_banner():
     """Print ASCII banner"""
     banner = """
-╔═══════════════════════════════════════════════════════════════╗
-║  ██████╗ ███████╗██╗   ██╗ ██████╗ ██████╗ ███████╗           ║
-║  ██╔══██╗██╔════╝██║   ██║██╔═══██╗██╔══██╗██╔════╝           ║
-║  ██║  ██║█████╗  ╚██╗ ██╔╝██║   ██║██████╔╝███████╗           ║
-║  ██████╔╝███████╗ ╚████╔╝ ╚██████╔╝██║     ╚════██║           ║
-║  ╚═════╝ ╚══════╝  ╚═══╝   ╚═════╝ ╚═╝     ╚═════╝            ║
-║  ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗  ║
-║  ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║  ║
-║  ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║  ║
-║  ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║  ║
-║  ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗
-║  ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
-╚═══════════════════════════════════════════════════════════════╝
+========================================
+      DEVOPS SENTINEL - SRE AGENT
+========================================
 """
     click.echo(click.style(banner, fg='cyan'))
 
 
 @click.group()
-@click.version_option(version='0.1.0', prog_name='DevOps Sentinel')
+@click.version_option(version=__version__, prog_name='DevOps Sentinel')
 @click.option('--json', 'output_json', is_flag=True, help='Output as JSON')
 @click.pass_context
 def cli(ctx, output_json):
     """
-    ⬢ DevOps Sentinel - Autonomous SRE Agent
+    DevOps Sentinel - Autonomous SRE Agent
     
     Monitor services, detect anomalies, and generate AI-powered postmortems.
     
     Quick start:
-    
-        sentinel monitor https://api.example.com/health
-        
-        sentinel incidents list
-        
-        sentinel postmortem generate <incident-id>
+    sentinel monitor https://api.example.com/health
+    sentinel incidents list
+    sentinel postmortem generate <incident-id>
     """
     ctx.ensure_object(dict)
     ctx.obj['json'] = output_json
@@ -110,21 +98,42 @@ def monitor(ctx, url, interval, timeout, notify):
             click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Monitoring: {url}")
             click.echo(f"  Interval: {interval}s | Timeout: {timeout}s")
             click.echo(f"  Press Ctrl+C to stop\n")
+            if notify:
+                click.echo("  Notifications: enabled")
         
         check_count = 0
-        failures = 0
+        last_state = None
+        notify_warned = False
         
         async with httpx.AsyncClient(timeout=timeout) as client:
+            async def send_notification(message: str):
+                nonlocal notify_warned
+                if not notify:
+                    return
+                webhook = os.getenv('SLACK_WEBHOOK_URL')
+                if not webhook:
+                    if not notify_warned and not ctx.obj.get('json'):
+                        click.echo(click.style("  WARN --notify set, but SLACK_WEBHOOK_URL is missing.", fg='yellow'))
+                    notify_warned = True
+                    return
+                try:
+                    await client.post(webhook, json={"text": message}, timeout=5)
+                except Exception:
+                    if not ctx.obj.get('json'):
+                        click.echo(click.style("  WARN Failed to send Slack notification.", fg='yellow'))
+
             while True:
                 check_count += 1
                 start = datetime.utcnow()
+                current_state = "failed"
                 
                 try:
                     response = await client.get(url)
                     elapsed = (datetime.utcnow() - start).total_seconds() * 1000
                     
                     if response.status_code == 200:
-                        status = click.style('✓ HEALTHY', fg='green')
+                        current_state = "healthy"
+                        status = click.style('OK HEALTHY', fg='green')
                         if ctx.obj.get('json'):
                             click.echo(json.dumps({
                                 'status': 'healthy',
@@ -135,8 +144,8 @@ def monitor(ctx, url, interval, timeout, notify):
                         else:
                             click.echo(f"  {status} | {response.status_code} | {elapsed:.0f}ms | Check #{check_count}")
                     else:
-                        failures += 1
-                        status = click.style(f'⚠ WARNING', fg='yellow')
+                        current_state = "warning"
+                        status = click.style('WARN WARNING', fg='yellow')
                         if ctx.obj.get('json'):
                             click.echo(json.dumps({
                                 'status': 'warning',
@@ -146,10 +155,14 @@ def monitor(ctx, url, interval, timeout, notify):
                             }))
                         else:
                             click.echo(f"  {status} | {response.status_code} | {elapsed:.0f}ms | Check #{check_count}")
+                        if last_state != current_state:
+                            await send_notification(
+                                f"[DevOps Sentinel] Warning for {url}: HTTP {response.status_code} ({elapsed:.0f}ms)"
+                            )
                         
                 except Exception as e:
-                    failures += 1
-                    status = click.style('✗ FAILED', fg='red')
+                    current_state = "failed"
+                    status = click.style('X FAILED', fg='red')
                     if ctx.obj.get('json'):
                         click.echo(json.dumps({
                             'status': 'failed',
@@ -158,6 +171,13 @@ def monitor(ctx, url, interval, timeout, notify):
                         }))
                     else:
                         click.echo(f"  {status} | {str(e)[:50]} | Check #{check_count}")
+                    if last_state != current_state:
+                        await send_notification(f"[DevOps Sentinel] Failure for {url}: {str(e)[:180]}")
+
+                if notify and last_state in {"warning", "failed"} and current_state == "healthy":
+                    await send_notification(f"[DevOps Sentinel] Recovered: {url} is healthy again.")
+
+                last_state = current_state
                 
                 await asyncio.sleep(interval)
     
@@ -200,10 +220,10 @@ def health(ctx, url, timeout):
                     click.echo(json.dumps(result, indent=2))
                 else:
                     if result['healthy']:
-                        click.echo(f"\n{click.style('✓', fg='green')} {url}")
+                        click.echo(f"\n{click.style('OK', fg='green')} {url}")
                         click.echo(f"  Status: {click.style('HEALTHY', fg='green')}")
                     else:
-                        click.echo(f"\n{click.style('⚠', fg='yellow')} {url}")
+                        click.echo(f"\n{click.style('WARN', fg='yellow')} {url}")
                         click.echo(f"  Status: {click.style('DEGRADED', fg='yellow')}")
                     
                     click.echo(f"  Response: {result['status_code']}")
@@ -218,7 +238,7 @@ def health(ctx, url, timeout):
                         'error': str(e)
                     }, indent=2))
                 else:
-                    click.echo(f"\n{click.style('✗', fg='red')} {url}")
+                    click.echo(f"\n{click.style('X', fg='red')} {url}")
                     click.echo(f"  Status: {click.style('UNREACHABLE', fg='red')}")
                     click.echo(f"  Error: {str(e)}")
                     click.echo()
@@ -239,27 +259,43 @@ def incidents():
 @click.pass_context
 def incidents_list(ctx, limit, severity, status):
     """List recent incidents."""
-    # Demo data for now - would connect to Supabase in production
-    demo_incidents = [
-        {'id': 'inc-001', 'severity': 'P1', 'service': 'api-gateway', 'status': 'resolved', 'created': '2026-01-27 10:30'},
-        {'id': 'inc-002', 'severity': 'P2', 'service': 'payment-api', 'status': 'open', 'created': '2026-01-27 14:15'},
-        {'id': 'inc-003', 'severity': 'P0', 'service': 'database', 'status': 'acknowledged', 'created': '2026-01-27 18:45'},
-    ]
-    
+    incidents_data = []
+    if is_logged_in():
+        user = get_current_user()
+        if user:
+            db = get_db()
+            if db.connected:
+                incidents_data = db.list_incidents(
+                    user["id"],
+                    limit=limit,
+                    severity=severity,
+                    status=status,
+                )
     if ctx.obj.get('json'):
-        click.echo(json.dumps(demo_incidents, indent=2))
-    else:
-        click.echo(f"\n{click.style('Recent Incidents', bold=True)}")
-        click.echo("─" * 60)
-        click.echo(f"{'ID':<12} {'Severity':<10} {'Service':<15} {'Status':<12} {'Created'}")
-        click.echo("─" * 60)
-        
-        for inc in demo_incidents[:limit]:
-            sev_color = {'P0': 'red', 'P1': 'yellow', 'P2': 'blue', 'P3': 'white'}.get(inc['severity'], 'white')
-            sev = click.style(inc['severity'], fg=sev_color, bold=True)
-            click.echo(f"{inc['id']:<12} {sev:<19} {inc['service']:<15} {inc['status']:<12} {inc['created']}")
-        
+        click.echo(json.dumps(incidents_data, indent=2, default=str))
+        return
+    click.echo(f"\n{click.style('Recent Incidents', bold=True)}")
+    click.echo("-" * 70)
+    click.echo(f"{'ID':<12} {'Severity':<10} {'Service':<20} {'Status':<12} {'Created'}")
+    click.echo("-" * 70)
+    if not incidents_data:
+        click.echo("No incidents found. Connect Supabase and run monitoring to collect incidents.")
         click.echo()
+        return
+    for inc in incidents_data:
+        sev_raw = str(inc.get("severity", "unknown")).upper()
+        sev_color = {'P0': 'red', 'P1': 'yellow', 'P2': 'blue', 'P3': 'white'}.get(sev_raw, 'white')
+        sev = click.style(sev_raw, fg=sev_color, bold=True)
+        service = (inc.get("services") or {}).get("name", "unknown")[:19]
+        created = str(inc.get("created_at", ""))[:19].replace("T", " ")
+        click.echo(
+            f"{str(inc.get('id', ''))[:12]:<12} "
+            f"{sev:<19} "
+            f"{service:<20} "
+            f"{inc.get('status', 'unknown'):<12} "
+            f"{created}"
+        )
+    click.echo()
 
 
 @cli.group()
@@ -307,7 +343,7 @@ Increased connection pool size and added connection leak detection.
     
     if output:
         Path(output).write_text(postmortem_text)
-        click.echo(f"\n{click.style('✓', fg='green')} Postmortem saved to {output}")
+        click.echo(f"\n{click.style('OK', fg='green')} Postmortem saved to {output}")
     else:
         click.echo(postmortem_text)
 
@@ -317,7 +353,7 @@ Increased connection pool size and added connection leak detection.
 def status(ctx):
     """Show current system status."""
     click.echo(f"\n{click.style('DevOps Sentinel Status', bold=True)}")
-    click.echo("─" * 40)
+    click.echo("-" * 40)
     
     # Check API connection
     api_url = os.getenv('API_URL', 'http://localhost:8000')
@@ -332,16 +368,16 @@ def status(ctx):
     
     api_ok = asyncio.run(check_api())
     
-    supabase_configured = bool(os.getenv('SUPABASE_URL'))
-    openai_configured = bool(os.getenv('OPENAI_API_KEY'))
+    supabase_configured = bool(os.getenv('SUPABASE_URL') and (os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')))
+    llm_configured = bool(os.getenv('OPENAI_API_KEY') or os.getenv('OPENROUTER_API_KEY'))
     slack_configured = bool(os.getenv('SLACK_WEBHOOK_URL') or os.getenv('SLACK_CLIENT_ID'))
     
     def status_icon(ok):
-        return click.style('✓', fg='green') if ok else click.style('✗', fg='red')
+        return click.style('OK', fg='green') if ok else click.style('X', fg='red')
     
     click.echo(f"  {status_icon(api_ok)} API Server: {'Connected' if api_ok else 'Not running'}")
     click.echo(f"  {status_icon(supabase_configured)} Supabase: {'Configured' if supabase_configured else 'Not configured'}")
-    click.echo(f"  {status_icon(openai_configured)} OpenAI: {'Configured' if openai_configured else 'Not configured'}")
+    click.echo(f"  {status_icon(llm_configured)} LLM Provider: {'Configured' if llm_configured else 'Not configured'}")
     click.echo(f"  {status_icon(slack_configured)} Slack: {'Configured' if slack_configured else 'Not configured'}")
     click.echo()
 
@@ -350,11 +386,14 @@ def status(ctx):
 def config():
     """Show current configuration."""
     click.echo(f"\n{click.style('Configuration', bold=True)}")
-    click.echo("─" * 40)
+    click.echo("-" * 40)
     
     configs = [
         ('API_URL', os.getenv('API_URL', 'http://localhost:8000')),
+        ('SENTINEL_WEB_URL', os.getenv('SENTINEL_WEB_URL', 'Not set')),
         ('SUPABASE_URL', os.getenv('SUPABASE_URL', 'Not set')[:50] + '...' if os.getenv('SUPABASE_URL') else 'Not set'),
+        ('SUPABASE_KEY', '***' if (os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')) else 'Not set'),
+        ('OPENROUTER_API_KEY', '***' if os.getenv('OPENROUTER_API_KEY') else 'Not set'),
         ('OPENAI_API_KEY', '***' if os.getenv('OPENAI_API_KEY') else 'Not set'),
         ('SLACK_WEBHOOK_URL', '***' if os.getenv('SLACK_WEBHOOK_URL') else 'Not set'),
     ]
@@ -378,18 +417,23 @@ def init():
 # Supabase (for data storage)
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
+# SUPABASE_KEY=  # optional alias
+
+# Hosted web app used by `sentinel login` browser flow
+# Example: https://devops-sentinel.dev
+SENTINEL_WEB_URL=
 
 # AI Provider (choose one)
-OPENAI_API_KEY=
-# OPENROUTER_API_KEY=
+OPENROUTER_API_KEY=
+# OPENAI_API_KEY=
 
 # Slack Integration (optional)
 SLACK_WEBHOOK_URL=
 """
         env_path.write_text(env_content)
-        click.echo(f"  {click.style('✓', fg='green')} Created .env file")
+        click.echo(f"  {click.style('OK', fg='green')} Created .env file")
     else:
-        click.echo(f"  {click.style('•', fg='yellow')} .env already exists")
+        click.echo(f"  {click.style('*', fg='yellow')} .env already exists")
     
     # Create sentinel.yaml config
     config_path = Path('sentinel.yaml')
@@ -412,14 +456,186 @@ monitoring:
   auto_postmortem: true
 """
         config_path.write_text(config_content)
-        click.echo(f"  {click.style('✓', fg='green')} Created sentinel.yaml")
+        click.echo(f"  {click.style('OK', fg='green')} Created sentinel.yaml")
     else:
-        click.echo(f"  {click.style('•', fg='yellow')} sentinel.yaml already exists")
+        click.echo(f"  {click.style('*', fg='yellow')} sentinel.yaml already exists")
     
     click.echo(f"\n{click.style('Done!', fg='green')} Edit .env with your API keys, then run:")
     click.echo(f"  sentinel login")
     click.echo(f"  sentinel status")
     click.echo()
+
+
+@cli.command()
+@click.option('--strict', is_flag=True, help='Treat warnings as failures')
+@click.pass_context
+def doctor(ctx, strict):
+    """Run environment and connectivity diagnostics."""
+    api_url = os.getenv('API_URL', 'http://localhost:8000')
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+    web_url = os.getenv('SENTINEL_WEB_URL')
+    llm_key = os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')
+
+    async def check_api_health():
+        try:
+            async with httpx.AsyncClient(timeout=4) as client:
+                resp = await client.get(f"{api_url}/health")
+                return resp.status_code == 200
+        except Exception:
+            return False
+
+    api_ok = asyncio.run(check_api_health())
+    auth_ok = is_logged_in()
+    user = get_current_user() if auth_ok else None
+
+    checks = [
+        {
+            "name": "Supabase URL",
+            "status": "ok" if supabase_url else "fail",
+            "detail": supabase_url or "Missing SUPABASE_URL",
+        },
+        {
+            "name": "Supabase Key",
+            "status": "ok" if supabase_key else "fail",
+            "detail": "Configured" if supabase_key else "Missing SUPABASE_KEY or SUPABASE_ANON_KEY",
+        },
+        {
+            "name": "CLI Login",
+            "status": "ok" if auth_ok else "warn",
+            "detail": f"Logged in as {user.get('email', 'unknown')}" if auth_ok else "Not logged in",
+        },
+        {
+            "name": "Web Auth URL",
+            "status": "ok" if web_url else "warn",
+            "detail": web_url or "SENTINEL_WEB_URL not set (fallback auth is still supported)",
+        },
+        {
+            "name": "LLM Provider Key",
+            "status": "ok" if llm_key else "warn",
+            "detail": "Configured" if llm_key else "Missing OPENROUTER_API_KEY or OPENAI_API_KEY",
+        },
+        {
+            "name": "API Health",
+            "status": "ok" if api_ok else "warn",
+            "detail": f"{api_url}/health reachable" if api_ok else f"API not reachable at {api_url}/health",
+        },
+    ]
+
+    failed = [c for c in checks if c["status"] == "fail"]
+    warnings = [c for c in checks if c["status"] == "warn"]
+    passed = len(failed) == 0 and (len(warnings) == 0 if strict else True)
+
+    if ctx.obj.get('json'):
+        click.echo(json.dumps({
+            "checks": checks,
+            "strict": strict,
+            "passed": passed,
+            "failed_count": len(failed),
+            "warning_count": len(warnings),
+        }, indent=2))
+        raise SystemExit(1 if not passed else 0)
+
+    icons = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}
+    colors = {"ok": "green", "warn": "yellow", "fail": "red"}
+
+    click.echo(f"\n{click.style('Sentinel Doctor', bold=True)}")
+    click.echo("-" * 40)
+    for item in checks:
+        marker = click.style(icons[item["status"]], fg=colors[item["status"]], bold=True)
+        click.echo(f"  {marker:<6} {item['name']}: {item['detail']}")
+    click.echo()
+
+    if not passed:
+        if failed:
+            click.echo(click.style("Critical checks failed. Fix required config and re-run `sentinel doctor`.", fg='red'))
+        else:
+            click.echo(click.style("Warnings treated as failures in strict mode.", fg='red'))
+        raise SystemExit(1)
+
+
+@cli.command()
+@click.pass_context
+def setup(ctx):
+    """Guided first-run setup for CLI users."""
+    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Guided setup")
+    click.echo("  This will configure login, first service, and a quick verification.\n")
+
+    if not Path('.env').exists():
+        click.echo("  .env not found, creating defaults...")
+        ctx.invoke(init)
+
+    if not is_logged_in() and click.confirm("  You are not logged in. Run browser login now?", default=True):
+        ctx.invoke(
+            login,
+            token=None,
+            device=False,
+            supabase_url=os.getenv('SUPABASE_URL'),
+            web_url=os.getenv('SENTINEL_WEB_URL'),
+        )
+
+    service_name = click.prompt("  Service name", default="my-api")
+    service_url = click.prompt("  Service health URL", default="https://api.example.com/health")
+    check_interval = click.prompt("  Check interval seconds", type=int, default=30)
+
+    registered = False
+    db = get_db()
+    if is_logged_in() and db.connected:
+        user = get_current_user()
+        if user and user.get('id'):
+            service = db.add_service(user['id'], service_name, service_url, check_interval=check_interval)
+            if service:
+                registered = True
+                click.echo(click.style("  OK Service registered in Supabase.", fg='green'))
+            else:
+                click.echo(click.style("  WARN Failed to register service in Supabase.", fg='yellow'))
+        else:
+            click.echo(click.style("  WARN Login state is invalid; run `sentinel login` again.", fg='yellow'))
+    else:
+        click.echo(click.style("  WARN Skipping DB registration (login or Supabase config missing).", fg='yellow'))
+
+    async def quick_check():
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(service_url)
+                return response.status_code == 200
+        except Exception:
+            return False
+
+    health_ok = asyncio.run(quick_check())
+    click.echo(click.style(
+        f"  {'OK' if health_ok else 'WARN'} Health check {'passed' if health_ok else 'failed'}",
+        fg='green' if health_ok else 'yellow'
+    ))
+
+    click.echo("\n  Next commands:")
+    click.echo(f"    sentinel monitor {service_url}")
+    if registered:
+        click.echo("    sentinel services list")
+    click.echo("    sentinel doctor")
+    click.echo()
+
+
+@cli.command()
+@click.option('--host', default=lambda: os.getenv('API_HOST', '0.0.0.0'), show_default=True, help='API host')
+@click.option('--port', default=lambda: int(os.getenv('API_PORT', os.getenv('PORT', '8000'))), show_default=True, help='API port')
+@click.option('--reload', is_flag=True, help='Enable auto-reload for local development')
+def serve(host, port, reload):
+    """Start the FastAPI server."""
+    cmd = [
+        sys.executable,
+        '-m',
+        'uvicorn',
+        'api_server:app',
+        '--host',
+        host,
+        '--port',
+        str(port),
+    ]
+    if reload:
+        cmd.append('--reload')
+    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Starting API server on {host}:{port}")
+    raise SystemExit(subprocess.call(cmd))
 
 
 # Register auth commands
@@ -434,3 +650,4 @@ cli.add_command(services)
 
 if __name__ == '__main__':
     cli()
+

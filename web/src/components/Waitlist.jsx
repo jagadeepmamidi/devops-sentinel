@@ -32,7 +32,7 @@ const Waitlist = () => {
                 const data = await response.json();
                 setError(data.message || 'Something went wrong');
             }
-        } catch (err) {
+        } catch {
             // For demo, just succeed
             setSubmitted(true);
         } finally {

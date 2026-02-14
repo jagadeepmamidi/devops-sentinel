@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-sentinel"
-version = "0.1.1"
+version = "0.2.0"
 description = "Autonomous SRE agents that watch your services, detect anomalies, and generate blameless postmortems"
 readme = "README.md"
-license = "MIT"
+license = { text = "MIT" }
 authors = [
     {name = "jagadeep.mamidi", email = "jagadeep.mamidi@gmail.com"}
 ]

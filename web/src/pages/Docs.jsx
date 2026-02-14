@@ -51,14 +51,18 @@ export default function Docs() {
             content: (
                 <>
                     <h2>Get Started in 5 Minutes</h2>
+                    <p>
+                        Preferred flow: install CLI, run <code>sentinel login</code>, complete signup/signin
+                        in browser, then return to terminal and start monitoring.
+                    </p>
 
                     <div className="step-card">
                         <div className="step-number">1</div>
                         <div className="step-content">
-                            <h3>Create an Account</h3>
-                            <p>Sign up with your email and create your organization</p>
+                            <h3>Install the CLI</h3>
+                            <p>Install DevOps Sentinel from PyPI.</p>
                             <div className="code-block">
-                                <code>https://devops-sentinel.dev/signup</code>
+                                <code>pip install devops-sentinel</code>
                             </div>
                         </div>
                     </div>
@@ -66,13 +70,13 @@ export default function Docs() {
                     <div className="step-card">
                         <div className="step-number">2</div>
                         <div className="step-content">
-                            <h3>Add Your First Service</h3>
-                            <p>Configure a service to monitor (API, website, database, etc.)</p>
+                            <h3>Login via Browser Flow</h3>
+                            <p>Run login in terminal, complete sign-in in browser, then return to CLI.</p>
                             <div className="code-block">
                                 <code>
-                                    Service Name: My API<br />
-                                    URL: https://api.example.com/health<br />
-                                    Check Interval: 60 seconds
+                                    sentinel login<br />
+                                    # browser opens /cli-auth<br />
+                                    # returns to local callback
                                 </code>
                             </div>
                         </div>
@@ -81,10 +85,13 @@ export default function Docs() {
                     <div className="step-card">
                         <div className="step-number">3</div>
                         <div className="step-content">
-                            <h3>Configure Alerts</h3>
-                            <p>Set up notifications via Slack, email, or PagerDuty</p>
+                            <h3>Add and Monitor a Service</h3>
+                            <p>Register your health URL and begin continuous checks.</p>
                             <div className="code-block">
-                                <code>Settings → Integrations → Connect Slack</code>
+                                <code>
+                                    sentinel services add my-api https://api.example.com/health<br />
+                                    sentinel monitor https://api.example.com/health
+                                </code>
                             </div>
                         </div>
                     </div>
@@ -92,8 +99,11 @@ export default function Docs() {
                     <div className="step-card">
                         <div className="step-number">4</div>
                         <div className="step-content">
-                            <h3>You're Live!</h3>
-                            <p>DevOps Sentinel is now monitoring your services 24/7</p>
+                            <h3>Validate and Operate</h3>
+                            <p>
+                                Use <code>sentinel doctor</code> to verify environment health and
+                                <code> sentinel incidents list</code> to track incidents.
+                            </p>
                         </div>
                     </div>
                 </>
@@ -231,7 +241,7 @@ export default function Docs() {
         <div className="docs-page">
             <nav className="docs-nav">
                 <Link to="/" className="nav-brand">
-                    <span className="logo-icon">⬢</span>
+                    <span className="logo-icon">S</span>
                     <span className="logo-text">DevOps Sentinel</span>
                 </Link>
                 <Link to="/feedback" className="feedback-link">
@@ -260,3 +270,4 @@ export default function Docs() {
         </div>
     )
 }
+

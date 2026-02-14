@@ -28,6 +28,7 @@ venv/
 ENV/
 env/
 .venv/
+.venv-release/
 
 # Environment Variables (NEVER COMMIT)
 .env

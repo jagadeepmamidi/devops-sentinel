@@ -16,7 +16,7 @@ from unittest.mock import patch, MagicMock
 
 # Import auth module functions
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.cli.auth import (
     ensure_config_dir,
@@ -28,6 +28,8 @@ from src.cli.auth import (
     is_logged_in,
     CONFIG_DIR,
     CREDENTIALS_FILE,
+    extract_token_from_input,
+    resolve_supabase_key,
 )
 
 
@@ -128,6 +130,43 @@ class TestConfigDirectory:
             ensure_config_dir()
             assert new_dir.exists()
             assert new_dir.is_dir()
+
+
+class TestTokenExtraction:
+    """Test token parsing for device/browser callback inputs."""
+
+    def test_extract_token_from_callback_url(self):
+        token, err = extract_token_from_input(
+            'http://localhost/device#access_token=abc123&state=s1',
+            expected_state='s1',
+        )
+        assert token == 'abc123'
+        assert err is None
+
+    def test_extract_token_state_mismatch(self):
+        token, err = extract_token_from_input(
+            'http://localhost/device#access_token=abc123&state=wrong',
+            expected_state='expected',
+        )
+        assert token is None
+        assert err == 'state_mismatch'
+
+    def test_extract_token_from_raw_token(self):
+        token, err = extract_token_from_input('raw-token-value')
+        assert token == 'raw-token-value'
+        assert err is None
+
+
+class TestSupabaseKeyAlias:
+    """Test SUPABASE_KEY / SUPABASE_ANON_KEY alias resolution."""
+
+    def test_resolve_supabase_key_prefers_supabase_key(self):
+        with patch.dict('os.environ', {'SUPABASE_KEY': 'key-a', 'SUPABASE_ANON_KEY': 'key-b'}, clear=False):
+            assert resolve_supabase_key() == 'key-a'
+
+    def test_resolve_supabase_key_falls_back_to_anon(self):
+        with patch.dict('os.environ', {'SUPABASE_ANON_KEY': 'anon-key'}, clear=True):
+            assert resolve_supabase_key() == 'anon-key'
 
 
 if __name__ == '__main__':

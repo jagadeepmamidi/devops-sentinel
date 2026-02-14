@@ -6,7 +6,7 @@ Supports environment variables and .env file loading.
 """
 
 from typing import Optional
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,9 +20,15 @@ class Settings(BaseSettings):
     )
     
     # ===== LLM Configuration =====
-    openrouter_api_key: str = Field(
-        ...,
+    openrouter_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENROUTER_API_KEY"),
         description="OpenRouter API key for LLM access"
+    )
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY"),
+        description="Optional OpenAI API key for LLM access"
     )
     default_model: str = Field(
         default="google/gemini-pro",
@@ -38,16 +44,19 @@ class Settings(BaseSettings):
     # ===== Supabase Configuration =====
     supabase_url: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("SUPABASE_URL"),
         description="Supabase project URL"
     )
     supabase_key: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("SUPABASE_KEY", "SUPABASE_ANON_KEY"),
         description="Supabase anon/service key"
     )
     
     # ===== Slack Configuration =====
     slack_webhook_url: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("SLACK_WEBHOOK_URL"),
         description="Slack webhook URL for alerts"
     )
     
@@ -90,6 +99,11 @@ class Settings(BaseSettings):
     def has_supabase(self) -> bool:
         """Check if Supabase is configured."""
         return bool(self.supabase_url and self.supabase_key)
+
+    @property
+    def has_llm(self) -> bool:
+        """Check if any supported LLM provider is configured."""
+        return bool(self.openrouter_api_key or self.openai_api_key)
     
     @property
     def has_slack(self) -> bool:

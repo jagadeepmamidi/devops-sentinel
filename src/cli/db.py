@@ -18,7 +18,7 @@ except ImportError:
     SUPABASE_AVAILABLE = False
     Client = None
 
-from .auth import get_access_token, is_logged_in
+from .auth import load_credentials
 
 
 def get_supabase_client() -> Optional[Client]:
@@ -30,7 +30,7 @@ def get_supabase_client() -> Optional[Client]:
         return None
     
     url = os.getenv('SUPABASE_URL')
-    anon_key = os.getenv('SUPABASE_ANON_KEY')
+    anon_key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
     
     if not url or not anon_key:
         return None
@@ -38,9 +38,20 @@ def get_supabase_client() -> Optional[Client]:
     client = create_client(url, anon_key)
     
     # Set auth token if logged in
-    access_token = get_access_token()
+    creds = load_credentials() or {}
+    access_token = creds.get('access_token')
+    refresh_token = creds.get('refresh_token')
     if access_token:
-        client.auth.set_session(access_token, '')
+        try:
+            if refresh_token:
+                client.auth.set_session(access_token, refresh_token)
+            else:
+                client.postgrest.auth(access_token)
+        except Exception:
+            try:
+                client.postgrest.auth(access_token)
+            except Exception:
+                pass
     
     return client
 

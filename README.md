@@ -20,20 +20,18 @@
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      DevOps Sentinel                         │
-├─────────────────────────────────────────────────────────────┤
-│  CLI (Typer)  │  API (FastAPI)  │  Dashboard (WebSocket)    │
-├─────────────────────────────────────────────────────────────┤
-│                   Monitoring Orchestrator                    │
-├─────────────────────────────────────────────────────────────┤
-│  Watcher Agent  │  Triage Agent  │  Investigator  │  Strategist  │
-├─────────────────────────────────────────────────────────────┤
-│  Health Check  │  Slack Alert  │  Log Analysis  │  DB Health  │
-├─────────────────────────────────────────────────────────────┤
-│  Supabase (Persistence)  │  OpenRouter (LLM)  │  Slack       │
-└─────────────────────────────────────────────────────────────┘
+```text
++------------------- DevOps Sentinel -------------------+
+| CLI (Click) | API (FastAPI) | Dashboard (WebSocket)   |
++-------------------------------------------------------+
+|               Monitoring Orchestrator                 |
++-------------------------------------------------------+
+| Watcher | Triage | Investigator | Strategist          |
++-------------------------------------------------------+
+| Health checks | Slack alerts | Log/DB analysis       |
++-------------------------------------------------------+
+| Supabase (Persistence) | OpenRouter/OpenAI | Slack   |
++-------------------------------------------------------+
 ```
 
 ## Installation
@@ -63,6 +61,8 @@ pip install -e .
 ```bash
 # Login to DevOps Sentinel
 sentinel login
+# Headless environments
+sentinel login --device
 
 # Check a service health
 sentinel health https://api.example.com
@@ -72,6 +72,10 @@ sentinel monitor https://api.example.com/health
 
 # View your projects
 sentinel projects list
+# Validate environment and auth
+sentinel doctor
+# Guided onboarding
+sentinel setup
 ```
 
 ## CLI Commands
@@ -80,22 +84,61 @@ sentinel projects list
 |---------|-------------|
 | `sentinel init` | Interactive configuration setup |
 | `sentinel monitor <url>` | Monitor a service URL |
-| `sentinel status` | Show monitored services |
-| `sentinel incidents` | List recent incidents |
-| `sentinel postmortem <id>` | View incident postmortem |
-| `sentinel serve` | Start dashboard server |
-| `sentinel lint <path>` | Run pre-deploy checks |
+| `sentinel status` | Show configuration and API/provider connectivity |
+| `sentinel incidents list` | List recent incidents |
+| `sentinel postmortem generate <id>` | Generate incident postmortem |
+| `sentinel serve` | Start API server |
+| `sentinel health <url>` | Run one-shot health check |
+| `sentinel doctor` | Run environment diagnostics |
+| `sentinel setup` | Guided first-run onboarding |
 
 ## Configuration
 
 Create a `.env` file or run `sentinel init`:
 
 ```env
+SENTINEL_WEB_URL=https://devops-sentinel.dev
 OPENROUTER_API_KEY=your_key_here
 DEFAULT_MODEL=google/gemini-pro
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_anon_key
+SUPABASE_ANON_KEY=your_anon_key
+# SUPABASE_KEY=your_anon_key  # alias also supported
 SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+```
+
+`sentinel login` opens `${SENTINEL_WEB_URL}/cli-auth` for signup/signin, then returns to the local CLI callback.
+
+## Install Command Note
+
+Use this exact command:
+
+```bash
+pip install devops-sentinel
+```
+
+`pip install devops sentinel` (with a space) is invalid.
+
+## Release Checklist (GitHub + PyPI)
+
+```bash
+# 1) Sanity checks
+python -m py_compile main.py config.py api_server.py src\cli\main.py src\cli\auth.py
+python main.py --help
+python main.py --json doctor
+
+# 2) Build package
+python -m pip install --upgrade build twine
+python -m build
+python -m twine check dist/*
+
+# 3) Publish (PyPI)
+python -m twine upload dist/*
+
+# 4) Verify install from PyPI
+python -m venv /tmp/sentinel-smoke
+# Windows: python -m venv %TEMP%\sentinel-smoke
+pip install devops-sentinel
+sentinel --version
 ```
 
 ## Docker Deployment
@@ -120,7 +163,7 @@ docker-compose logs -f sentinel
 
 - All data stays local or in YOUR Supabase instance
 - No telemetry or external data collection
-- Use `--privacy` flag to see exactly what data is processed
+- Use `sentinel doctor` to validate configuration and connectivity
 - OpenRouter calls only contain health check context (no PII)
 
 ## Supabase Schema
@@ -159,3 +202,4 @@ CREATE TABLE health_checks (
 ## License
 
 MIT License
+

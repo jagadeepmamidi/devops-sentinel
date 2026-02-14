@@ -16,14 +16,12 @@ import os
 import sys
 import json
 import time
-import webbrowser
 import secrets
-import hashlib
+import webbrowser
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-import threading
+from urllib.parse import urlparse, parse_qs, urlencode
 
 import click
 
@@ -81,7 +79,9 @@ def get_current_user() -> Optional[Dict]:
     """Get the current logged-in user."""
     creds = load_credentials()
     if creds:
-        return creds.get('user')
+        user = creds.get('user')
+        if isinstance(user, dict) and user.get('id'):
+            return user
     return None
 
 
@@ -95,13 +95,85 @@ def get_access_token() -> Optional[str]:
 
 def is_logged_in() -> bool:
     """Check if user is logged in."""
-    return load_credentials() is not None
+    return bool(get_access_token() and get_current_user())
+
+
+def resolve_supabase_key() -> Optional[str]:
+    """Resolve Supabase key from supported environment aliases."""
+    key = (os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY') or '').strip()
+    return key or None
+
+
+def fetch_user_profile(access_token: str, supabase_url: str) -> Optional[Dict]:
+    """Fetch authenticated user profile from Supabase."""
+    if not access_token or not supabase_url:
+        return None
+
+    try:
+        import httpx
+
+        headers = {'Authorization': f'Bearer {access_token}'}
+        supabase_key = resolve_supabase_key()
+        if supabase_key:
+            headers['apikey'] = supabase_key
+
+        response = httpx.get(
+            f"{supabase_url.rstrip('/')}/auth/v1/user",
+            headers=headers,
+            timeout=10
+        )
+        if response.status_code == 200:
+            user = response.json()
+            if isinstance(user, dict) and user.get('id'):
+                return user
+        return None
+    except Exception:
+        return None
+
+
+def extract_token_from_input(raw_input: str, expected_state: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+    """Extract access token from raw token or callback URL input."""
+    raw = (raw_input or '').strip()
+    if not raw:
+        return None, 'empty'
+
+    def _parse_state_token(params: Dict[str, list]) -> Tuple[Optional[str], Optional[str]]:
+        token = params.get('access_token', [None])[0]
+        state = params.get('state', [None])[0]
+        if expected_state and state and state != expected_state:
+            return None, 'state_mismatch'
+        return token, None
+
+    if raw.startswith(('http://', 'https://')):
+        parsed = urlparse(raw)
+        fragment_params = parse_qs(parsed.fragment)
+        query_params = parse_qs(parsed.query)
+
+        token, err = _parse_state_token(fragment_params)
+        if token or err:
+            return token, err
+
+        token, err = _parse_state_token(query_params)
+        if token or err:
+            return token, err
+
+        return None, 'missing_access_token'
+
+    if 'access_token=' in raw:
+        value = raw.split('#', 1)[1] if '#' in raw else raw
+        token, err = _parse_state_token(parse_qs(value))
+        if token or err:
+            return token, err
+        return None, 'missing_access_token'
+
+    return raw, None
 
 
 class AuthCallbackHandler(BaseHTTPRequestHandler):
     """HTTP handler for OAuth callback."""
     
     token_data = None
+    expected_state = None
     
     def log_message(self, format, *args):
         """Suppress HTTP logs."""
@@ -120,12 +192,23 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
             # Check if this is the token submission
             access_token = query_params.get('access_token', [None])[0]
             refresh_token = query_params.get('refresh_token', [None])[0]
-            
+            state = query_params.get('state', [None])[0]
+             
             if access_token:
+                expected_state = AuthCallbackHandler.expected_state
+                if expected_state and state != expected_state:
+                    AuthCallbackHandler.token_data = {'error': 'state_mismatch'}
+                    self.send_response(400)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(b'<html><body><h1>Authentication failed</h1><p>Invalid auth state.</p></body></html>')
+                    return
+
                 # Store the tokens
                 AuthCallbackHandler.token_data = {
                     'access_token': access_token,
-                    'refresh_token': refresh_token or ''
+                    'refresh_token': refresh_token or '',
+                    'state': state,
                 }
                 
                 # Send success page
@@ -174,7 +257,7 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
 </head>
 <body>
     <div class="container">
-        <div class="icon">✓</div>
+        <div class="icon">OK</div>
         <h1>Login Successful!</h1>
         <p>You can close this window and return to the terminal.</p>
         <p class="hint">DevOps Sentinel is now authenticated.</p>
@@ -233,10 +316,12 @@ class AuthCallbackHandler(BaseHTTPRequestHandler):
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         
+        const state = params.get('state') || '';
         if (accessToken) {
             // Redirect to callback with tokens as query params
-            window.location.href = '/callback?access_token=' + accessToken + 
-                '&refresh_token=' + (refreshToken || '');
+            window.location.href = '/callback?access_token=' + encodeURIComponent(accessToken) +
+                '&refresh_token=' + encodeURIComponent(refreshToken || '') +
+                '&state=' + encodeURIComponent(state);
         } else {
             document.body.innerHTML = '<div class="container"><p>Authentication failed. Please try again.</p></div>';
         }
@@ -256,37 +341,73 @@ def start_callback_server(port: int = 54321) -> HTTPServer:
     return server
 
 
-def browser_login(supabase_url: str, redirect_port: int = 54321) -> Optional[Dict]:
+def build_browser_auth_url(
+    supabase_url: str,
+    redirect_uri: str,
+    web_url: Optional[str] = None,
+    state: Optional[str] = None,
+    source: str = "cli",
+) -> str:
+    """Build browser auth URL for website-first CLI auth flow."""
+    selected_web_url = (web_url or os.getenv("SENTINEL_WEB_URL", "")).strip()
+
+    if selected_web_url:
+        base = selected_web_url.rstrip("/")
+        payload = {
+            "supabase_url": supabase_url,
+            "redirect_uri": redirect_uri,
+            "source": source,
+        }
+        if state:
+            payload["state"] = state
+        query = urlencode(payload)
+        return f"{base}/cli-auth?{query}"
+
+    # Fallback direct Supabase hosted auth
+    params = {
+        "provider": "email",
+        "redirect_to": redirect_uri,
+    }
+    if state:
+        params["state"] = state
+    return f"{supabase_url.rstrip('/')}/auth/v1/authorize?{urlencode(params)}"
+
+
+def browser_login(
+    supabase_url: str,
+    redirect_port: int = 54321,
+    web_url: Optional[str] = None
+) -> Optional[Dict]:
     """
     Perform browser-based login.
     
     Opens browser to Supabase auth page, waits for callback with tokens.
     """
-    # Generate state for CSRF protection
-    state = secrets.token_urlsafe(32)
-    
     # Callback URL
     redirect_uri = f'http://localhost:{redirect_port}/callback'
-    
-    # Build Supabase auth URL
-    # For magic link or OAuth providers
-    auth_url = f"{supabase_url}/auth/v1/authorize"
-    
-    # Actually, Supabase's hosted auth UI is at a different path
-    # Let's use the project's hosted auth page
-    project_ref = supabase_url.replace('https://', '').split('.')[0]
-    
-    # Construct the auth URL for the hosted auth UI
-    auth_url = f"https://{project_ref}.supabase.co/auth/v1/authorize?provider=email&redirect_to={redirect_uri}"
+    auth_state = secrets.token_urlsafe(24)
+    auth_url = build_browser_auth_url(
+        supabase_url,
+        redirect_uri,
+        web_url=web_url,
+        state=auth_state,
+        source="cli",
+    )
     
     # Start local server
-    server = start_callback_server(redirect_port)
+    try:
+        server = start_callback_server(redirect_port)
+    except OSError as e:
+        click.echo(click.style(f"\n  Failed to start local callback server on port {redirect_port}: {e}", fg='red'))
+        return None
     
     # Reset token data
     AuthCallbackHandler.token_data = None
+    AuthCallbackHandler.expected_state = auth_state
     
-    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Opening browser for authentication...")
-    click.echo(f"  If browser doesn't open, visit: {auth_url[:60]}...")
+    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Opening browser for login/signup...")
+    click.echo("  Complete auth in your browser, then return to this terminal.")
+    click.echo(f"  If browser doesn't open, visit: {auth_url}")
     
     # Open browser
     webbrowser.open(auth_url)
@@ -297,15 +418,22 @@ def browser_login(supabase_url: str, redirect_port: int = 54321) -> Optional[Dic
     server.timeout = 120  # 2 minute timeout
     start_time = time.time()
     
-    while AuthCallbackHandler.token_data is None:
-        server.handle_request()
-        if time.time() - start_time > 120:
-            click.echo(click.style("\n  Authentication timed out.", fg='red'))
-            return None
-    
-    server.server_close()
-    
-    return AuthCallbackHandler.token_data
+    try:
+        while AuthCallbackHandler.token_data is None:
+            server.handle_request()
+            if time.time() - start_time > 120:
+                click.echo(click.style("\n  Authentication timed out.", fg='red'))
+                return None
+    finally:
+        server.server_close()
+        AuthCallbackHandler.expected_state = None
+
+    token_data = AuthCallbackHandler.token_data or {}
+    if token_data.get('error') == 'state_mismatch':
+        click.echo(click.style("\n  Authentication failed: invalid auth state.", fg='red'))
+        return None
+
+    return token_data
 
 
 def token_login(token: str, supabase_url: str) -> Optional[Dict]:
@@ -315,30 +443,52 @@ def token_login(token: str, supabase_url: str) -> Optional[Dict]:
     For CI/CD environments where browser isn't available.
     """
     try:
-        import httpx
-        
-        # Verify token with Supabase
-        response = httpx.get(
-            f"{supabase_url}/auth/v1/user",
-            headers={
-                'Authorization': f'Bearer {token}',
-                'apikey': os.getenv('SUPABASE_ANON_KEY', '')
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            user = response.json()
+        user = fetch_user_profile(token, supabase_url)
+        if user:
             return {
                 'access_token': token,
                 'refresh_token': '',
                 'user': user
             }
-        else:
-            return None
+        return None
     except Exception as e:
         click.echo(f"  Error: {str(e)}")
         return None
+
+
+def device_login(supabase_url: str, web_url: Optional[str]) -> Optional[Dict]:
+    """
+    Headless-friendly login flow.
+
+    User opens the auth URL on any browser-enabled device, then pastes
+    an access token back into the terminal.
+    """
+    auth_state = secrets.token_urlsafe(24)
+    auth_url = build_browser_auth_url(
+        supabase_url=supabase_url,
+        redirect_uri="http://localhost/device",
+        web_url=web_url,
+        state=auth_state,
+        source="device",
+    )
+
+    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Device login mode")
+    click.echo("  1. Open this URL on any browser-enabled device:")
+    click.echo(f"     {auth_url}")
+    click.echo("  2. Complete signup/signin.")
+    click.echo("  3. After redirect, copy the full callback URL from browser address bar.")
+    click.echo("  4. Paste callback URL (or just access token) below.")
+
+    raw_input = click.prompt("  Callback URL or access token", hide_input=True).strip()
+    token, error = extract_token_from_input(raw_input, expected_state=auth_state)
+    if error == 'state_mismatch':
+        click.echo(click.style("  Invalid auth state. Please run `sentinel login --device` again.", fg='red'))
+        return None
+    if not token:
+        click.echo(click.style("  Could not extract access token from input.", fg='red'))
+        return None
+
+    return token_login(token, supabase_url)
 
 
 def require_auth(func):
@@ -355,8 +505,14 @@ def require_auth(func):
 
 @click.command()
 @click.option('--token', '-t', help='API token for non-interactive login (CI/CD)')
+@click.option('--device', is_flag=True, help='Headless login: paste token after signing in on browser')
 @click.option('--supabase-url', envvar='SUPABASE_URL', help='Supabase project URL')
-def login(token: Optional[str], supabase_url: Optional[str]):
+@click.option(
+    '--web-url',
+    envvar='SENTINEL_WEB_URL',
+    help='Website URL for browser auth flow (e.g. https://devops-sentinel.dev)'
+)
+def login(token: Optional[str], device: bool, supabase_url: Optional[str], web_url: Optional[str]):
     """
     Authenticate with DevOps Sentinel.
     
@@ -367,6 +523,7 @@ def login(token: Optional[str], supabase_url: Optional[str]):
         sentinel login
         
         sentinel login --token YOUR_API_TOKEN
+        sentinel login --device
     """
     # Check for existing login
     if is_logged_in():
@@ -387,33 +544,47 @@ def login(token: Optional[str], supabase_url: Optional[str]):
         click.echo(click.style("\nError: SUPABASE_URL not configured.", fg='red'))
         click.echo("  Run `sentinel init` first or set SUPABASE_URL environment variable.")
         return
+
+    if token and device:
+        click.echo(click.style("\nError: Use either --token or --device, not both.", fg='red'))
+        return
     
     # Perform login
     if token:
         # Token-based login for CI/CD
         click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Authenticating with API token...")
         result = token_login(token, supabase_url)
+    elif device:
+        result = device_login(supabase_url, web_url)
     else:
         # Browser-based login
-        result = browser_login(supabase_url)
+        result = browser_login(supabase_url, web_url=web_url)
     
     if result:
         # Get user info
-        user = result.get('user', {})
         access_token = result.get('access_token', '')
         refresh_token = result.get('refresh_token', '')
+        user = result.get('user') or fetch_user_profile(access_token, supabase_url)
+
+        if not access_token:
+            click.echo(click.style("\nX Authentication failed: missing access token.", fg='red'))
+            return
+        if not user or not user.get('id'):
+            click.echo(click.style("\nX Authentication failed: could not fetch user profile.", fg='red'))
+            click.echo("  Ensure SUPABASE_KEY or SUPABASE_ANON_KEY is configured and try again.")
+            return
         
         # Save credentials
         save_credentials(access_token, refresh_token, user)
         
         email = user.get('email', 'Unknown')
-        click.echo(f"\n{click.style('✓', fg='green')} Successfully logged in as {email}")
+        click.echo(f"\n{click.style('OK', fg='green')} Successfully logged in as {email}")
         click.echo(f"  Credentials saved to {CONFIG_DIR}")
         click.echo(f"\n  Next steps:")
         click.echo(f"    sentinel status    - Check configuration")
-        click.echo(f"    sentinel monitor   - Start monitoring")
+        click.echo(f"    sentinel monitor <url>   - Start monitoring")
     else:
-        click.echo(click.style("\n✗ Authentication failed.", fg='red'))
+        click.echo(click.style("\nX Authentication failed.", fg='red'))
 
 
 @click.command()
@@ -427,7 +598,7 @@ def logout():
     email = user.get('email', 'Unknown') if user else 'Unknown'
     
     clear_credentials()
-    click.echo(f"\n{click.style('✓', fg='green')} Logged out from {email}")
+    click.echo(f"\n{click.style('OK', fg='green')} Logged out from {email}")
     click.echo(f"  Credentials removed from {CONFIG_DIR}")
 
 
@@ -443,7 +614,7 @@ def whoami():
     creds = load_credentials()
     
     click.echo(f"\n{click.style('Current User', bold=True)}")
-    click.echo("─" * 40)
+    click.echo("-" * 40)
     click.echo(f"  Email: {user.get('email', 'Unknown')}")
     click.echo(f"  ID: {user.get('id', 'Unknown')[:8]}...")
     
@@ -454,3 +625,4 @@ def whoami():
     
     click.echo(f"\n  Config: {CONFIG_DIR}")
     click.echo()
+
