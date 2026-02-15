@@ -72,17 +72,19 @@ class BaselineMonitor:
             # Insufficient data for baseline
             return None
         
-        # Extract response times
+        # Extract and sort response times once for multiple percentile calculations
         response_times = [h['response_time_ms'] for h in health_checks]
+        sorted_response_times = sorted(response_times)
         
         # Calculate statistics
+        avg_response_time = statistics.mean(response_times)
         baseline = {
             'service_id': service_id,
-            'avg_response_time_ms': statistics.mean(response_times),
-            'p50_response_time_ms': self._percentile(response_times, 50),
-            'p95_response_time_ms': self._percentile(response_times, 95),
-            'p99_response_time_ms': self._percentile(response_times, 99),
-            'stddev_response_time_ms': statistics.stdev(response_times) if len(response_times) > 1 else 0,
+            'avg_response_time_ms': avg_response_time,
+            'p50_response_time_ms': self._percentile(sorted_response_times, 50),
+            'p95_response_time_ms': self._percentile(sorted_response_times, 95),
+            'p99_response_time_ms': self._percentile(sorted_response_times, 99),
+            'stddev_response_time_ms': statistics.stdev(response_times, xbar=avg_response_time) if len(response_times) > 1 else 0,
             'sample_size': len(health_checks),
             'calculated_at': datetime.utcnow(),
             'expires_at': datetime.utcnow() + timedelta(days=7)  # Re-calculate weekly
@@ -209,9 +211,20 @@ class BaselineMonitor:
         if should_recalculate:
             await self.calculate_baseline(service_id)
     
-    def _percentile(self, data: List[float], percentile: int) -> float:
-        """Calculate percentile from sorted data"""
-        sorted_data = sorted(data)
+    def _percentile(self, sorted_data: List[float], percentile: int) -> float:
+        """
+        Calculate percentile from already sorted data
+
+        Args:
+            sorted_data: List of floats, must be sorted in ascending order
+            percentile: Integer between 0 and 100
+
+        Returns:
+            Calculated percentile value
+        """
+        if not sorted_data:
+            return 0.0
+
         index = (len(sorted_data) - 1) * percentile / 100
         floor = int(index)
         ceil = floor + 1
