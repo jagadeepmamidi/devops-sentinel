@@ -17,7 +17,10 @@ class TestQuickHealthCheck:
     
     @pytest.fixture
     def checker(self):
-        return QuickHealthCheck()
+        checker = QuickHealthCheck()
+        # Mock _is_safe_hostname to allow tests to run regardless of environment DNS
+        checker._is_safe_hostname = AsyncMock(return_value=True)
+        return checker
     
     def test_init(self, checker):
         """Should initialize with default timeout"""
@@ -115,7 +118,9 @@ class TestSuggestions:
     
     @pytest.fixture
     def checker(self):
-        return QuickHealthCheck()
+        checker = QuickHealthCheck()
+        checker._is_safe_hostname = AsyncMock(return_value=True)
+        return checker
     
     def test_suggestions_for_server_error(self, checker):
         """Should suggest checking logs for 500"""
@@ -208,7 +213,9 @@ class TestBatchCheck:
     
     @pytest.fixture
     def checker(self):
-        return QuickHealthCheck()
+        checker = QuickHealthCheck()
+        checker._is_safe_hostname = AsyncMock(return_value=True)
+        return checker
     
     @pytest.mark.asyncio
     async def test_check_multiple_urls(self, checker):
