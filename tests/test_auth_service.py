@@ -16,8 +16,10 @@ class TestAuthService:
     """Tests for AuthService class"""
     
     @pytest.fixture
-    def auth_service(self):
+    def auth_service(self, monkeypatch):
         """Create auth service without Supabase (mock mode)"""
+        monkeypatch.setenv('ENVIRONMENT', 'test')
+        monkeypatch.setenv('SENTINEL_ALLOW_DEV_AUTH', 'true')
         return AuthService(None)
     
     @pytest.mark.asyncio
@@ -91,6 +93,16 @@ class TestAuthService:
         
         assert response['user']['email'] == "user@test.com"
         assert response['user']['name'] == "Test"
+
+    @pytest.mark.asyncio
+    async def test_missing_auth_configuration_fails_closed(self, monkeypatch):
+        monkeypatch.setenv('ENVIRONMENT', 'production')
+        monkeypatch.delenv('SENTINEL_ALLOW_DEV_AUTH', raising=False)
+
+        with pytest.raises(Exception) as exc_info:
+            await AuthService(None).sign_in('test@example.com', 'password123')
+
+        assert getattr(exc_info.value, 'status_code', None) == 503
 
 
 class TestAuthServiceWithSupabase:

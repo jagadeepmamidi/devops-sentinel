@@ -29,21 +29,48 @@ class LLMManager:
         return cls._instance
     
     def __init__(self):
-        if self._llm is None:
-            self._initialize_llm()
+        # Keep construction side-effect free. Configuration errors should be
+        # raised when an agent actually requests an LLM, not while importing
+        # the CLI or API modules.
+        pass
     
     def _initialize_llm(self) -> None:
-        """Initialize the LLM with OpenRouter configuration."""
-        self._llm = ChatOpenAI(
-            model=settings.default_model,
-            temperature=settings.llm_temperature,
-            api_key=settings.openrouter_api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
+        """Initialize the configured LLM provider."""
+        self._llm = self._build_llm(settings.default_model)
         
         if settings.enable_privacy_logging:
             print(f"[PRIVACY] LLM initialized with model: {settings.default_model}")
-            print(f"[PRIVACY] API calls routed through: openrouter.ai")
+            print(f"[PRIVACY] API calls routed through: {settings.llm_provider}")
+
+    @staticmethod
+    def _build_llm(model: str) -> ChatOpenAI:
+        """Build a provider-specific ChatOpenAI-compatible client."""
+        provider = settings.llm_provider.lower().strip()
+        if provider == "openrouter":
+            if not settings.openrouter_api_key:
+                raise ValueError("LLM_PROVIDER=openrouter requires OPENROUTER_API_KEY")
+            return ChatOpenAI(
+                model=model,
+                temperature=settings.llm_temperature,
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1",
+            )
+
+        if provider == "openai":
+            if not settings.openai_api_key:
+                raise ValueError("LLM_PROVIDER=openai requires OPENAI_API_KEY")
+            if "/" in model:
+                raise ValueError(
+                    "Direct OpenAI models must use names such as gpt-4o-mini; "
+                    "provider/model names are for OpenRouter"
+                )
+            return ChatOpenAI(
+                model=model,
+                temperature=settings.llm_temperature,
+                api_key=settings.openai_api_key,
+            )
+
+        raise ValueError("LLM_PROVIDER must be either 'openrouter' or 'openai'")
     
     @property
     def llm(self) -> ChatOpenAI:
@@ -67,12 +94,7 @@ class LLMManager:
             return self.llm
         
         # Create a new instance with the specified model
-        return ChatOpenAI(
-            model=model,
-            temperature=settings.llm_temperature,
-            api_key=settings.openrouter_api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
+        return self._build_llm(model)
     
     def switch_model(self, model: str) -> None:
         """
@@ -81,12 +103,7 @@ class LLMManager:
         Args:
             model: New model identifier (e.g., "google/gemini-pro")
         """
-        self._llm = ChatOpenAI(
-            model=model,
-            temperature=settings.llm_temperature,
-            api_key=settings.openrouter_api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
+        self._llm = self._build_llm(model)
         
         if settings.enable_privacy_logging:
             print(f"[PRIVACY] Model switched to: {model}")

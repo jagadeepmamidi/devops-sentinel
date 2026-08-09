@@ -75,6 +75,13 @@ class AuthService:
     
     def __init__(self, client: Optional[Client] = None):
         self.client = client or supabase
+
+    @staticmethod
+    def _dev_auth_enabled() -> bool:
+        return (
+            os.getenv('ENVIRONMENT', '').lower() in {'development', 'test'}
+            and os.getenv('SENTINEL_ALLOW_DEV_AUTH', '').lower() == 'true'
+        )
     
     async def sign_up(
         self,
@@ -89,7 +96,9 @@ class AuthService:
             User data and session tokens
         """
         if not self.client:
-            return self._mock_auth_response(email, name)
+            if self._dev_auth_enabled():
+                return self._mock_auth_response(email, name)
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             # Create auth user
@@ -139,7 +148,9 @@ class AuthService:
             Session tokens and user data
         """
         if not self.client:
-            return self._mock_auth_response(email)
+            if self._dev_auth_enabled():
+                return self._mock_auth_response(email)
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             result = self.client.auth.sign_in_with_password({
@@ -173,7 +184,9 @@ class AuthService:
     async def sign_out(self, access_token: str) -> bool:
         """Sign out and invalidate session"""
         if not self.client:
-            return True
+            if self._dev_auth_enabled():
+                return True
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             self.client.auth.sign_out()
@@ -189,7 +202,9 @@ class AuthService:
             New session tokens
         """
         if not self.client:
-            return self._mock_auth_response("user@example.com")
+            if self._dev_auth_enabled():
+                return self._mock_auth_response("user@example.com")
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             result = self.client.auth.refresh_session(refresh_token)
@@ -209,6 +224,8 @@ class AuthService:
     async def get_user(self, access_token: str) -> Optional[Dict]:
         """Get current authenticated user"""
         if not self.client:
+            if not self._dev_auth_enabled():
+                return None
             return {
                 'id': 'mock-user-1',
                 'email': 'user@example.com',
@@ -237,7 +254,9 @@ class AuthService:
     async def reset_password(self, email: str) -> bool:
         """Send password reset email"""
         if not self.client:
-            return True
+            if self._dev_auth_enabled():
+                return True
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             self.client.auth.reset_password_email(email)
@@ -253,7 +272,9 @@ class AuthService:
     ) -> bool:
         """Update user password"""
         if not self.client:
-            return True
+            if self._dev_auth_enabled():
+                return True
+            raise HTTPException(503, "Authentication service is not configured")
         
         try:
             self.client.auth.update_user({

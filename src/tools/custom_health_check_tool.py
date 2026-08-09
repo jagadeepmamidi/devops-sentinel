@@ -92,6 +92,18 @@ class CustomHealthCheckTool:
                 'is_healthy': False,
                 'error': 'No script provided'
             }
+
+        # Executing supplied scripts is powerful and potentially unsafe.
+        # Require an explicit deployment-level opt-in instead of enabling it
+        # accidentally through a runbook or API payload.
+        if os.getenv('SENTINEL_ALLOW_SCRIPT_CHECKS', '').lower() != 'true':
+            return {
+                'is_healthy': False,
+                'error': 'Script health checks are disabled; set SENTINEL_ALLOW_SCRIPT_CHECKS=true in a trusted environment'
+            }
+
+        if script_type not in {'python', 'bash'}:
+            return {'is_healthy': False, 'error': 'script_type must be python or bash'}
         
         start_time = datetime.utcnow()
         
@@ -124,14 +136,12 @@ class CustomHealthCheckTool:
                 )
             except asyncio.TimeoutError:
                 process.kill()
+                await process.wait()
                 return {
                     'is_healthy': False,
                     'error': f'Script execution timeout ({self.timeout}s)',
                     'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
                 }
-            
-            # Clean up temp file
-            os.unlink(script_path)
             
             exit_code = process.returncode
             output = stdout.decode('utf-8').strip()
@@ -160,6 +170,12 @@ class CustomHealthCheckTool:
                 'error': f'Script execution failed: {str(e)}',
                 'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
             }
+        finally:
+            if 'script_path' in locals():
+                try:
+                    os.unlink(script_path)
+                except FileNotFoundError:
+                    pass
     
     async def execute_tcp_check(self, config: Dict) -> Dict:
         """

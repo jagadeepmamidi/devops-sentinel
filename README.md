@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Autonomous SRE Agent System** - Reduce Mean Time to Detection (MTTD) from minutes to under 10 seconds.
+**SRE Agent Assistant** - Detect service failures quickly, coordinate investigation, and produce evidence-backed response plans.
 
 **[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
 
@@ -98,6 +98,7 @@ Create a `.env` file or run `sentinel init`:
 
 ```env
 SENTINEL_WEB_URL=https://devops-sentinel.dev
+LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=your_key_here
 DEFAULT_MODEL=google/gemini-pro
 SUPABASE_URL=https://your-project.supabase.co
@@ -105,6 +106,8 @@ SUPABASE_ANON_KEY=your_anon_key
 # SUPABASE_KEY=your_anon_key  # alias also supported
 SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 ```
+
+For direct OpenAI usage, set `LLM_PROVIDER=openai`, provide `OPENAI_API_KEY`, and use a model such as `gpt-4o-mini`.
 
 `sentinel login` opens `${SENTINEL_WEB_URL}/cli-auth` for signup/signin, then returns to the local CLI callback.
 
@@ -157,7 +160,17 @@ docker-compose logs -f sentinel
 2. On failure, **First Responder** sends a Slack alert
 3. **Investigator** analyzes logs, deployments, and database status
 4. **Strategist** creates a prioritized action plan
-5. AI generates a structured postmortem saved to Supabase
+5. The incident remains open until a human or approved remediation flow verifies recovery
+6. AI generates a structured postmortem after resolution
+
+Detection latency is measured only when the source provides both failure-start and detection timestamps. The polling monitor does not invent an MTTD value when the original failure time is unknown.
+
+## Safety controls
+
+- Destructive runbook steps require explicit approval by default.
+- Arbitrary shell commands are disabled unless `SENTINEL_ALLOW_ARBITRARY_COMMANDS=true` is explicitly configured in a trusted environment.
+- Script-based health checks are disabled unless `SENTINEL_ALLOW_SCRIPT_CHECKS=true` is explicitly configured.
+- Public URL checks validate every redirect hop to reduce SSRF risk.
 
 ## Privacy
 
@@ -202,4 +215,14 @@ CREATE TABLE health_checks (
 ## License
 
 MIT License
+
+## Release validation
+
+```bash
+python -m pip install -e ".[dev]"
+pytest
+rm -rf build dist devops_sentinel.egg-info
+python -m build --wheel
+python -m twine check dist/*
+```
 

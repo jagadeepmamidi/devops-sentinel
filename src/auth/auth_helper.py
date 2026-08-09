@@ -6,6 +6,7 @@ Simple auth helpers for user authentication
 """
 
 from datetime import datetime
+import os
 from typing import Dict, Optional
 from fastapi import Request, HTTPException, Depends
 
@@ -76,8 +77,12 @@ async def get_current_user(request: Request) -> Dict:
     
     token = auth_header.replace('Bearer ', '')
     
-    # For development: accept any token and return mock user
-    if token == 'dev-token':
+    # Development bypass is deliberately opt-in. Never enable it implicitly.
+    if (
+        token == 'dev-token'
+        and os.getenv('ENVIRONMENT', '').lower() in {'development', 'test'}
+        and os.getenv('SENTINEL_ALLOW_DEV_AUTH', '').lower() == 'true'
+    ):
         return {
             'id': 'dev-user-1',
             'email': 'dev@localhost',
@@ -85,14 +90,7 @@ async def get_current_user(request: Request) -> Dict:
             'tier': 'pro'
         }
     
-    # In production: verify with Supabase
-    # auth = AuthHelper(supabase_client)
-    # user = await auth.verify_token(token)
-    # if not user:
-    #     raise HTTPException(401, "Invalid token")
-    # return user
-    
-    raise HTTPException(401, "Invalid token")
+    raise HTTPException(401, "Invalid or expired token")
 
 
 async def get_optional_user(request: Request) -> Optional[Dict]:

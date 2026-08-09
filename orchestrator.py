@@ -125,8 +125,11 @@ class MonitoringOrchestrator:
             error_message=result.error_message
         )
         
-        # Calculate MTTD
-        incident.mttd_seconds = (datetime.utcnow() - incident.detected_at).total_seconds()
+        # The polling monitor knows when it observed the failure, but not when
+        # the failure originally began. Leave MTTD unset instead of reporting a
+        # misleading near-zero value. An external failure timestamp can be
+        # added later when the source provides one.
+        incident.mttd_seconds = None
         
         incident.add_event(
             event_type="detected",
@@ -155,6 +158,7 @@ class MonitoringOrchestrator:
         
         # Update incident status
         incident.status = IncidentStatus.ALERTING
+        incident.alerted_at = datetime.utcnow()
         incident.add_event("alerting", "Notifying team via Slack", "FirstResponder")
         
         await self._emit_event("incident_updated", {
@@ -190,28 +194,48 @@ class MonitoringOrchestrator:
             verbose=False
         )
         
-        result = crew.kickoff()
+        # CrewAI's kickoff is synchronous. Run it in a worker thread so one
+        # slow LLM call cannot block health checks for every other service.
+        result = await asyncio.to_thread(crew.kickoff)
         
         # Store results in incident
         incident.action_plan = str(result)
-        incident.status = IncidentStatus.RESOLVED
-        incident.resolved_at = datetime.utcnow()
-        incident.mttr_seconds = (incident.resolved_at - incident.detected_at).total_seconds()
-        
-        incident.add_event("resolved", "Action plan generated", "Strategist")
-        
-        # Emit completion event
-        await self._emit_event("incident_resolved", {
+        # Generating an action plan is not the same as restoring the service.
+        # Keep the incident open until a later verification step confirms
+        # recovery.
+        incident.status = IncidentStatus.INVESTIGATING
+        incident.add_event("action_proposed", "Action plan generated; awaiting remediation and verification", "Strategist")
+
+        await self._emit_event("incident_action_proposed", {
             "incident_id": str(incident.id),
-            "mttr_seconds": incident.mttr_seconds,
             "action_plan": incident.action_plan[:500]  # Truncate for event
         })
-        
         # Save to database
         from services.supabase_client import supabase_client
         if supabase_client.is_connected:
             supabase_client.create_incident(incident)
             supabase_client.update_incident(incident)
+
+    async def resolve_incident(self, incident_id: UUID, verification: HealthCheckResult) -> bool:
+        """Resolve an incident only after a successful recovery check."""
+        incident = self.active_incidents.get(incident_id)
+        if not incident:
+            return False
+        if not verification.is_healthy:
+            return False
+
+        incident.status = IncidentStatus.RESOLVED
+        incident.resolved_at = datetime.utcnow()
+        incident.mttr_seconds = (incident.resolved_at - incident.detected_at).total_seconds()
+        incident.add_event("resolved", "Recovery verified by a healthy service check", "MonitoringOrchestrator")
+        await self._emit_event("incident_resolved", {
+            "incident_id": str(incident.id),
+            "mttr_seconds": incident.mttr_seconds,
+        })
+        from services.supabase_client import supabase_client
+        if supabase_client.is_connected:
+            supabase_client.update_incident(incident)
+        return True
     
     async def run(self) -> None:
         """

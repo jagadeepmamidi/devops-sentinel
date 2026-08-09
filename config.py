@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         default="google/gemini-pro",
         description="Default LLM model to use via OpenRouter"
     )
+    llm_provider: str = Field(
+        default="openrouter",
+        validation_alias=AliasChoices("LLM_PROVIDER"),
+        description="LLM provider: openrouter or openai"
+    )
     llm_temperature: float = Field(
         default=0.0,
         ge=0.0,
