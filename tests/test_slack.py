@@ -11,7 +11,7 @@ import hashlib
 import hmac
 import time
 
-from src.integrations.slack import SlackIntegration
+from sentinel.integrations.slack import SlackIntegration
 
 
 class TestSlackIntegration:

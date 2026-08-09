@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timedelta
 
-from src.core.rate_limiter import RateLimiter, RateLimitExceeded
+from sentinel.core.rate_limiter import RateLimiter, RateLimitExceeded
 
 
 class TestRateLimiter:

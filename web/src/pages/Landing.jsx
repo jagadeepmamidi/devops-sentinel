@@ -5,6 +5,7 @@ import SiteFooter from '../components/site/SiteFooter'
 import './Landing.css'
 
 const NAV_LINKS = [
+  { to: '/operator/services', label: 'Operator' },
   { to: '/cli-auth', label: 'CLI Login' },
   { to: '/docs', label: 'Docs' },
   {
@@ -41,14 +42,24 @@ export default function Landing() {
       <main id="landing-main" className="site-main site-container">
         <section className="landing-hero-grid">
           <div className="site-card landing-hero-card">
-            <p className="site-label">CLI-first incident response</p>
+            <div className="landing-eyebrow">
+              <span className="landing-eyebrow-dot" aria-hidden="true" />
+              <span>CLI-first incident response</span>
+              <span className="landing-eyebrow-status">v0.3 now available</span>
+            </div>
             <h1 className="site-title">
-              Monitor, detect, and resolve incidents from your terminal
+              See the signal. <span>Fix the incident.</span>
             </h1>
             <p className="site-text">
-              Install from PyPI, authenticate once in browser, then return to your terminal and
-              start monitoring production services in minutes.
+              DevOps Sentinel gives your team one calm, actionable view of production health —
+              from the first failing check to the final postmortem.
             </p>
+
+            <div className="landing-proof-row" aria-label="Product capabilities">
+              <span><strong>94ms</strong> sample check</span>
+              <span><strong>24/7</strong> service coverage</span>
+              <span><strong>1 CLI</strong> to operate</span>
+            </div>
 
             <div className="landing-install-pill" role="group" aria-label="Install command">
               <span className="dollar">$</span>
@@ -67,6 +78,7 @@ export default function Landing() {
             </div>
 
             <div className="site-btn-row">
+              <Link to="/operator/services" className="site-btn secondary">Open Operator Console</Link>
               <Link to="/cli-auth" className="site-btn primary">Start CLI Login</Link>
               <Link to="/docs" className="site-btn secondary">Read Docs</Link>
             </div>
@@ -91,6 +103,24 @@ $ sentinel monitor https://api.example.com/health
 [INFO] run: sentinel incidents list`}
             </pre>
           </div>
+        </section>
+
+        <section className="landing-feature-grid" aria-label="What Sentinel does">
+          <article className="landing-feature-card">
+            <span className="landing-feature-index">01</span>
+            <h2>Know what changed</h2>
+            <p className="site-text">Correlate health signals with deployments before the alert becomes a guessing game.</p>
+          </article>
+          <article className="landing-feature-card">
+            <span className="landing-feature-index">02</span>
+            <h2>Move with context</h2>
+            <p className="site-text">Get incident summaries, likely causes, and the next best action in one place.</p>
+          </article>
+          <article className="landing-feature-card">
+            <span className="landing-feature-index">03</span>
+            <h2>Learn after recovery</h2>
+            <p className="site-text">Turn every outage into a searchable postmortem your team can actually use.</p>
+          </article>
         </section>
 
         <section className="landing-steps-grid" aria-label="Getting started steps">

@@ -7,7 +7,12 @@ Shared fixtures and configuration for tests
 
 import pytest
 import asyncio
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 @pytest.fixture(scope="session")
@@ -142,6 +147,7 @@ def sample_deployment():
 # Test markers
 def pytest_configure(config):
     """Register custom markers"""
+    config.addinivalue_line("markers", "asyncio: run test in an event loop")
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
@@ -151,3 +157,23 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "requires_api_key: marks tests that require API keys"
     )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_pyfunc_call(pyfuncitem):
+    """Run asyncio-marked tests without requiring pytest-asyncio."""
+    if "asyncio" not in pyfuncitem.keywords:
+        return None
+
+    testargs = {name: pyfuncitem.funcargs[name] for name in pyfuncitem._fixtureinfo.argnames}
+    loop = pyfuncitem.funcargs.get("event_loop")
+    if loop is None:
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        try:
+            loop.run_until_complete(pyfuncitem.obj(**testargs))
+        finally:
+            loop.close()
+        return True
+
+    loop.run_until_complete(pyfuncitem.obj(**testargs))
+    return True

@@ -10,6 +10,8 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
+import httpx
+
 from models import (
     ServiceConfig, 
     HealthCheckResult, 
@@ -71,22 +73,21 @@ class MonitoringOrchestrator:
         Returns:
             HealthCheckResult with status and timing.
         """
-        from tools import health_check_tool
-        
         start_time = time.time()
-        result_str = await health_check_tool._arun(service.url)
-        response_time = (time.time() - start_time) * 1000
-        
-        # Parse result
-        is_healthy = "FAILED" not in result_str and "200" in result_str
+        result_str = ""
         status_code = None
-        
-        if "Status Code:" in result_str:
-            try:
-                code_str = result_str.split("Status Code:")[1].split("\n")[0].strip()
-                status_code = int(code_str)
-            except (ValueError, IndexError):
-                pass
+
+        try:
+            async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
+                response = await client.get(service.url)
+                status_code = response.status_code
+                result_str = f"HTTP {status_code}"
+                is_healthy = status_code == 200
+        except Exception as exc:
+            result_str = str(exc)
+            is_healthy = False
+
+        response_time = (time.time() - start_time) * 1000
         
         result = HealthCheckResult(
             service_id=service.id,
@@ -148,70 +149,36 @@ class MonitoringOrchestrator:
         await self._trigger_agent_response(incident)
     
     async def _trigger_agent_response(self, incident: Incident) -> None:
-        """Trigger the agent crew to respond to an incident."""
-        from crewai import Crew, Process
-        from agents import SentinelAgents
-        from tasks import SentinelTasks
-        
-        # Update incident status
+        """Create a lightweight action plan without blocking on external agents."""
         incident.status = IncidentStatus.ALERTING
-        incident.add_event("alerting", "Notifying team via Slack", "FirstResponder")
-        
+        incident.add_event("alerting", "Failure detected; notifying configured responders", "MonitoringOrchestrator")
+
         await self._emit_event("incident_updated", {
             "incident_id": str(incident.id),
             "status": incident.status.value
         })
-        
-        # Initialize agents
-        agents = SentinelAgents()
-        tasks = SentinelTasks()
-        
-        # Create the crew
-        watcher = agents.watcher_agent()
-        responder = agents.first_responder_agent()
-        investigator = agents.investigator_agent()
-        strategist = agents.strategist_agent()
-        
-        # Create tasks
-        monitor_task = tasks.monitor_task(watcher, incident.service_url)
-        alert_task = tasks.alert_task(responder, monitor_task)
-        investigate_task = tasks.investigate_task(investigator, monitor_task)
-        strategize_task = tasks.strategize_task(strategist, investigate_task)
-        
-        # Update status to investigating
+
         incident.status = IncidentStatus.INVESTIGATING
-        incident.add_event("investigating", "Agents analyzing root cause", "Investigator")
-        
-        # Execute crew
-        crew = Crew(
-            agents=[watcher, responder, investigator, strategist],
-            tasks=[monitor_task, alert_task, investigate_task, strategize_task],
-            process=Process.sequential,
-            verbose=False
+        incident.add_event("investigating", "Collecting basic remediation context", "MonitoringOrchestrator")
+
+        incident.action_plan = "\n".join(
+            [
+                f"Investigate service: {incident.service_name}",
+                f"Check endpoint: {incident.service_url}",
+                "Review recent deployments and infrastructure changes.",
+                "Inspect server logs and dependency health.",
+                "Resolve the user-facing failure before generating a postmortem.",
+            ]
         )
+        incident.add_event("action_plan", "Generated a lightweight remediation plan", "MonitoringOrchestrator")
         
-        result = crew.kickoff()
-        
-        # Store results in incident
-        incident.action_plan = str(result)
-        incident.status = IncidentStatus.RESOLVED
-        incident.resolved_at = datetime.utcnow()
-        incident.mttr_seconds = (incident.resolved_at - incident.detected_at).total_seconds()
-        
-        incident.add_event("resolved", "Action plan generated", "Strategist")
-        
-        # Emit completion event
-        await self._emit_event("incident_resolved", {
+        await self._emit_event("incident_updated", {
             "incident_id": str(incident.id),
-            "mttr_seconds": incident.mttr_seconds,
+            "status": incident.status.value,
             "action_plan": incident.action_plan[:500]  # Truncate for event
         })
         
-        # Save to database
-        from services.supabase_client import supabase_client
-        if supabase_client.is_connected:
-            supabase_client.create_incident(incident)
-            supabase_client.update_incident(incident)
+        # Persistence is handled by the shared CLI/API database layer in the MVP path.
     
     async def run(self) -> None:
         """

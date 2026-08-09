@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 
-from src.auth.auth_service import AuthService, get_current_user, get_optional_user
+from sentinel.auth.auth_service import AuthService, get_current_user, get_optional_user
 
 
 class TestAuthService:
@@ -141,7 +141,7 @@ class TestAuthServiceWithSupabase:
         mock.insert.return_value = mock
         mock.eq.return_value = mock
         mock.execute = MagicMock(return_value=MagicMock(data=[
-            {'id': 'user-1', 'name': 'Test', 'subscription_tier': 'free'}
+            {'id': 'user-1', 'display_name': 'Test', 'subscription_tier': 'free'}
         ]))
         
         return mock

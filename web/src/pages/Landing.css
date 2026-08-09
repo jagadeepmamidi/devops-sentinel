@@ -1,5 +1,17 @@
 .landing-page {
-  background: #000;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(101, 154, 255, 0.15), transparent 28rem),
+    radial-gradient(circle at 92% 20%, rgba(255, 178, 92, 0.08), transparent 22rem),
+    #070a0f;
+}
+
+.landing-page .site-main {
+  padding-top: 28px;
+}
+
+.landing-page .site-card {
+  background: rgba(17, 25, 36, 0.78);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.16);
 }
 
 .landing-hero-grid {
@@ -10,7 +22,81 @@
 }
 
 .landing-hero-card {
-  padding: 20px;
+  padding: clamp(24px, 4vw, 48px);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-hero-card::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  right: -70px;
+  top: -70px;
+  border: 1px solid rgba(143, 195, 251, 0.22);
+  border-radius: 50%;
+  box-shadow: 0 0 0 18px rgba(143, 195, 251, 0.035), 0 0 0 36px rgba(143, 195, 251, 0.025);
+  pointer-events: none;
+}
+
+.landing-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a9c8e9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.landing-eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #83d9ad;
+  box-shadow: 0 0 0 4px rgba(131, 217, 173, 0.12);
+}
+
+.landing-eyebrow-status {
+  margin-left: 6px;
+  padding-left: 14px;
+  border-left: 1px solid var(--site-border);
+  color: #7d96b2;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.landing-hero-card .site-title {
+  max-width: 680px;
+  font-size: clamp(2.4rem, 6vw, 5.2rem);
+  letter-spacing: -0.055em;
+  margin-top: 18px;
+}
+
+.landing-hero-card .site-title span {
+  color: var(--site-accent);
+}
+
+.landing-hero-card .site-text {
+  max-width: 620px;
+  font-size: 1.05rem;
+}
+
+.landing-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 22px;
+  color: #839ab3;
+  font-size: 0.78rem;
+}
+
+.landing-proof-row strong {
+  color: #e8f3ff;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .landing-install-pill {
@@ -54,6 +140,35 @@
   overflow: hidden;
   background: #05080d !important;
   border-color: rgba(166, 189, 214, 0.3);
+}
+
+.landing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.landing-feature-card {
+  padding: 18px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius-md);
+  background: rgba(13, 20, 29, 0.72);
+}
+
+.landing-feature-index {
+  color: #7ea7d1;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.landing-feature-card h2 {
+  margin: 14px 0 6px;
+  font-size: 1rem;
+}
+
+.landing-feature-card .site-text {
+  font-size: 0.86rem;
 }
 
 .landing-terminal-header {
@@ -139,6 +254,7 @@
 
 @media (max-width: 980px) {
   .landing-hero-grid,
+  .landing-feature-grid,
   .landing-steps-grid,
   .landing-support-grid {
     grid-template-columns: 1fr;
@@ -160,5 +276,22 @@
 
   .landing-install-pill code {
     font-size: 0.74rem;
+  }
+
+  .landing-eyebrow {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .landing-eyebrow-status {
+    width: 100%;
+    margin-left: 15px;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .landing-proof-row {
+    display: grid;
+    gap: 6px;
   }
 }

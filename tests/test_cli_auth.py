@@ -18,7 +18,7 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.cli.auth import (
+from sentinel.cli.auth import (
     ensure_config_dir,
     save_credentials,
     load_credentials,
@@ -39,14 +39,14 @@ class TestCredentialStorage:
     @pytest.fixture
     def temp_config_dir(self, tmp_path):
         """Use temporary directory for config."""
-        with patch('src.cli.auth.CONFIG_DIR', tmp_path):
-            with patch('src.cli.auth.CREDENTIALS_FILE', tmp_path / 'credentials.json'):
+        with patch('sentinel.cli.auth.CONFIG_DIR', tmp_path):
+            with patch('sentinel.cli.auth.CREDENTIALS_FILE', tmp_path / 'credentials.json'):
                 yield tmp_path
     
     def test_save_and_load_credentials(self, temp_config_dir):
         """Test credentials are saved and loaded correctly."""
-        with patch('src.cli.auth.CONFIG_DIR', temp_config_dir):
-            with patch('src.cli.auth.CREDENTIALS_FILE', temp_config_dir / 'credentials.json'):
+        with patch('sentinel.cli.auth.CONFIG_DIR', temp_config_dir):
+            with patch('sentinel.cli.auth.CREDENTIALS_FILE', temp_config_dir / 'credentials.json'):
                 # Save credentials
                 test_user = {'email': 'test@example.com', 'id': 'user-123'}
                 save_credentials('access-token-123', 'refresh-token-456', test_user)
@@ -62,8 +62,8 @@ class TestCredentialStorage:
         """Test credentials are cleared properly."""
         creds_file = temp_config_dir / 'credentials.json'
         
-        with patch('src.cli.auth.CONFIG_DIR', temp_config_dir):
-            with patch('src.cli.auth.CREDENTIALS_FILE', creds_file):
+        with patch('sentinel.cli.auth.CONFIG_DIR', temp_config_dir):
+            with patch('sentinel.cli.auth.CREDENTIALS_FILE', creds_file):
                 # Save then clear
                 save_credentials('token', 'refresh', {'email': 'test@example.com'})
                 assert creds_file.exists()
@@ -73,7 +73,7 @@ class TestCredentialStorage:
     
     def test_load_returns_none_when_no_creds(self, temp_config_dir):
         """Test load_credentials returns None when no file exists."""
-        with patch('src.cli.auth.CREDENTIALS_FILE', temp_config_dir / 'nonexistent.json'):
+        with patch('sentinel.cli.auth.CREDENTIALS_FILE', temp_config_dir / 'nonexistent.json'):
             assert load_credentials() is None
 
 
@@ -96,18 +96,18 @@ class TestLoginState:
     def test_is_logged_in_true(self, logged_in_state):
         """Test is_logged_in returns True when credentials exist."""
         tmp_path, creds_file = logged_in_state
-        with patch('src.cli.auth.CREDENTIALS_FILE', creds_file):
+        with patch('sentinel.cli.auth.CREDENTIALS_FILE', creds_file):
             assert is_logged_in() is True
     
     def test_is_logged_in_false(self, tmp_path):
         """Test is_logged_in returns False when no credentials."""
-        with patch('src.cli.auth.CREDENTIALS_FILE', tmp_path / 'nope.json'):
+        with patch('sentinel.cli.auth.CREDENTIALS_FILE', tmp_path / 'nope.json'):
             assert is_logged_in() is False
     
     def test_get_current_user(self, logged_in_state):
         """Test get_current_user returns user dict."""
         tmp_path, creds_file = logged_in_state
-        with patch('src.cli.auth.CREDENTIALS_FILE', creds_file):
+        with patch('sentinel.cli.auth.CREDENTIALS_FILE', creds_file):
             user = get_current_user()
             assert user is not None
             assert user['email'] == 'user@test.com'
@@ -115,7 +115,7 @@ class TestLoginState:
     def test_get_access_token(self, logged_in_state):
         """Test get_access_token returns token string."""
         tmp_path, creds_file = logged_in_state
-        with patch('src.cli.auth.CREDENTIALS_FILE', creds_file):
+        with patch('sentinel.cli.auth.CREDENTIALS_FILE', creds_file):
             token = get_access_token()
             assert token == 'test-token'
 
@@ -126,7 +126,7 @@ class TestConfigDirectory:
     def test_ensure_config_dir_creates_directory(self, tmp_path):
         """Test config directory is created if missing."""
         new_dir = tmp_path / 'new_sentinel_config'
-        with patch('src.cli.auth.CONFIG_DIR', new_dir):
+        with patch('sentinel.cli.auth.CONFIG_DIR', new_dir):
             ensure_config_dir()
             assert new_dir.exists()
             assert new_dir.is_dir()
@@ -171,3 +171,4 @@ class TestSupabaseKeyAlias:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
