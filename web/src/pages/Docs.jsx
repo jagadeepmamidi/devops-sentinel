@@ -5,6 +5,7 @@ import SiteFooter from '../components/site/SiteFooter'
 import './Docs.css'
 
 const NAV_LINKS = [
+  { to: '/operator/services', label: 'Operator' },
   { to: '/cli-auth', label: 'CLI Auth' },
   { to: '/feedback', label: 'Feedback', className: 'outline' },
 ]
@@ -97,16 +98,16 @@ const DOC_SECTIONS = {
         <p>Use the REST API when integrating monitoring into your automation pipelines.</p>
         <div className="site-code-block">
           curl -H "Authorization: Bearer YOUR_API_KEY" \
-          {'\n'}  https://api.devops-sentinel.dev/v1/services
+          {'\n'}  https://api.devops-sentinel.dev/api/services
         </div>
         <div className="docs-endpoints">
           <div className="site-card soft docs-endpoint">
             <span className="docs-method get">GET</span>
-            <span>/v1/services</span>
+            <span>/api/services</span>
           </div>
           <div className="site-card soft docs-endpoint">
             <span className="docs-method post">POST</span>
-            <span>/v1/incidents</span>
+            <span>/api/postmortems/generate</span>
           </div>
         </div>
       </>

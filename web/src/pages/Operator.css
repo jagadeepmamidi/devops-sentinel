@@ -1,0 +1,153 @@
+.operator-main {
+  padding-top: 12px;
+  padding-bottom: 36px;
+}
+
+.operator-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.operator-panel {
+  padding: 20px;
+}
+
+.operator-panel h2,
+.operator-panel h3 {
+  margin-top: 0;
+}
+
+.operator-token-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.operator-token-form input,
+.operator-generate-form textarea {
+  width: 100%;
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius-sm);
+  background: #0d1620;
+  color: var(--site-text);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.operator-note,
+.operator-error,
+.operator-empty {
+  margin-top: 12px;
+  font-size: 0.92rem;
+}
+
+.operator-error {
+  color: #ffb3b3;
+}
+
+.operator-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.operator-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.operator-table th,
+.operator-table td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--site-border);
+  vertical-align: top;
+}
+
+.operator-table th {
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.operator-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.operator-status.healthy,
+.operator-status.resolved {
+  background: rgba(70, 160, 110, 0.2);
+  color: #a9f1c2;
+}
+
+.operator-status.degraded,
+.operator-status.detecting,
+.operator-status.investigating,
+.operator-status.alerting {
+  background: rgba(210, 154, 55, 0.18);
+  color: #ffd996;
+}
+
+.operator-status.down,
+.operator-status.critical {
+  background: rgba(220, 76, 76, 0.2);
+  color: #ffb8b8;
+}
+
+.operator-link {
+  color: var(--site-accent);
+  text-decoration: none;
+}
+
+.operator-link:hover {
+  text-decoration: underline;
+}
+
+.operator-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.operator-detail-card {
+  padding: 14px;
+}
+
+.operator-detail-card span {
+  display: block;
+  color: var(--site-muted);
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.operator-generate-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.operator-markdown {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 720px) {
+  .operator-token-form {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

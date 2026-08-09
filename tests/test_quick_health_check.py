@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
 
-from src.api.quick_health_check import QuickHealthCheck
+from sentinel.api.quick_health_check import QuickHealthCheck
 
 
 class TestQuickHealthCheck:

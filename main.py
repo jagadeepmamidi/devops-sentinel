@@ -1,6 +1,6 @@
 """Convenience entrypoint for local execution."""
 
-from src.cli.main import cli
+from sentinel.cli.main import cli
 
 
 if __name__ == "__main__":

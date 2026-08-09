@@ -316,7 +316,7 @@ def postmortem():
 @click.pass_context
 def postmortem_generate(ctx, incident_id, output):
     """Generate an AI-powered postmortem for an incident."""
-    
+
     # Get database connection
     db = get_db()
     if not db.connected:

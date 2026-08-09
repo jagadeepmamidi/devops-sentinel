@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-sentinel"
-version = "0.2.0"
+version = "0.3.0"
 description = "Autonomous SRE agents that watch your services, detect anomalies, and generate blameless postmortems"
 readme = "README.md"
 license = "MIT"
@@ -61,6 +61,9 @@ ai = [
     "openai>=1.0",
     "anthropic>=0.18",
 ]
+mcp = [
+    "mcp>=1.2",
+]
 all = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
@@ -69,10 +72,12 @@ all = [
     "email-validator>=2.0",
     "openai>=1.0",
     "anthropic>=0.18",
+    "mcp>=1.2",
 ]
 
 [project.scripts]
-sentinel = "src.cli.main:cli"
+sentinel = "sentinel.cli.main:cli"
+devops-sentinel-mcp = "sentinel.mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/jagadeepmamidi/devops-sentinel"
@@ -81,7 +86,7 @@ Repository = "https://github.com/jagadeepmamidi/devops-sentinel"
 Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
 
 [tool.setuptools]
-packages = ["src", "src.cli", "src.core", "src.api", "src.auth", "src.integrations", "src.ml", "src.notifications", "src.setup", "src.tools"]
+packages = ["sentinel", "sentinel.cli", "sentinel.core", "sentinel.api", "sentinel.auth", "sentinel.integrations", "sentinel.ml", "sentinel.notifications", "sentinel.setup", "sentinel.tools"]
 py-modules = ["agents", "api_server", "config", "main", "models", "orchestrator", "server", "tasks"]
 
 [tool.setuptools.package-data]
@@ -92,9 +97,9 @@ py-modules = ["agents", "api_server", "config", "main", "models", "orchestrator"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
 addopts = "-v --tb=short"
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+

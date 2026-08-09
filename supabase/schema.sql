@@ -21,6 +21,7 @@ CREATE TABLE profiles (
     email TEXT UNIQUE,
     display_name TEXT,
     avatar_url TEXT,
+    subscription_tier TEXT DEFAULT 'free',
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -71,6 +72,7 @@ CREATE TABLE services (
     check_interval INTEGER DEFAULT 10 CHECK (check_interval > 0),
     is_active BOOLEAN DEFAULT true,
     last_status TEXT DEFAULT 'unknown',
+    last_response_time_ms FLOAT,
     last_checked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
@@ -107,6 +109,24 @@ CREATE INDEX idx_incidents_detected_at ON incidents(detected_at DESC);
 CREATE INDEX idx_incidents_status ON incidents(status);
 
 -- =============================================================================
+-- INCIDENT EVENTS
+-- =============================================================================
+
+CREATE TABLE incident_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE NOT NULL,
+    service_id UUID REFERENCES services(id) ON DELETE CASCADE NOT NULL,
+    event_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_incident_events_incident_created_at ON incident_events(incident_id, created_at DESC);
+CREATE INDEX idx_incident_events_user_created_at ON incident_events(user_id, created_at DESC);
+
+-- =============================================================================
 -- HEALTH CHECKS
 -- =============================================================================
 
@@ -116,6 +136,7 @@ CREATE TABLE health_checks (
     status_code INTEGER,
     response_time_ms FLOAT,
     is_healthy BOOLEAN,
+    error_message TEXT,
     checked_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -130,6 +151,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE incident_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE health_checks ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: users can only see/edit their own
@@ -174,6 +196,13 @@ CREATE POLICY "Users can create incidents" ON incidents
 
 CREATE POLICY "Users can update own incidents" ON incidents
     FOR UPDATE USING (auth.uid() = user_id);
+
+-- Incident events: users can view and create their own incident history
+CREATE POLICY "Users can view own incident events" ON incident_events
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own incident events" ON incident_events
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Health checks: linked to service ownership
 CREATE POLICY "Users can view health checks for own services" ON health_checks

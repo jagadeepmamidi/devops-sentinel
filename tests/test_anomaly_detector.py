@@ -7,7 +7,7 @@ Tests statistical anomaly detection
 
 import pytest
 import math
-from src.core.anomaly_detector import AnomalyDetector, StreamingAnomalyDetector
+from sentinel.core.anomaly_detector import AnomalyDetector, StreamingAnomalyDetector
 
 
 class TestAnomalyDetector:

@@ -4,34 +4,35 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**SRE Agent Assistant** - Detect service failures quickly, coordinate investigation, and produce evidence-backed response plans.
+**CLI-first SRE agent assistant** for service health checks, incident tracking, evidence-backed response plans, and postmortem workflows.
 
 **[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
 
 ## Features
 
 - **Continuous Monitoring** - Health checks at configurable intervals
-- **Multi-Agent Analysis** - CrewAI-powered investigation and root cause analysis
-- **AI Postmortems** - Automated incident documentation
-- **Incident Memory** - Learn from past incidents with similarity matching
-- **Real-time Dashboard** - WebSocket-powered live updates
+- **Canonical API** - One FastAPI backend for CLI, API, and operator workflows
+- **AI Postmortems** - Optional post-incident documentation with a fallback generator
+- **Incident Tracking** - Services, incidents, and health checks share one schema contract
+- **Incident Event History** - Detect, resolve, and postmortem events are stored for auditability
+- **Operator Console** - Lightweight web UI for services and incidents
 - **CLI Interface** - Terminal-first developer experience
 - **Privacy-First** - No telemetry, transparent data handling
+
+Future work and cleanup policy live in `FUTURE_ROADMAP_AND_CLEANUP.md`. Current operating details live in `MVP_RECOVERY_SOP.md`.
 
 ## Architecture
 
 ```text
-+------------------- DevOps Sentinel -------------------+
-| CLI (Click) | API (FastAPI) | Dashboard (WebSocket)   |
-+-------------------------------------------------------+
-|               Monitoring Orchestrator                 |
-+-------------------------------------------------------+
-| Watcher | Triage | Investigator | Strategist          |
-+-------------------------------------------------------+
-| Health checks | Slack alerts | Log/DB analysis       |
-+-------------------------------------------------------+
-| Supabase (Persistence) | OpenRouter/OpenAI | Slack   |
-+-------------------------------------------------------+
++--------------------- DevOps Sentinel ----------------------+
+| CLI (`sentinel`) | Canonical API | Operator Console        |
++------------------------------------------------------------+
+| Shared monitoring logic | Shared Supabase data layer       |
++------------------------------------------------------------+
+| Services | Incidents | Health checks | Postmortems          |
++------------------------------------------------------------+
+| Supabase (auth + persistence) | Optional AI | Notifications |
++------------------------------------------------------------+
 ```
 
 ## Installation
@@ -61,40 +62,41 @@ pip install -e .
 ```bash
 # Login to DevOps Sentinel
 sentinel login
-# Headless environments
-sentinel login --device
 
-# Check a service health
-sentinel health https://api.example.com
+# Add a service
+sentinel services add my-api https://api.example.com/health
+
+# List services
+sentinel services list
 
 # Monitor a service continuously
 sentinel monitor https://api.example.com/health
 
-# View your projects
-sentinel projects list
+# List incidents
+sentinel incidents list
+
 # Validate environment and auth
 sentinel doctor
-# Guided onboarding
-sentinel setup
 ```
 
 ## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `sentinel init` | Interactive configuration setup |
+| `sentinel login` | Authenticate the CLI |
 | `sentinel monitor <url>` | Monitor a service URL |
-| `sentinel status` | Show configuration and API/provider connectivity |
+| `sentinel services list` | List registered services |
+| `sentinel services add <name> <url>` | Register a monitored service |
+| `sentinel services delete <service_id>` | Delete a monitored service |
+| `sentinel services check <service_id>` | Run a one-off service check |
 | `sentinel incidents list` | List recent incidents |
 | `sentinel postmortem generate <id>` | Generate incident postmortem |
 | `sentinel serve` | Start API server |
-| `sentinel health <url>` | Run one-shot health check |
 | `sentinel doctor` | Run environment diagnostics |
-| `sentinel setup` | Guided first-run onboarding |
 
 ## Configuration
 
-Create a `.env` file or run `sentinel init`:
+Create a `.env` file:
 
 ```env
 SENTINEL_WEB_URL=https://devops-sentinel.dev
@@ -125,9 +127,11 @@ pip install devops-sentinel
 
 ```bash
 # 1) Sanity checks
-python -m py_compile main.py config.py api_server.py src\cli\main.py src\cli\auth.py
+python -m py_compile main.py config.py api_server.py sentinel\cli\main.py sentinel\cli\auth.py sentinel\api\app.py
 python main.py --help
 python main.py --json doctor
+pytest -q -o addopts=""
+cd web && npm run build
 
 # 2) Build package
 python -m pip install --upgrade build twine
@@ -156,12 +160,18 @@ docker-compose logs -f sentinel
 
 ## How It Works
 
-1. **Watcher Agent** continuously monitors service health endpoints
-2. On failure, **First Responder** sends a Slack alert
-3. **Investigator** analyzes logs, deployments, and database status
-4. **Strategist** creates a prioritized action plan
-5. The incident remains open until a human or approved remediation flow verifies recovery
-6. AI generates a structured postmortem after resolution
+1. The CLI or worker runs health checks against a service endpoint
+2. Results are written to Supabase health-check history
+3. Services are updated with the latest status and timing data
+4. Failure and recovery thresholds decide when incidents open or resolve
+5. Incident events are stored for timeline and audit history
+6. Postmortems are generated later through the API or CLI
+7. **Watcher Agent** continuously monitors service health endpoints
+8. On failure, **First Responder** sends a Slack alert
+9. **Investigator** analyzes logs, deployments, and database status
+10. **Strategist** creates a prioritized action plan
+11. The incident remains open until a human or approved remediation flow verifies recovery
+12. AI generates a structured postmortem after resolution
 
 Detection latency is measured only when the source provides both failure-start and detection timestamps. The polling monitor does not invent an MTTD value when the original failure time is unknown.
 
@@ -180,6 +190,8 @@ Detection latency is measured only when the source provides both failure-start a
 - OpenRouter calls only contain health check context (no PII)
 
 ## Supabase Schema
+
+This README shows a simplified contract. Use `supabase/schema.sql` and `migrations/008_mvp_contract_alignment.sql` as the source of truth.
 
 ```sql
 -- Run these in your Supabase SQL editor
