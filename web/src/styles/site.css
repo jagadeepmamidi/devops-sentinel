@@ -1,13 +1,13 @@
 :root {
-  --site-bg: #0a0f14;
-  --site-bg-soft: #0f1620;
-  --site-surface: #131d28;
-  --site-surface-soft: #101923;
-  --site-border: rgba(146, 171, 199, 0.24);
-  --site-text: #eaf2fc;
-  --site-muted: #9fb4cb;
-  --site-accent: #8fc3fb;
-  --site-accent-soft: #e9f3ff;
+  --site-bg: #000;
+  --site-bg-soft: #05080d;
+  --site-surface: #070b10;
+  --site-surface-soft: #030507;
+  --site-border: rgba(126, 165, 204, 0.22);
+  --site-text: #e7f1fb;
+  --site-muted: #98a8b8;
+  --site-accent: #9acbff;
+  --site-accent-soft: #ddecfb;
   --space-1: 8px;
   --space-2: 12px;
   --space-3: 16px;
@@ -28,7 +28,7 @@ body {
   margin: 0;
   min-width: 320px;
   font-family: var(--font-sans);
-  background: linear-gradient(180deg, #0e151d 0%, var(--site-bg) 100%);
+  background: #000;
   color: var(--site-text);
   line-height: 1.5;
 }
@@ -72,6 +72,7 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+  border-bottom: 1px solid rgba(126, 165, 204, 0.1);
 }
 
 .site-brand {
@@ -84,9 +85,10 @@ a {
 .site-brand-badge {
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-sm);
-  background: #dbe9f8;
-  color: #08111d;
+  border-radius: 3px;
+  border: 1px solid rgba(154, 203, 255, 0.45);
+  background: #080d13;
+  color: #b9d9f7;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -130,8 +132,9 @@ a {
 
 .site-card {
   border: 1px solid var(--site-border);
-  border-radius: var(--radius-md);
+  border-radius: 5px;
   background: var(--site-surface);
+  box-shadow: 0 0 30px rgba(66, 125, 180, 0.035);
 }
 
 .site-card.soft {
@@ -193,7 +196,7 @@ a {
 
 .site-btn {
   text-decoration: none;
-  border-radius: var(--radius-sm);
+  border-radius: 3px;
   padding: 9px 14px;
   font-size: 14px;
   font-weight: 700;
@@ -202,8 +205,9 @@ a {
 }
 
 .site-btn.primary {
-  background: var(--site-accent-soft);
-  color: #071428;
+  background: #ddecfb;
+  color: #06101a;
+  font-family: var(--font-mono);
 }
 
 .site-btn.primary:hover {
@@ -212,7 +216,7 @@ a {
 
 .site-btn.secondary {
   border-color: var(--site-border);
-  background: #121e2a;
+  background: #070d14;
   color: #d8e7f8;
 }
 
@@ -240,8 +244,8 @@ a {
 
 .site-inline-code {
   border: 1px solid var(--site-border);
-  border-radius: 7px;
-  background: #101923;
+  border-radius: 3px;
+  background: #05090e;
   padding: 2px 6px;
   font-family: var(--font-mono);
   font-size: 0.8rem;

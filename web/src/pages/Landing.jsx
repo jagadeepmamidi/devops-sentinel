@@ -19,6 +19,10 @@ const FOOTER_LINKS = [
   { to: '/privacy', label: 'Privacy' },
 ]
 
+const TERMINAL_BANNER = String.raw`╔══════════════════════════════════════════════════════════════════════╗
+║                         DEVOPS SENTINEL                             ║
+╚══════════════════════════════════════════════════════════════════════╝`
+
 export default function Landing() {
   const [copied, setCopied] = useState(false)
 
@@ -77,11 +81,7 @@ export default function Landing() {
             <span>devops-sentinel@terminal</span>
           </div>
           <pre className="landing-terminal-content">
-{` ____              ____               _____            _   _             _
-|  _ \\  _____   __ / ___|  ___  _ __  |_   _|___   ___ | |_(_)_ __   __ _| |
-| | | |/ _ \\ \\ / / \\___ \\ / _ \\| '_ \\   | |/ _ \\ / _ \\| __| | '_ \\ / _\` | |
-| |_| |  __/\\ V /   ___) | (_) | | | |  | | (_) | (_) | |_| | | | | (_| | |
-|____/ \\___| \\_/   |____/ \\___/|_| |_|  |_|\\___/ \\___/ \\__|_|_| |_|\\__,_|_|
+{`${TERMINAL_BANNER}
 
 $ sentinel monitor https://api.example.com/health
 [PASS] /health 200 in 94ms
