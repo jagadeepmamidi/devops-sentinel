@@ -6,7 +6,7 @@
 
 **CLI-first SRE agent assistant** for service health checks, incident tracking, evidence-backed response plans, and postmortem workflows.
 
-**[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
+**[Install from PyPI](https://pypi.org/project/devops-sentinel/)** | [Documentation](https://devops-sentinel-seven.vercel.app/) | [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
 
 ## Features
 

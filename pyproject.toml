@@ -81,7 +81,7 @@ devops-sentinel-mcp = "sentinel.mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/jagadeepmamidi/devops-sentinel"
-Documentation = "https://devops-sentinel-i2ygm8zfs-jagadeeps-projects-10f14bee.vercel.app/"
+Documentation = "https://devops-sentinel-seven.vercel.app/"
 Repository = "https://github.com/jagadeepmamidi/devops-sentinel"
 Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
 
