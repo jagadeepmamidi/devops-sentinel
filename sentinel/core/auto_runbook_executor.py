@@ -28,7 +28,7 @@ class AutoRunbookExecutor:
     
     def __init__(self, supabase_client, approval_required: bool = True):
         self.supabase = supabase_client
-       self.approval_required = approval_required
+        self.approval_required = approval_required
         self.execution_history = []
         
         # Action handlers
