@@ -75,6 +75,14 @@ class AuthService:
     
     def __init__(self, client: Optional[Client] = None):
         self.client = client or supabase
+
+    @staticmethod
+    def _dev_auth_enabled() -> bool:
+        """Allow mock auth only when explicitly enabled outside production."""
+        environment = os.getenv("ENVIRONMENT", "development").lower()
+        return environment in {"test", "development"} and os.getenv(
+            "SENTINEL_ALLOW_DEV_AUTH", "false"
+        ).lower() == "true"
     
     async def sign_up(
         self,
@@ -139,6 +147,8 @@ class AuthService:
             Session tokens and user data
         """
         if not self.client:
+            if not self._dev_auth_enabled():
+                raise HTTPException(503, "Authentication service is not configured")
             return self._mock_auth_response(email)
         
         try:

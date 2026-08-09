@@ -11,6 +11,8 @@ import aiohttp
 import asyncio
 import ssl
 import socket
+import ipaddress
+from urllib.parse import urlparse, urljoin
 
 
 class QuickHealthCheck:
@@ -27,6 +29,44 @@ class QuickHealthCheck:
     
     DEFAULT_TIMEOUT = 10  # seconds
     
+    async def _is_safe_hostname(self, hostname: str) -> bool:
+        """
+        Check if a hostname resolves to a safe (public) IP address.
+        Prevents SSRF by blocking private, loopback, and other restricted ranges.
+        """
+        if not hostname:
+            return False
+
+        # Block common local hostnames directly
+        if hostname.lower() in ('localhost', '0.0.0.0', '::1'):
+            return False
+
+        try:
+            # Resolve hostname to all associated IP addresses (IPv4 and IPv6)
+            loop = asyncio.get_event_loop()
+            addr_info = await loop.run_in_executor(
+                None,
+                lambda: socket.getaddrinfo(hostname, None)
+            )
+
+            for info in addr_info:
+                ip = info[4][0]
+                addr = ipaddress.ip_address(ip)
+
+                # Check for restricted ranges
+                if (addr.is_loopback or
+                    addr.is_private or
+                    addr.is_link_local or
+                    addr.is_multicast or
+                    addr.is_reserved or
+                    addr.is_unspecified):
+                    return False
+
+            return True
+        except Exception:
+            # If resolution fails or any other error occurs, treat as unsafe
+            return False
+
     async def check_url(self, url: str, timeout: int = None) -> Dict:
         """
         Perform instant health check on URL
@@ -44,6 +84,18 @@ class QuickHealthCheck:
         if not url.startswith(('http://', 'https://')):
             url = f"https://{url}"
         
+        # Initial SSRF validation
+        parsed = urlparse(url)
+        if not await self._is_safe_hostname(parsed.hostname):
+            return {
+                'url': url,
+                'checked_at': datetime.utcnow().isoformat(),
+                'status': 'error',
+                'error': 'Forbidden: Access to internal or restricted IP ranges is not allowed.',
+                'healthy': False,
+                'suggestions': ['Please provide a valid public URL']
+            }
+
         result = {
             'url': url,
             'checked_at': datetime.utcnow().isoformat(),
@@ -104,42 +156,69 @@ class QuickHealthCheck:
         return result
     
     async def _check_http(self, url: str, timeout: int) -> Dict:
-        """Perform HTTP request and measure response"""
+        """Perform HTTP request and measure response with safe redirect following"""
         start_time = datetime.utcnow()
+        current_url = url
+        redirect_count = 0
+        max_redirects = 5
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                url,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-                allow_redirects=True,
-                ssl=False  # We check SSL separately
-            ) as response:
-                end_time = datetime.utcnow()
-                elapsed_ms = (end_time - start_time).total_seconds() * 1000
+            while True:
+                # Validate hostname for each hop
+                parsed = urlparse(current_url)
+                if not await self._is_safe_hostname(parsed.hostname):
+                    return {
+                        'status_code': 403,
+                        'error': 'Forbidden: Access to internal or restricted IP ranges is not allowed.',
+                        'healthy': False
+                    }
                 
-                # Read some content to verify it works
-                content_length = response.headers.get('Content-Length', '0')
-                
-                return {
-                    'status_code': response.status,
-                    'response_time_ms': round(elapsed_ms, 2),
-                    'content_length': int(content_length) if content_length.isdigit() else 0,
-                    'headers': {
-                        'server': response.headers.get('Server', 'Unknown'),
-                        'content_type': response.headers.get('Content-Type', 'Unknown')
-                    },
-                    'redirected': str(response.url) != url,
-                    'final_url': str(response.url)
-                }
+                async with session.get(
+                    current_url,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    allow_redirects=False,
+                    ssl=False  # We check SSL separately
+                ) as response:
+                    # Check for redirect
+                    if response.status in (301, 302, 303, 307, 308) and redirect_count < max_redirects:
+                        location = response.headers.get('Location')
+                        if location:
+                            current_url = urljoin(current_url, location)
+                            redirect_count += 1
+                            continue
+
+                    end_time = datetime.utcnow()
+                    elapsed_ms = (end_time - start_time).total_seconds() * 1000
+
+                    # Read some content to verify it works
+                    content_length = response.headers.get('Content-Length', '0')
+
+                    return {
+                        'status_code': response.status,
+                        'response_time_ms': round(elapsed_ms, 2),
+                        'content_length': int(content_length) if content_length.isdigit() else 0,
+                        'headers': {
+                            'server': response.headers.get('Server', 'Unknown'),
+                            'content_type': response.headers.get('Content-Type', 'Unknown')
+                        },
+                        'redirected': current_url != url,
+                        'final_url': current_url
+                    }
     
     async def _check_ssl(self, url: str) -> Dict:
         """Check SSL certificate validity"""
         try:
-            from urllib.parse import urlparse
             parsed = urlparse(url)
             hostname = parsed.hostname
             port = parsed.port or 443
             
+            # Validate hostname for SSRF
+            if not await self._is_safe_hostname(hostname):
+                return {
+                    'valid': False,
+                    'error': 'Forbidden: Access to internal or restricted IP ranges is not allowed.'
+                }
+
             # Create SSL context
             context = ssl.create_default_context()
             
@@ -147,7 +226,22 @@ class QuickHealthCheck:
             loop = asyncio.get_event_loop()
             
             def get_cert():
-                with socket.create_connection((hostname, port), timeout=5) as sock:
+                # To prevent DNS rebinding, we resolve once and connect to the IP
+                addr_info = socket.getaddrinfo(hostname, port)
+                safe_ip = None
+                for info in addr_info:
+                    ip = info[4][0]
+                    addr = ipaddress.ip_address(ip)
+                    if not (addr.is_loopback or addr.is_private or addr.is_link_local or
+                            addr.is_multicast or addr.is_reserved or addr.is_unspecified):
+                        safe_ip = ip
+                        break
+
+                if not safe_ip:
+                    raise ValueError("No safe public IP address found for host")
+
+                # Use the safe IP but keep original hostname for SNI and cert verification
+                with socket.create_connection((safe_ip, port), timeout=5) as sock:
                     with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                         cert = ssock.getpeercert()
                         return cert

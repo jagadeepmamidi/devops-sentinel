@@ -126,8 +126,11 @@ class MonitoringOrchestrator:
             error_message=result.error_message
         )
         
-        # Calculate MTTD
-        incident.mttd_seconds = (datetime.utcnow() - incident.detected_at).total_seconds()
+        # The polling monitor knows when it observed the failure, but not when
+        # the failure originally began. Leave MTTD unset instead of reporting a
+        # misleading near-zero value. An external failure timestamp can be
+        # added later when the source provides one.
+        incident.mttd_seconds = None
         
         incident.add_event(
             event_type="detected",
@@ -151,8 +154,8 @@ class MonitoringOrchestrator:
     async def _trigger_agent_response(self, incident: Incident) -> None:
         """Create a lightweight action plan without blocking on external agents."""
         incident.status = IncidentStatus.ALERTING
+        incident.alerted_at = datetime.utcnow()
         incident.add_event("alerting", "Failure detected; notifying configured responders", "MonitoringOrchestrator")
-
         await self._emit_event("incident_updated", {
             "incident_id": str(incident.id),
             "status": incident.status.value

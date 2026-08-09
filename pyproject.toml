@@ -7,7 +7,7 @@ name = "devops-sentinel"
 version = "0.3.0"
 description = "Autonomous SRE agents that watch your services, detect anomalies, and generate blameless postmortems"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     {name = "jagadeep.mamidi", email = "jagadeep.mamidi@gmail.com"}
 ]
@@ -34,6 +34,15 @@ dependencies = [
     "aiohttp>=3.9",
     "python-dotenv>=1.0",
     "supabase>=2.0",
+    "langchain-core>=0.1.30",
+    "langchain-openai>=0.1.0",
+    "crewai==0.51.0",
+    "crewai-tools==0.8.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.22",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "dnspython>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +52,10 @@ dev = [
     "pytest-cov>=4.0",
     "fastapi>=0.100",
     "email-validator>=2.0",
+    "ruff>=0.1.11",
+    "bandit>=1.7.7",
+    "build>=1.0",
+    "twine>=5.0",
 ]
 ai = [
     "openai>=1.0",
@@ -52,7 +65,14 @@ mcp = [
     "mcp>=1.2",
 ]
 all = [
-    "devops-sentinel[dev,ai,mcp]",
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "fastapi>=0.100",
+    "email-validator>=2.0",
+    "openai>=1.0",
+    "anthropic>=0.18",
+    "mcp>=1.2",
 ]
 
 [project.scripts]
@@ -67,9 +87,13 @@ Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
 
 [tool.setuptools]
 packages = ["sentinel", "sentinel.cli", "sentinel.core", "sentinel.api", "sentinel.auth", "sentinel.integrations", "sentinel.ml", "sentinel.notifications", "sentinel.setup", "sentinel.tools"]
+py-modules = ["agents", "api_server", "config", "main", "models", "orchestrator", "server", "tasks"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["__pycache__/*", "*.py[cod]"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
