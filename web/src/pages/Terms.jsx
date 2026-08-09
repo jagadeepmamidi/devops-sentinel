@@ -79,7 +79,7 @@ export default function Terms() {
           <section>
             <h2>Contact</h2>
             <p>
-              Questions about terms: <a href="mailto:legal@devops-sentinel.dev">legal@devops-sentinel.dev</a>
+              Questions about these terms? Please <a href="https://github.com/jagadeepmamidi/devops-sentinel/issues" target="_blank" rel="noreferrer">open a GitHub issue</a>.
             </p>
           </section>
         </article>

@@ -72,7 +72,7 @@ export default function Privacy() {
           <section>
             <h2>Contact</h2>
             <p>
-              Privacy questions: <a href="mailto:privacy@devops-sentinel.dev">privacy@devops-sentinel.dev</a>
+              Privacy questions? Please <a href="https://github.com/jagadeepmamidi/devops-sentinel/issues" target="_blank" rel="noreferrer">open a GitHub issue</a>. Do not include secrets or sensitive personal information in a public issue.
             </p>
           </section>
         </article>
