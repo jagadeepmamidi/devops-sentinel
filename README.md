@@ -5,7 +5,9 @@
 
 **Agent-accessible SRE operations platform** for health checks, incident operations, evidence-backed response plans, and postmortems.
 
-This is next-generation distribution of DevOps Sentinel. It keeps Python as canonical runtime while adding a secure MCP interface and a typed npm client.
+[Install `devops-sentinel-next` from PyPI](https://pypi.org/project/devops-sentinel-next/) · [GitHub](https://github.com/jagadeepmamidi/devops-sentinel)
+
+This distribution keeps Python as canonical runtime while adding a secure MCP interface and a typed npm client.
 
 ## Why use it?
 
@@ -95,23 +97,20 @@ Run `sentinel doctor` before operating.
 - Arbitrary commands and script checks are disabled unless explicitly enabled.
 - Review SSRF, authentication, and authorization controls before public deployment.
 
-## New PyPI package release
+## Published package
 
-This repository now builds distribution `devops-sentinel-next`; import path and CLI remain compatible. Create or use new PyPI account, verify name ownership, then:
+Install latest release directly from [PyPI](https://pypi.org/project/devops-sentinel-next/):
 
 ```bash
-python -m pip install --upgrade build twine
-python -m build
-python -m twine check dist/*
-python -m twine upload dist/*
+python -m pip install --upgrade devops-sentinel-next
 ```
 
-Use a PyPI API token, not account password. Configure trusted publishing from GitHub Actions before automation.
+Import path and CLI remain compatible with earlier DevOps Sentinel releases. For contributor release automation, use PyPI trusted publishing through GitHub Actions.
 
 ## Development
 
 ```bash
-python -m pip install -e ".[dev,mcp]"
+python -m pip install -e ".[dev,mcp]"  # local development
 pytest -q -o addopts=""
 python -m ruff check sentinel tests
 ```

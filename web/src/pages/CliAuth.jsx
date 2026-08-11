@@ -78,7 +78,7 @@ export default function CliAuth() {
           )}
 
           <div className="cli-auth-steps site-code-block">
-            1. pip install devops-sentinel
+            1. pip install devops-sentinel-next
             {'\n'}2. sentinel login
             {'\n'}3. Browser auth -&gt; back to CLI
           </div>
