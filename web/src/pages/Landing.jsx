@@ -8,6 +8,7 @@ const NAV_LINKS = [
 	{ to: "/cli-auth", label: "CLI Login" },
 	{ to: "/docs", label: "Docs" },
 	{ href: "https://pypi.org/project/devops-sentinel-next/", label: "PyPI", external: true },
+	{ href: "https://pypi.org/project/devops-sentinel-next/", label: "PyPI", external: true },
 	{
 		href: "https://github.com/jagadeepmamidi/devops-sentinel",
 		label: "GitHub",
