@@ -7,7 +7,6 @@ import "./Docs.css";
 const NAV_LINKS = [
 	{ to: "/operator/services", label: "Operator" },
 	{ to: "/cli-auth", label: "CLI Auth" },
-	{ to: "/feedback", label: "Feedback", className: "outline" },
 ];
 
 const FOOTER_LINKS = [

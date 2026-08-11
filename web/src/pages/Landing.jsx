@@ -5,10 +5,13 @@ import SiteFooter from "../components/site/SiteFooter";
 import "./Landing.css";
 
 const NAV_LINKS = [
-	{ to: "/cli-auth", label: "CLI Login" },
+	{ to: "/cli-auth", label: "CLI Login", className: "primary" },
 	{ to: "/docs", label: "Docs" },
-	{ href: "https://pypi.org/project/devops-sentinel-next/", label: "PyPI", external: true },
-	{ href: "https://pypi.org/project/devops-sentinel-next/", label: "PyPI", external: true },
+	{
+		href: "https://pypi.org/project/devops-sentinel-next/",
+		label: "PyPI",
+		external: true,
+	},
 	{
 		href: "https://github.com/jagadeepmamidi/devops-sentinel",
 		label: "GitHub",
@@ -82,11 +85,11 @@ export default function Landing() {
 					</div>
 
 					<div className="landing-actions">
-						<Link to="/cli-auth" className="landing-text-link">
-							Get started <span aria-hidden="true">→</span>
+						<Link to="/cli-auth" className="site-btn primary">
+							Start from terminal <span aria-hidden="true">→</span>
 						</Link>
-						<Link to="/operator/services" className="landing-text-link muted">
-							Open operator console <span aria-hidden="true">→</span>
+						<Link to="/docs" className="site-btn secondary">
+							Read documentation <span aria-hidden="true">→</span>
 						</Link>
 					</div>
 				</section>
@@ -96,7 +99,7 @@ export default function Landing() {
 					aria-label="Sample terminal output"
 				>
 					<div className="landing-terminal-header">
-						<span className="landing-dot" />
+						<span className="landing-dot" aria-hidden="true" />
 						<span>devops-sentinel@terminal</span>
 					</div>
 					<pre className="landing-terminal-content">

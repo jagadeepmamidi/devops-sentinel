@@ -26,15 +26,18 @@ export default function OperatorServices() {
 
   useEffect(() => {
     if (!token) {
-      setServices([])
       return
     }
 
     let cancelled = false
-    setLoading(true)
-    setError('')
 
-    operatorFetch('/api/services', token)
+    Promise.resolve().then(() => {
+      if (!cancelled) {
+        setLoading(true)
+        setError('')
+      }
+      return operatorFetch('/api/services', token)
+    })
       .then((payload) => {
         if (!cancelled) {
           setServices(payload.services || [])

@@ -37,6 +37,11 @@ a {
   color: inherit;
 }
 
+:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 3px;
+}
+
 .site-page {
   min-height: 100vh;
   color: var(--site-text);
@@ -66,13 +71,21 @@ a {
 }
 
 .site-nav {
-  padding-top: 20px;
-  padding-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: 14px;
+  padding-bottom: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
-  border-bottom: 1px solid rgba(126, 165, 204, 0.1);
+  border: 1px solid rgba(154, 203, 255, 0.12);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  background: rgba(3, 7, 11, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .site-brand {
@@ -116,6 +129,12 @@ a {
   padding: 7px 9px;
 }
 
+.site-nav-link.primary {
+  border: 1px solid rgba(154, 203, 255, 0.32);
+  background: rgba(154, 203, 255, 0.12);
+  color: #eaf5ff;
+}
+
 .site-nav-link:hover {
   color: #edf5ff;
   background: rgba(18, 28, 39, 0.65);
@@ -132,13 +151,19 @@ a {
 
 .site-card {
   border: 1px solid var(--site-border);
-  border-radius: 5px;
-  background: var(--site-surface);
-  box-shadow: 0 0 30px rgba(66, 125, 180, 0.035);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(12, 19, 28, 0.78), rgba(4, 8, 13, 0.9));
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .site-card.soft {
-  background: var(--site-surface-soft);
+  background: rgba(3, 7, 11, 0.72);
+}
+
+.site-card:hover {
+  border-color: rgba(154, 203, 255, 0.34);
 }
 
 .site-muted {
