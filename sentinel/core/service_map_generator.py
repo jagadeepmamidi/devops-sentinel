@@ -5,9 +5,8 @@ Service Map Generator - Visualize Dependencies
 Generate interactive service dependency maps
 """
 
+
 import networkx as nx
-from typing import Dict, List, Optional, Tuple
-import json
 
 
 class ServiceMapGenerator:
@@ -68,7 +67,7 @@ class ServiceMapGenerator:
         
         return self.graph
     
-    def find_critical_services(self) -> List[Dict]:
+    def find_critical_services(self) -> list[dict]:
         """
         Identify critical services (high centrality, many dependents)
         
@@ -108,7 +107,7 @@ class ServiceMapGenerator:
         
         return critical_services
     
-    def find_single_points_of_failure(self) -> List[Dict]:
+    def find_single_points_of_failure(self) -> list[dict]:
         """
         Find services that, if removed, would disconnect the graph
         
@@ -139,7 +138,7 @@ class ServiceMapGenerator:
         
         return spofs
     
-    def calculate_blast_radius_visual(self, service_id: str) -> Dict:
+    def calculate_blast_radius_visual(self, service_id: str) -> dict:
         """
         Calculate visual blast radius (what breaks if this service fails)
         
@@ -217,7 +216,7 @@ class ServiceMapGenerator:
         
         return '\n'.join(lines)
     
-    def export_to_cytoscape(self) -> Dict:
+    def export_to_cytoscape(self) -> dict:
         """
         Export graph to Cytoscape.js format
         
@@ -296,7 +295,7 @@ class ServiceMapGenerator:
             }
         }
     
-    def export_to_d3(self) -> Dict:
+    def export_to_d3(self) -> dict:
         """
         Export graph to D3.js force-directed format
         
@@ -333,7 +332,7 @@ class ServiceMapGenerator:
             'links': links
         }
     
-    def get_dependency_chain(self, service_id: str) -> List[List[str]]:
+    def get_dependency_chain(self, service_id: str) -> list[list[str]]:
         """
         Get all dependency chains for a service
         

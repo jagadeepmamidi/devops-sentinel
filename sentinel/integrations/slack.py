@@ -5,12 +5,11 @@ Slack Integration - Real-time Notifications & Commands
 Slack webhooks, slash commands, and interactive messages
 """
 
-import asyncio
 import hashlib
 import hmac
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+
 import aiohttp
 
 
@@ -37,9 +36,9 @@ class SlackIntegration:
     
     async def send_incident_alert(
         self,
-        incident: Dict,
-        channel: Optional[str] = None,
-        similar_incident: Optional[Dict] = None
+        incident: dict,
+        channel: str | None = None,
+        similar_incident: dict | None = None
     ) -> bool:
         """
         Send incident alert to Slack
@@ -72,7 +71,7 @@ class SlackIntegration:
     
     async def send_resolution_notice(
         self,
-        incident: Dict,
+        incident: dict,
         resolved_by: str,
         duration_minutes: int
     ) -> bool:
@@ -101,8 +100,8 @@ class SlackIntegration:
     
     async def send_daily_digest(
         self,
-        summary: Dict,
-        incidents: List[Dict]
+        summary: dict,
+        incidents: list[dict]
     ) -> bool:
         """Send daily digest summary"""
         blocks = [
@@ -163,7 +162,7 @@ class SlackIntegration:
         text: str,
         user_id: str,
         channel_id: str
-    ) -> Dict:
+    ) -> dict:
         """
         Handle /sentinel slash command
         
@@ -190,8 +189,8 @@ class SlackIntegration:
     
     async def handle_interaction(
         self,
-        payload: Dict
-    ) -> Dict:
+        payload: dict
+    ) -> dict:
         """
         Handle interactive button clicks
         
@@ -239,20 +238,19 @@ class SlackIntegration:
     
     # Private methods
     
-    async def _send_message(self, payload: Dict) -> bool:
+    async def _send_message(self, payload: dict) -> bool:
         """Send message to Slack"""
         if not self.webhook_url:
             print(f"[Slack] Would send: {payload.get('text', '')[:100]}")
             return True
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.webhook_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    return resp.status == 200
+            async with aiohttp.ClientSession() as session, session.post(
+                self.webhook_url,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+                return resp.status == 200
         except Exception as e:
             print(f"[Slack] Error sending message: {e}")
             return False
@@ -269,9 +267,9 @@ class SlackIntegration:
     
     def _build_incident_blocks(
         self,
-        incident: Dict,
-        similar: Optional[Dict] = None
-    ) -> List[Dict]:
+        incident: dict,
+        similar: dict | None = None
+    ) -> list[dict]:
         """Build incident message blocks"""
         severity = incident.get('severity', 'P2')
         emoji = {'P0': '🔴', 'P1': '🟠', 'P2': '🟡', 'P3': '🔵'}.get(severity, '⚪')
@@ -346,7 +344,7 @@ class SlackIntegration:
         
         return blocks
     
-    async def _handle_status_command(self) -> Dict:
+    async def _handle_status_command(self) -> dict:
         """Handle /sentinel status"""
         # Would fetch real status
         return {
@@ -359,28 +357,28 @@ class SlackIntegration:
             )
         }
     
-    async def _handle_ack_command(self, incident_id: str, user_id: str) -> Dict:
+    async def _handle_ack_command(self, incident_id: str, user_id: str) -> dict:
         """Handle /sentinel ack"""
         return {
             'response_type': 'in_channel',
             'text': f"✓ <@{user_id}> acknowledged incident {incident_id}"
         }
     
-    async def _handle_resolve_command(self, incident_id: str, user_id: str) -> Dict:
+    async def _handle_resolve_command(self, incident_id: str, user_id: str) -> dict:
         """Handle /sentinel resolve"""
         return {
             'response_type': 'in_channel',
             'text': f"✅ <@{user_id}> resolved incident {incident_id}"
         }
     
-    async def _handle_oncall_command(self) -> Dict:
+    async def _handle_oncall_command(self) -> dict:
         """Handle /sentinel oncall"""
         return {
             'response_type': 'ephemeral',
             'text': "👤 *Currently On-Call:* @alice (until Monday 9am)"
         }
     
-    def _get_help_response(self) -> Dict:
+    def _get_help_response(self) -> dict:
         """Return help text"""
         return {
             'response_type': 'ephemeral',
@@ -393,14 +391,14 @@ class SlackIntegration:
             )
         }
     
-    async def _acknowledge_incident(self, incident_id: str, user_id: str) -> Dict:
+    async def _acknowledge_incident(self, incident_id: str, user_id: str) -> dict:
         """Handle acknowledge button click"""
         return {
             'text': f"✓ <@{user_id}> acknowledged",
             'replace_original': False
         }
     
-    async def _resolve_incident(self, incident_id: str, user_id: str) -> Dict:
+    async def _resolve_incident(self, incident_id: str, user_id: str) -> dict:
         """Handle resolve button click"""
         return {
             'text': f"✅ <@{user_id}> resolved",
@@ -409,8 +407,7 @@ class SlackIntegration:
 
 
 # FastAPI routes
-from fastapi import APIRouter, Request, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Request
 
 router = APIRouter(prefix="/api/integrations/slack", tags=["slack"])
 

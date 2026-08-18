@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
@@ -18,11 +18,11 @@ load_dotenv()
 mcp = FastMCP("devops-sentinel")
 
 
-def _error(code: str, message: str) -> Dict[str, Any]:
+def _error(code: str, message: str) -> dict[str, Any]:
     return {"error": {"code": code, "message": message}}
 
 
-def _incident_service() -> IncidentService | Dict[str, Any]:
+def _incident_service() -> IncidentService | dict[str, Any]:
     from sentinel.cli.auth import get_current_user, is_logged_in
     from sentinel.cli.db import get_db
 
@@ -42,13 +42,13 @@ def _incident_service() -> IncidentService | Dict[str, Any]:
 
 
 @mcp.tool()
-async def health_check(url: str, timeout: int = 10) -> Dict[str, Any]:
+async def health_check(url: str, timeout: int = 10) -> dict[str, Any]:
     """Check one URL for HTTP health, latency, and SSL status."""
     return await QuickHealthCheck().check_url(url, timeout)
 
 
 @mcp.tool()
-async def health_check_batch(urls: List[str], timeout: int = 10) -> Dict[str, Any]:
+async def health_check_batch(urls: list[str], timeout: int = 10) -> dict[str, Any]:
     """Check up to 10 URLs in parallel."""
     if not urls or len(urls) > 10:
         return _error("invalid_input", "Provide between 1 and 10 URLs.")
@@ -57,15 +57,15 @@ async def health_check_batch(urls: List[str], timeout: int = 10) -> Dict[str, An
 
 
 @mcp.tool()
-def doctor(strict: bool = False) -> Dict[str, Any]:
+def doctor(strict: bool = False) -> dict[str, Any]:
     """Run environment and connectivity diagnostics."""
     return run_doctor(strict=strict)
 
 
 @mcp.tool()
 def list_incidents(
-    limit: int = 10, severity: Optional[str] = None, status: Optional[str] = None
-) -> Dict[str, Any]:
+    limit: int = 10, severity: str | None = None, status: str | None = None
+) -> dict[str, Any]:
     """List recent incidents belonging to current authenticated user."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -75,7 +75,7 @@ def list_incidents(
 
 
 @mcp.tool()
-def get_incident(incident_id: str) -> Dict[str, Any]:
+def get_incident(incident_id: str) -> dict[str, Any]:
     """Get one incident only when current user owns it."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -85,7 +85,7 @@ def get_incident(incident_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def get_incident_events(incident_id: str) -> Dict[str, Any]:
+def get_incident_events(incident_id: str) -> dict[str, Any]:
     """Get auditable timeline events for an owned incident."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -99,7 +99,7 @@ def get_incident_events(incident_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def generate_postmortem(incident_id: str) -> Dict[str, Any]:
+async def generate_postmortem(incident_id: str) -> dict[str, Any]:
     """Generate a postmortem for an owned incident."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -113,8 +113,8 @@ async def generate_postmortem(incident_id: str) -> Dict[str, Any]:
 
 @mcp.tool()
 def analyze_anomaly(
-    metric_name: str, current_value: float, historical_values: List[float]
-) -> Dict[str, Any]:
+    metric_name: str, current_value: float, historical_values: list[float]
+) -> dict[str, Any]:
     """Detect statistical anomalies against historical baseline values."""
     if len(historical_values) < 3:
         return _error("invalid_input", "Provide at least 3 historical values.")

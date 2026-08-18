@@ -11,9 +11,8 @@ Key Features:
 """
 
 import asyncio
-from typing import Optional, Dict, List, Tuple
-from datetime import datetime, timedelta
 import statistics
+from datetime import datetime, timedelta
 
 
 class BaselineMonitor:
@@ -45,7 +44,7 @@ class BaselineMonitor:
         self,
         service_id: str,
         lookback_hours: int = 24
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """
         Calculate baseline metrics from recent health check history
         
@@ -115,7 +114,7 @@ class BaselineMonitor:
         service_id: str,
         current_response_time: float,
         status_code: int
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """
         Check if current metrics indicate degraded state
         
@@ -162,7 +161,7 @@ class BaselineMonitor:
         
         return is_degraded, reason
     
-    async def get_baseline(self, service_id: str) -> Optional[Dict]:
+    async def get_baseline(self, service_id: str) -> dict | None:
         """
         Get cached baseline or fetch from database
         
@@ -209,7 +208,7 @@ class BaselineMonitor:
         if should_recalculate:
             await self.calculate_baseline(service_id)
     
-    def _percentile(self, data: List[float], percentile: int) -> float:
+    def _percentile(self, data: list[float], percentile: int) -> float:
         """Calculate percentile from sorted data"""
         sorted_data = sorted(data)
         index = (len(sorted_data) - 1) * percentile / 100
@@ -228,18 +227,17 @@ class BaselineMonitor:
         service_id: str,
         lookback_hours: int,
         healthy_only: bool
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Fetch health checks from database (placeholder)"""
         # TODO: Implement actual DB query when Supabase is ready
         # For now, return empty list
         return []
     
-    async def _store_baseline(self, baseline: Dict):
+    async def _store_baseline(self, baseline: dict):
         """Store baseline in database (placeholder)"""
         # TODO: Implement actual DB insert when Supabase is ready
-        pass
     
-    async def _fetch_baseline_from_db(self, service_id: str) -> Optional[Dict]:
+    async def _fetch_baseline_from_db(self, service_id: str) -> dict | None:
         """Fetch baseline from database (placeholder)"""
         # TODO: Implement actual DB query when Supabase is ready
         return None
@@ -265,7 +263,7 @@ class DegradationAlert:
         self.severity = severity
         self.detected_at = datetime.utcnow()
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to dictionary for storage/API"""
         return {
             'service_id': self.service_id,

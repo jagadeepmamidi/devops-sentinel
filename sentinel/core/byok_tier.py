@@ -7,7 +7,6 @@ and automatically assigns them the 'byok' tier.
 """
 
 import os
-from typing import Dict, Optional
 
 
 class BYOKDetector:
@@ -77,7 +76,7 @@ class BYOKDetector:
         return 'free'
     
     @classmethod
-    def get_tier_for_user(cls, user: Optional[Dict]) -> str:
+    def get_tier_for_user(cls, user: dict | None) -> str:
         """
         Determine tier for a specific user
         
@@ -103,7 +102,7 @@ class BYOKDetector:
         return cls.get_tier_for_environment()
     
     @classmethod
-    def get_available_features(cls, tier: str) -> Dict[str, bool]:
+    def get_available_features(cls, tier: str) -> dict[str, bool]:
         """
         Get feature availability for a tier
         
@@ -156,12 +155,12 @@ class BYOKDetector:
         return missing
 
 
-def get_user_tier(user: Optional[Dict] = None) -> str:
+def get_user_tier(user: dict | None = None) -> str:
     """Convenience function to get tier for current user"""
     return BYOKDetector.get_tier_for_user(user)
 
 
-def is_feature_available(feature: str, user: Optional[Dict] = None) -> bool:
+def is_feature_available(feature: str, user: dict | None = None) -> bool:
     """Check if a feature is available for user"""
     tier = get_user_tier(user)
     features = BYOKDetector.get_available_features(tier)

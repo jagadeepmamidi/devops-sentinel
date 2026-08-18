@@ -6,11 +6,9 @@ Handle waitlist signups with email validation and duplicate prevention
 """
 
 from datetime import datetime
-from typing import Optional
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr, validator
-import re
 
+from fastapi import APIRouter
+from pydantic import BaseModel, EmailStr, validator
 
 router = APIRouter(tags=["waitlist"])
 
@@ -18,8 +16,8 @@ router = APIRouter(tags=["waitlist"])
 class WaitlistSignup(BaseModel):
     """Waitlist signup request"""
     email: EmailStr
-    referrer: Optional[str] = None
-    source: Optional[str] = None  # 'homepage', 'producthunt', 'twitter', etc.
+    referrer: str | None = None
+    source: str | None = None  # 'homepage', 'producthunt', 'twitter', etc.
     
     @validator('email')
     def validate_business_email(cls, v):
@@ -39,7 +37,7 @@ class WaitlistResponse(BaseModel):
     """Waitlist signup response"""
     success: bool
     message: str
-    position: Optional[int] = None
+    position: int | None = None
     already_registered: bool = False
 
 

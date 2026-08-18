@@ -5,12 +5,12 @@ Quick Health Check - Viral Feature for Instant Value
 No signup required - check any URL instantly
 """
 
-from datetime import datetime
-from typing import Dict, Optional
-import aiohttp
 import asyncio
-import ssl
 import socket
+import ssl
+from datetime import datetime
+
+import aiohttp
 
 
 class QuickHealthCheck:
@@ -27,7 +27,7 @@ class QuickHealthCheck:
     
     DEFAULT_TIMEOUT = 10  # seconds
     
-    async def check_url(self, url: str, timeout: int = None) -> Dict:
+    async def check_url(self, url: str, timeout: int = None) -> dict:
         """
         Perform instant health check on URL
         
@@ -103,36 +103,35 @@ class QuickHealthCheck:
         
         return result
     
-    async def _check_http(self, url: str, timeout: int) -> Dict:
+    async def _check_http(self, url: str, timeout: int) -> dict:
         """Perform HTTP request and measure response"""
         start_time = datetime.utcnow()
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                url,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-                allow_redirects=True,
-                ssl=False  # We check SSL separately
-            ) as response:
-                end_time = datetime.utcnow()
-                elapsed_ms = (end_time - start_time).total_seconds() * 1000
-                
-                # Read some content to verify it works
-                content_length = response.headers.get('Content-Length', '0')
-                
-                return {
-                    'status_code': response.status,
-                    'response_time_ms': round(elapsed_ms, 2),
-                    'content_length': int(content_length) if content_length.isdigit() else 0,
-                    'headers': {
-                        'server': response.headers.get('Server', 'Unknown'),
-                        'content_type': response.headers.get('Content-Type', 'Unknown')
-                    },
-                    'redirected': str(response.url) != url,
-                    'final_url': str(response.url)
-                }
+
+        async with aiohttp.ClientSession() as session, session.get(
+            url,
+            timeout=aiohttp.ClientTimeout(total=timeout),
+            allow_redirects=True,
+            ssl=False  # We check SSL separately
+        ) as response:
+            end_time = datetime.utcnow()
+            elapsed_ms = (end_time - start_time).total_seconds() * 1000
+
+            # Read some content to verify it works
+            content_length = response.headers.get('Content-Length', '0')
+
+            return {
+                'status_code': response.status,
+                'response_time_ms': round(elapsed_ms, 2),
+                'content_length': int(content_length) if content_length.isdigit() else 0,
+                'headers': {
+                    'server': response.headers.get('Server', 'Unknown'),
+                    'content_type': response.headers.get('Content-Type', 'Unknown')
+                },
+                'redirected': str(response.url) != url,
+                'final_url': str(response.url)
+            }
     
-    async def _check_ssl(self, url: str) -> Dict:
+    async def _check_ssl(self, url: str) -> dict:
         """Check SSL certificate validity"""
         try:
             from urllib.parse import urlparse
@@ -184,7 +183,7 @@ class QuickHealthCheck:
                 'error': str(e)
             }
     
-    def _generate_suggestions(self, result: Dict) -> list:
+    def _generate_suggestions(self, result: dict) -> list:
         """Generate actionable suggestions based on results"""
         suggestions = []
         

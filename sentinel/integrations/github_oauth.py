@@ -8,15 +8,13 @@ GitHub OAuth - One-Click Repo Monitoring
 import os
 import secrets
 from datetime import datetime
-from typing import Dict, Optional
 from urllib.parse import urlencode
 
 import aiohttp
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 
 from sentinel.auth.auth_service import get_current_user
-
 
 # OAuth Configuration
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '')
@@ -64,38 +62,36 @@ class GitHubOAuth:
         
         return f"{self.AUTHORIZE_URL}?{urlencode(params)}"
     
-    async def handle_callback(self, code: str, state: str) -> Dict:
+    async def handle_callback(self, code: str, state: str) -> dict:
         """Handle OAuth callback"""
         state_data = self._state_store.pop(state, None)
         if not state_data:
             raise HTTPException(400, "Invalid state")
         
         # Exchange code for token
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.TOKEN_URL,
-                headers={'Accept': 'application/json'},
-                data={
-                    'client_id': GITHUB_CLIENT_ID,
-                    'client_secret': GITHUB_CLIENT_SECRET,
-                    'code': code
-                }
-            ) as resp:
-                tokens = await resp.json()
+        async with aiohttp.ClientSession() as session, session.post(
+            self.TOKEN_URL,
+            headers={'Accept': 'application/json'},
+            data={
+                'client_id': GITHUB_CLIENT_ID,
+                'client_secret': GITHUB_CLIENT_SECRET,
+                'code': code
+            }
+        ) as resp:
+            tokens = await resp.json()
         
         if 'error' in tokens:
             raise HTTPException(400, tokens.get('error_description', 'OAuth failed'))
         
         # Get user info
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                self.USER_URL,
-                headers={
-                    'Authorization': f"Bearer {tokens['access_token']}",
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            ) as resp:
-                github_user = await resp.json()
+        async with aiohttp.ClientSession() as session, session.get(
+            self.USER_URL,
+            headers={
+                'Authorization': f"Bearer {tokens['access_token']}",
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        ) as resp:
+            github_user = await resp.json()
         
         # Store integration
         integration = {
@@ -125,7 +121,7 @@ router = APIRouter(prefix="/api/github/oauth", tags=["github-oauth"])
 
 
 @router.get("/start")
-async def start_oauth(user: Dict = Depends(get_current_user)):
+async def start_oauth(user: dict = Depends(get_current_user)):
     """Start GitHub OAuth flow"""
     if not GITHUB_CLIENT_ID:
         raise HTTPException(500, "GitHub OAuth not configured")

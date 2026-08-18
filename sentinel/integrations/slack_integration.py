@@ -5,10 +5,10 @@ Slack Integration - Collaborative Incident Management
 Manage incidents through Slack threads with rich formatting
 """
 
-import aiohttp
-from typing import Dict, List, Optional
-from datetime import datetime
 import json
+from datetime import datetime
+
+import aiohttp
 
 
 class SlackIntegration:
@@ -24,7 +24,7 @@ class SlackIntegration:
     - Status updates
     """
     
-    def __init__(self, webhook_url: str, bot_token: Optional[str] = None):
+    def __init__(self, webhook_url: str, bot_token: str | None = None):
         """
         Initialize Slack integration
         
@@ -38,9 +38,9 @@ class SlackIntegration:
     
     async def post_incident_alert(
         self,
-        incident: Dict,
+        incident: dict,
         channel: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Post incident alert to Slack
         
@@ -172,7 +172,7 @@ class SlackIntegration:
         thread_ts: str,
         message: str,
         channel: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Post update to existing incident thread
         
@@ -185,27 +185,26 @@ class SlackIntegration:
             # Fallback to webhook (can't thread without bot token)
             return await self._send_message({"text": message}, channel)
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.api_base}/chat.postMessage",
-                headers={
-                    "Authorization": f"Bearer {self.bot_token}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "channel": channel,
-                    "text": message,
-                    "thread_ts": thread_ts
-                }
-            ) as response:
-                return await response.json()
+        async with aiohttp.ClientSession() as session, session.post(
+            f"{self.api_base}/chat.postMessage",
+            headers={
+                "Authorization": f"Bearer {self.bot_token}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "channel": channel,
+                "text": message,
+                "thread_ts": thread_ts
+            }
+        ) as response:
+            return await response.json()
     
     async def post_resolution_summary(
         self,
-        incident: Dict,
+        incident: dict,
         thread_ts: str,
         channel: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Post incident resolution summary to thread
         
@@ -259,12 +258,12 @@ class SlackIntegration:
     
     async def post_escalation_alert(
         self,
-        incident: Dict,
+        incident: dict,
         escalated_to: str,
         level: int,
         thread_ts: str,
         channel: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Post escalation notification
         
@@ -283,10 +282,10 @@ class SlackIntegration:
     
     async def post_deployment_alert(
         self,
-        deployment: Dict,
-        health: Dict,
+        deployment: dict,
+        health: dict,
         channel: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Post deployment health alert
         
@@ -355,9 +354,9 @@ class SlackIntegration:
     
     async def _send_message(
         self,
-        message: Dict,
-        channel: Optional[str] = None
-    ) -> Dict:
+        message: dict,
+        channel: str | None = None
+    ) -> dict:
         """
         Send message to Slack via webhook or API
         
@@ -368,22 +367,21 @@ class SlackIntegration:
         if channel:
             message['channel'] = channel
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.webhook_url,
-                json=message,
-                headers={"Content-Type": "application/json"}
-            ) as response:
-                if response.status == 200:
-                    return {
-                        'success': True,
-                        'timestamp': datetime.utcnow().isoformat()
-                    }
-                else:
-                    return {
-                        'success': False,
-                        'error': await response.text()
-                    }
+        async with aiohttp.ClientSession() as session, session.post(
+            self.webhook_url,
+            json=message,
+            headers={"Content-Type": "application/json"}
+        ) as response:
+            if response.status == 200:
+                return {
+                    'success': True,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': await response.text()
+                }
     
     def format_code_block(self, code: str, language: str = '') -> str:
         """Format code for Slack markdown"""
@@ -400,7 +398,6 @@ class SlackIntegration:
 
 # Example usage
 if __name__ == "__main__":
-    import asyncio
     
     async def test_slack():
         # Initialize with webhook URL

@@ -5,12 +5,12 @@ Pytest Configuration
 Shared fixtures and configuration for tests
 """
 
-import pytest
 import asyncio
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

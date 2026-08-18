@@ -5,14 +5,14 @@ All Integrations Hub
 Central hub for managing all one-click OAuth integrations
 """
 
+
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, List
 
 from sentinel.auth.auth_service import get_current_user
-from .slack_oauth import SlackOAuth
+
 from .github_oauth import GitHubOAuth
 from .pagerduty_oauth import PagerDutyOAuth
-
+from .slack_oauth import SlackOAuth
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
@@ -81,7 +81,7 @@ async def list_available_integrations():
 
 
 @router.get("/connected")
-async def list_connected_integrations(user: Dict = Depends(get_current_user)):
+async def list_connected_integrations(user: dict = Depends(get_current_user)):
     """
     List user's connected integrations
     """
@@ -110,9 +110,6 @@ async def get_all_buttons():
     """
     Get all OAuth button HTML for embedding
     """
-    from .slack_oauth import router as slack_router
-    from .github_oauth import router as github_router
-    from .pagerduty_oauth import router as pagerduty_router
     
     return {
         "buttons": {
@@ -160,7 +157,7 @@ async def get_pagerduty_button():
 async def disconnect_integration(
     integration_type: str,
     integration_id: str,
-    user: Dict = Depends(get_current_user)
+    user: dict = Depends(get_current_user)
 ):
     """
     Disconnect an integration
@@ -171,11 +168,9 @@ async def disconnect_integration(
     elif integration_type == 'github':
         oauth = GitHubOAuth()
         # Similar removal logic
-        pass
     elif integration_type == 'pagerduty':
         oauth = PagerDutyOAuth()
         # Similar removal logic
-        pass
     else:
         raise HTTPException(400, f"Unknown integration: {integration_type}")
     

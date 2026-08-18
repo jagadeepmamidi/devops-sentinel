@@ -5,11 +5,11 @@ Tests for Slack Integration
 Tests Slack webhook, slash commands, and message formatting
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 import hashlib
 import hmac
 import time
+
+import pytest
 
 from sentinel.integrations.slack import SlackIntegration
 

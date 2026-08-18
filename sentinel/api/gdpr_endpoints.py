@@ -6,11 +6,9 @@ User rights: Access, Export, Delete all personal data
 """
 
 from datetime import datetime
-from typing import Dict, Optional
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
-import json
 
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
@@ -28,7 +26,7 @@ class GDPRHandler:
     def __init__(self, supabase_client):
         self.supabase = supabase_client
     
-    async def export_all_data(self, user_id: str) -> Dict:
+    async def export_all_data(self, user_id: str) -> dict:
         """
         GDPR Article 20 - Export ALL user data
         
@@ -104,7 +102,7 @@ class GDPRHandler:
         self,
         user_id: str,
         confirmation: str
-    ) -> Dict:
+    ) -> dict:
         """
         GDPR Article 17 - Right to be forgotten
         
@@ -191,7 +189,7 @@ class GDPRHandler:
             'message': 'All personal data has been permanently deleted'
         }
     
-    async def get_data_usage_summary(self, user_id: str) -> Dict:
+    async def get_data_usage_summary(self, user_id: str) -> dict:
         """
         Transparency endpoint - show what data we have
         """
@@ -244,7 +242,7 @@ class GDPRHandler:
     
     # Helper methods to fetch data
     
-    async def _get_account_data(self, user_id: str) -> Dict:
+    async def _get_account_data(self, user_id: str) -> dict:
         result = await self.supabase.table('users').select('*').eq(
             'id', user_id
         ).execute()

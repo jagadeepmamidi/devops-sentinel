@@ -5,12 +5,12 @@ Email Notification System - SMTP-Based Alerting
 Send email notifications for incidents, postmortems, and digests
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 import asyncio
-import aiosmtplib
-from email.mime.text import MIMEText
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+import aiosmtplib
 
 
 class EmailNotificationSystem:
@@ -26,7 +26,7 @@ class EmailNotificationSystem:
     - Attachment support
     """
     
-    def __init__(self, smtp_config: Dict):
+    def __init__(self, smtp_config: dict):
         """
         Initialize email system
         
@@ -49,9 +49,9 @@ class EmailNotificationSystem:
     
     async def send_incident_alert(
         self,
-        incident: Dict,
-        recipients: List[str]
-    ) -> Dict:
+        incident: dict,
+        recipients: list[str]
+    ) -> dict:
         """
         Send immediate incident alert
         
@@ -82,10 +82,10 @@ class EmailNotificationSystem:
     
     async def send_postmortem(
         self,
-        incident: Dict,
+        incident: dict,
         postmortem: str,
-        recipients: List[str]
-    ) -> Dict:
+        recipients: list[str]
+    ) -> dict:
         """
         Send postmortem report
         
@@ -111,10 +111,10 @@ class EmailNotificationSystem:
     
     async def send_daily_digest(
         self,
-        incidents: List[Dict],
-        stats: Dict,
-        recipients: List[str]
-    ) -> Dict:
+        incidents: list[dict],
+        stats: dict,
+        recipients: list[str]
+    ) -> dict:
         """
         Send daily incident digest
         
@@ -138,10 +138,10 @@ class EmailNotificationSystem:
     
     async def send_weekly_digest(
         self,
-        incidents: List[Dict],
-        stats: Dict,
-        recipients: List[str]
-    ) -> Dict:
+        incidents: list[dict],
+        stats: dict,
+        recipients: list[str]
+    ) -> dict:
         """Send weekly incident digest"""
         week_start = (datetime.utcnow() - timedelta(days=7)).strftime('%m/%d')
         week_end = datetime.utcnow().strftime('%m/%d')
@@ -160,11 +160,11 @@ class EmailNotificationSystem:
     
     async def _send_email(
         self,
-        recipients: List[str],
+        recipients: list[str],
         subject: str,
         html_body: str,
         text_body: str
-    ) -> Dict:
+    ) -> dict:
         """
         Send email via SMTP
         
@@ -206,7 +206,7 @@ class EmailNotificationSystem:
                 'recipients': recipients
             }
     
-    def _render_incident_email(self, incident: Dict) -> str:
+    def _render_incident_email(self, incident: dict) -> str:
         """Generate HTML email for incident"""
         severity = incident.get('severity', 'P2')
         severity_colors = {
@@ -279,7 +279,7 @@ class EmailNotificationSystem:
 </html>
         """
     
-    def _render_incident_text(self, incident: Dict) -> str:
+    def _render_incident_text(self, incident: dict) -> str:
         """Generate plain text email for incident"""
         return f"""
 [{incident.get('severity', 'P2')}] INCIDENT ALERT
@@ -299,7 +299,7 @@ https://devops-sentinel.dev/incidents/{incident.get('id')}
 DevOps Sentinel - AI-Powered Monitoring
         """
     
-    def _render_postmortem_email(self, incident: Dict, postmortem: str) -> str:
+    def _render_postmortem_email(self, incident: dict, postmortem: str) -> str:
         """Generate HTML email for postmortem"""
         return f"""
 <!DOCTYPE html>
@@ -335,7 +335,7 @@ DevOps Sentinel - AI-Powered Monitoring
 </html>
         """
     
-    def _render_digest_email(self, incidents: List[Dict], stats: Dict, period: str) -> str:
+    def _render_digest_email(self, incidents: list[dict], stats: dict, period: str) -> str:
         """Generate HTML digest email"""
         incident_rows = '\n'.join([
             f"""
@@ -408,7 +408,7 @@ DevOps Sentinel - AI-Powered Monitoring
 </html>
         """
     
-    def _render_digest_text(self, incidents: List[Dict], stats: Dict) -> str:
+    def _render_digest_text(self, incidents: list[dict], stats: dict) -> str:
         """Generate plain text digest"""
         incident_list = '\n'.join([
             f"- [{inc.get('severity')}] {inc.get('service_name')}: {inc.get('failure_type')}"

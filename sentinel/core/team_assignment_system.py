@@ -5,9 +5,8 @@ Team Assignment System - Collaborative Incident Ownership
 Assign incidents to team members and track ownership
 """
 
-from datetime import datetime
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime
 
 
 class TeamAssignmentSystem:
@@ -28,10 +27,10 @@ class TeamAssignmentSystem:
     async def assign_incident(
         self,
         incident_id: str,
-        assigned_to: Optional[str] = None,
-        assigned_by: Optional[str] = None,
+        assigned_to: str | None = None,
+        assigned_by: str | None = None,
         reason: str = 'auto'
-    ) -> Dict:
+    ) -> dict:
         """
         Assign incident to team member
         
@@ -122,7 +121,7 @@ class TeamAssignmentSystem:
         new_assignee: str,
         reassigned_by: str,
         reason: str = 'manual'
-    ) -> Dict:
+    ) -> dict:
         """
         Reassign incident to different team member
         
@@ -156,7 +155,7 @@ class TeamAssignmentSystem:
         self,
         incident_id: str,
         unassigned_by: str
-    ) -> Dict:
+    ) -> dict:
         """
         Remove assignment from incident
         
@@ -179,7 +178,7 @@ class TeamAssignmentSystem:
         
         return {'incident_id': incident_id, 'status': 'unassigned'}
     
-    async def get_team_workload(self, team_id: str) -> List[Dict]:
+    async def get_team_workload(self, team_id: str) -> list[dict]:
         """
         Get current workload for all team members
         
@@ -227,7 +226,7 @@ class TeamAssignmentSystem:
         user_id: str,
         status: str = 'assigned',
         limit: int = 20
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get all assignments for a user
         
@@ -253,7 +252,7 @@ class TeamAssignmentSystem:
     async def get_assignment_history(
         self,
         incident_id: str
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get full assignment history for incident
         
@@ -269,7 +268,7 @@ class TeamAssignmentSystem:
     async def _log_assignment(
         self,
         incident_id: str,
-        assignment: Dict
+        assignment: dict
     ):
         """Log assignment to incident timeline"""
         await self.supabase.table('incident_timeline').insert({
@@ -283,7 +282,7 @@ class TeamAssignmentSystem:
             'created_at': datetime.utcnow().isoformat()
         }).execute()
     
-    async def get_team_stats(self, team_id: str) -> Dict:
+    async def get_team_stats(self, team_id: str) -> dict:
         """
         Get team assignment statistics
         
@@ -322,7 +321,6 @@ class TeamAssignmentSystem:
 
 # Helper to avoid circular import
 from datetime import timedelta
-
 
 # Example usage
 if __name__ == "__main__":

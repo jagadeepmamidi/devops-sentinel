@@ -4,8 +4,8 @@ Monitoring threshold policy helpers shared by CLI and future workers.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Iterable, Mapping
 
 
 @dataclass(frozen=True)

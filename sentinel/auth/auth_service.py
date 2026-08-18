@@ -5,23 +5,21 @@ Supabase Auth Service
 Complete authentication flow with Supabase
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
 import os
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Request, Response, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
-
 
 # Initialize Supabase client
 try:
-    from supabase import create_client, Client
+    from supabase import Client, create_client
     
     SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
     SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
     
-    supabase: Optional[Client] = None
+    supabase: Client | None = None
     if SUPABASE_URL and SUPABASE_KEY:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 except ImportError:
@@ -37,7 +35,7 @@ security = HTTPBearer(auto_error=False)
 class SignUpRequest(BaseModel):
     email: EmailStr
     password: str
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class SignInRequest(BaseModel):
@@ -46,7 +44,7 @@ class SignInRequest(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    user: Dict
+    user: dict
     access_token: str
     refresh_token: str
     expires_at: int
@@ -55,7 +53,7 @@ class AuthResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
-    name: Optional[str]
+    name: str | None
     tier: str
     created_at: str
 
@@ -73,7 +71,7 @@ class AuthService:
     - User profile
     """
     
-    def __init__(self, client: Optional[Client] = None):
+    def __init__(self, client: Client | None = None):
         self.client = client or supabase
 
     @staticmethod
@@ -88,8 +86,8 @@ class AuthService:
         self,
         email: str,
         password: str,
-        name: Optional[str] = None
-    ) -> Dict:
+        name: str | None = None
+    ) -> dict:
         """
         Create new user account
         
@@ -139,7 +137,7 @@ class AuthService:
         self,
         email: str,
         password: str
-    ) -> Dict:
+    ) -> dict:
         """
         Sign in with email and password
         
@@ -191,7 +189,7 @@ class AuthService:
         except:
             return False
     
-    async def refresh_token(self, refresh_token: str) -> Dict:
+    async def refresh_token(self, refresh_token: str) -> dict:
         """
         Refresh access token
         
@@ -213,10 +211,10 @@ class AuthService:
             
             raise HTTPException(401, "Invalid refresh token")
             
-        except Exception as e:
+        except Exception:
             raise HTTPException(401, "Failed to refresh token")
     
-    async def get_user(self, access_token: str) -> Optional[Dict]:
+    async def get_user(self, access_token: str) -> dict | None:
         """Get current authenticated user"""
         if not self.client:
             return {
@@ -279,7 +277,7 @@ class AuthService:
         self,
         user_id: str,
         email: str,
-        name: Optional[str]
+        name: str | None
     ):
         """Create user profile in our database"""
         if not self.client:
@@ -296,7 +294,7 @@ class AuthService:
         except:
             pass  # Profile might already exist
     
-    async def _get_user_profile(self, user_id: str) -> Optional[Dict]:
+    async def _get_user_profile(self, user_id: str) -> dict | None:
         """Get user profile from database"""
         if not self.client:
             return None
@@ -313,8 +311,8 @@ class AuthService:
     def _mock_auth_response(
         self,
         email: str,
-        name: Optional[str] = None
-    ) -> Dict:
+        name: str | None = None
+    ) -> dict:
         """Mock response for development"""
         return {
             'user': {
@@ -332,7 +330,7 @@ class AuthService:
 # Dependency for protected routes
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> Dict:
+) -> dict:
     """
     FastAPI dependency for authenticated routes
     
@@ -355,7 +353,7 @@ async def get_current_user(
 
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> Optional[Dict]:
+) -> dict | None:
     """Dependency for optionally authenticated routes"""
     if not credentials:
         return None
@@ -408,7 +406,7 @@ async def refresh(refresh_token: str):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(user: Dict = Depends(get_current_user)):
+async def get_me(user: dict = Depends(get_current_user)):
     """Get current user profile"""
     return {
         'id': user['id'],

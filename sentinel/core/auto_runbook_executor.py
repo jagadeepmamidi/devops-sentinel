@@ -5,10 +5,9 @@ Auto-Runbook Execution Engine - Automated Remediation
 Execute runbooks automatically for known incident types
 """
 
-from datetime import datetime
-from typing import Dict, List, Optional, Callable
 import asyncio
 import subprocess
+from datetime import datetime
 
 
 class AutoRunbookExecutor:
@@ -45,9 +44,9 @@ class AutoRunbookExecutor:
     async def execute_runbook(
         self,
         incident_id: str,
-        runbook_id: Optional[str] = None,
+        runbook_id: str | None = None,
         auto_approve_safe: bool = False
-    ) -> Dict:
+    ) -> dict:
         """
         Execute runbook for incident
         
@@ -177,10 +176,10 @@ class AutoRunbookExecutor:
         self,
         execution_id: str,
         step_number: int,
-        step: Dict,
-        incident: Dict,
+        step: dict,
+        incident: dict,
         auto_approve: bool
-    ) -> Dict:
+    ) -> dict:
         """
         Execute a single runbook step
         
@@ -248,7 +247,7 @@ class AutoRunbookExecutor:
                 'error': str(e)
             }
     
-    def _interpolate_params(self, params: Dict, incident: Dict) -> Dict:
+    def _interpolate_params(self, params: dict, incident: dict) -> dict:
         """Replace {{incident.field}} with actual values"""
         interpolated = {}
         
@@ -312,7 +311,7 @@ class AutoRunbookExecutor:
     async def _run_command(
         self,
         command: str,
-        host: Optional[str] = None,
+        host: str | None = None,
         timeout: int = 30
     ) -> str:
         """Run arbitrary command"""
@@ -361,7 +360,7 @@ class AutoRunbookExecutor:
     async def _clear_cache(
         self,
         cache_type: str = 'redis',
-        keys: Optional[List[str]] = None
+        keys: list[str] | None = None
     ) -> str:
         """Clear cache"""
         if cache_type == 'redis':
@@ -395,7 +394,7 @@ class AutoRunbookExecutor:
         else:
             raise Exception(f"Rollback failed: {result.stderr}")
     
-    async def _find_matching_runbook(self, incident: Dict) -> Optional[Dict]:
+    async def _find_matching_runbook(self, incident: dict) -> dict | None:
         """Find best matching runbook for incident"""
         # Query runbooks that match failure type
         failure_type = incident.get('failure_type')
@@ -423,7 +422,7 @@ class AutoRunbookExecutor:
         incident_id: str,
         runbook_id: str,
         status: str,
-        results: Optional[List[Dict]] = None
+        results: list[dict] | None = None
     ):
         """Log runbook execution"""
         await self.supabase.table('runbook_executions').upsert({

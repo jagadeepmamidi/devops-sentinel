@@ -10,20 +10,20 @@ Core modules for intelligent incident management:
 - Runbook matching engine
 """
 
-from .classifier import FailureClassifier, FailureType
 from .baseline_monitor import BaselineMonitor, DegradationAlert
-from .incident_memory import IncidentMemory
+from .classifier import FailureClassifier, FailureType
 from .dependency_analyzer import DependencyAnalyzer, DependencyType
+from .incident_memory import IncidentMemory
 from .runbook_matcher import RunbookMatcher
 
 __all__ = [
-    'FailureClassifier',
-    'FailureType',
     'BaselineMonitor',
     'DegradationAlert',
-    'IncidentMemory',
     'DependencyAnalyzer',
     'DependencyType',
+    'FailureClassifier',
+    'FailureType',
+    'IncidentMemory',
     'RunbookMatcher',
 ]
 

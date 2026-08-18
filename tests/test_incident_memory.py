@@ -5,9 +5,9 @@ Tests for Incident Memory
 Tests similar incident search and confidence thresholds
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime
+
+import pytest
 
 from sentinel.core.incident_memory import IncidentMemory
 

@@ -5,11 +5,8 @@ Chaos Engineering Tools - Automated Failure Injection
 Test system resilience by injecting controlled failures
 """
 
-from datetime import datetime
-from typing import Dict, List, Optional
 import asyncio
-import aiohttp
-import random
+from datetime import datetime
 
 
 class ChaosEngineeringTools:
@@ -35,7 +32,7 @@ class ChaosEngineeringTools:
         latency_ms: int,
         duration_seconds: int,
         probability: float = 1.0
-    ) -> Dict:
+    ) -> dict:
         """
         Inject network latency to a service
         
@@ -106,7 +103,7 @@ class ChaosEngineeringTools:
         self,
         service_id: str,
         duration_seconds: int
-    ) -> Dict:
+    ) -> dict:
         """
         Kill a service temporarily to test failover
         
@@ -175,7 +172,7 @@ class ChaosEngineeringTools:
         service_id: str,
         multiplier: float,
         duration_seconds: int
-    ) -> Dict:
+    ) -> dict:
         """
         Simulate traffic spike to test auto-scaling
         
@@ -247,7 +244,7 @@ class ChaosEngineeringTools:
         service_id: str,
         dependency_id: str,
         failure_mode: str = 'timeout'
-    ) -> Dict:
+    ) -> dict:
         """
         Simulate dependency failure to test circuit breakers
         
@@ -301,7 +298,7 @@ class ChaosEngineeringTools:
             'service_resilience': 'pass' if graceful_degradation else 'fail'
         }
     
-    async def _measure_service_health(self, service_id: str) -> Dict:
+    async def _measure_service_health(self, service_id: str) -> dict:
         """Get current service health metrics"""
         # Get service details
         service = await self.supabase.table('services').select('*').eq(
@@ -321,7 +318,7 @@ class ChaosEngineeringTools:
             'instance_count': svc.get('instance_count', 1)
         }
     
-    async def _get_dependent_services(self, service_id: str) -> List[str]:
+    async def _get_dependent_services(self, service_id: str) -> list[str]:
         """Get services that depend on this service"""
         deps = await self.supabase.table('service_dependencies').select(
             'source_service_id'
@@ -331,9 +328,9 @@ class ChaosEngineeringTools:
     
     async def _monitor_cascade_failures(
         self,
-        services: List[str],
+        services: list[str],
         duration: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Monitor services for cascade failures"""
         results = []
         
@@ -361,7 +358,7 @@ class ChaosEngineeringTools:
         # This is a placeholder - actual implementation would use tools like
         # Istio, Linkerd, or Toxiproxy to inject real failures
     
-    def _calculate_impact(self, baseline: Dict, degraded: Dict) -> Dict:
+    def _calculate_impact(self, baseline: dict, degraded: dict) -> dict:
         """Calculate performance impact"""
         response_time_increase = (
             (degraded.get('avg_response_time', 0) - baseline.get('avg_response_time', 1)) /
@@ -383,9 +380,9 @@ class ChaosEngineeringTools:
         experiment_id: str,
         service_id: str,
         experiment_type: str,
-        config: Dict,
+        config: dict,
         status: str,
-        results: Optional[Dict] = None
+        results: dict | None = None
     ):
         """Log chaos experiment to database"""
         await self.supabase.table('chaos_experiments').insert({

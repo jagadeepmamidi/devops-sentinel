@@ -5,9 +5,8 @@ Enhanced Incident Memory - Protected Similarity Search
 Find similar past incidents with confidence thresholds
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 import asyncio
+from datetime import datetime
 
 
 class IncidentMemory:
@@ -33,10 +32,10 @@ class IncidentMemory:
     
     async def find_similar_incidents(
         self,
-        incident: Dict,
+        incident: dict,
         limit: int = 5,
         include_low_confidence: bool = False
-    ) -> Dict:
+    ) -> dict:
         """
         Find similar past incidents with confidence protection
         
@@ -88,7 +87,7 @@ class IncidentMemory:
         if not high_confidence:
             return {
                 'suggestion': None,
-                'reason': 'No confident matches found (threshold: {:.0%})'.format(threshold),
+                'reason': f'No confident matches found (threshold: {threshold:.0%})',
                 'confidence': max(s.get('similarity_score', 0) for s in similar) if similar else 0,
                 'below_threshold': True
             }
@@ -127,7 +126,7 @@ class IncidentMemory:
             ]
         }
     
-    def _generate_explanation(self, current: Dict, past: Dict) -> str:
+    def _generate_explanation(self, current: dict, past: dict) -> str:
         """Generate plain-English explanation for why incidents matched"""
         reasons = []
         
@@ -244,11 +243,11 @@ class IncidentMemory:
     
     async def _vector_similarity_search(
         self,
-        embedding: List[float],
-        service_id: Optional[str] = None,
-        exclude_id: Optional[str] = None,
+        embedding: list[float],
+        service_id: str | None = None,
+        exclude_id: str | None = None,
         limit: int = 10
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Perform vector similarity search using pgvector
         
@@ -306,7 +305,7 @@ class IncidentMemory:
             print(f"Vector search error: {e}")
             return []
     
-    async def _generate_embedding(self, incident: Dict) -> Optional[List[float]]:
+    async def _generate_embedding(self, incident: dict) -> list[float] | None:
         """Generate embedding for incident using OpenAI/other API"""
         if not self.embedding_client:
             return None
@@ -322,7 +321,7 @@ class IncidentMemory:
             print(f"Embedding generation error: {e}")
             return None
     
-    def _build_embedding_text(self, incident: Dict) -> str:
+    def _build_embedding_text(self, incident: dict) -> str:
         """Build text representation for embedding"""
         parts = []
         
@@ -426,7 +425,7 @@ if __name__ == "__main__":
         })
         
         if result.get('suggestion'):
-            print(f"Found similar incident!")
+            print("Found similar incident!")
             print(f"Confidence: {result['confidence']:.0%}")
             print(f"Explanation: {result['explanation']}")
             print(f"Resolution: {result['suggestion']['resolution']}")

@@ -5,9 +5,9 @@ Tests for Quick Health Check API
 Tests the viral health check feature
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from datetime import datetime
 
 from sentinel.api.quick_health_check import QuickHealthCheck
 

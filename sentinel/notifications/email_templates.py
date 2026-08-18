@@ -6,7 +6,6 @@ HTML email templates for various notifications
 """
 
 from datetime import datetime
-from typing import Dict, Optional
 
 
 class EmailTemplates:
@@ -171,7 +170,7 @@ class EmailTemplates:
         description: str,
         detected_at: str,
         incident_url: str,
-        similar_incident: Optional[Dict] = None
+        similar_incident: dict | None = None
     ) -> str:
         """Generate incident alert email"""
         severity_class = 'alert-critical' if severity in ['P0', 'P1'] else 'alert-warning'
@@ -225,9 +224,9 @@ class EmailTemplates:
     
     @staticmethod
     def daily_digest(
-        summary: Dict,
+        summary: dict,
         top_incidents: list,
-        services_status: Dict,
+        services_status: dict,
         dashboard_url: str
     ) -> str:
         """Generate daily digest email"""

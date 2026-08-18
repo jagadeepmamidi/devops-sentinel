@@ -10,13 +10,11 @@ Enables custom health checks beyond basic HTTP:
 """
 
 import asyncio
-import subprocess
-import socket
-import dns.resolver
-from typing import Dict, Optional, Tuple
-from datetime import datetime
-import tempfile
 import os
+import tempfile
+from datetime import datetime
+
+import dns.resolver
 
 
 class CustomHealthCheckTool:
@@ -43,8 +41,8 @@ class CustomHealthCheckTool:
     async def execute_check(
         self,
         check_type: str,
-        check_config: Dict
-    ) -> Dict:
+        check_config: dict
+    ) -> dict:
         """
         Execute health check based on type
         
@@ -67,7 +65,7 @@ class CustomHealthCheckTool:
                 'error': f'Unknown check type: {check_type}'
             }
     
-    async def execute_script_check(self, config: Dict) -> Dict:
+    async def execute_script_check(self, config: dict) -> dict:
         """
         Execute Python or Bash script
         
@@ -157,11 +155,11 @@ class CustomHealthCheckTool:
         except Exception as e:
             return {
                 'is_healthy': False,
-                'error': f'Script execution failed: {str(e)}',
+                'error': f'Script execution failed: {e!s}',
                 'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
             }
     
-    async def execute_tcp_check(self, config: Dict) -> Dict:
+    async def execute_tcp_check(self, config: dict) -> dict:
         """
         Check TCP port connectivity
         
@@ -209,11 +207,11 @@ class CustomHealthCheckTool:
         except Exception as e:
             return {
                 'is_healthy': False,
-                'error': f'TCP connection failed: {str(e)}',
+                'error': f'TCP connection failed: {e!s}',
                 'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
             }
     
-    async def execute_dns_check(self, config: Dict) -> Dict:
+    async def execute_dns_check(self, config: dict) -> dict:
         """
         Check DNS resolution
         
@@ -280,7 +278,7 @@ class CustomHealthCheckTool:
         except Exception as e:
             return {
                 'is_healthy': False,
-                'error': f'DNS resolution failed: {str(e)}',
+                'error': f'DNS resolution failed: {e!s}',
                 'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
             }
 

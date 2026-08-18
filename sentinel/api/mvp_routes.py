@@ -5,7 +5,6 @@ MVP monitoring routes backed by Supabase.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
@@ -15,7 +14,6 @@ from sentinel.auth.auth_service import get_current_user, security
 from sentinel.cli.db import SentinelDB
 from sentinel.core.postmortem_generator import PostmortemGenerator
 
-
 router = APIRouter(tags=["monitoring"])
 
 
@@ -23,12 +21,12 @@ class ServiceCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     url: str = Field(..., min_length=1)
     check_interval: int = Field(default=30, ge=1, le=3600)
-    project_id: Optional[str] = None
+    project_id: str | None = None
 
 
 class PostmortemGenerateRequest(BaseModel):
     incident_id: str
-    resolution_notes: Optional[str] = None
+    resolution_notes: str | None = None
 
 
 def get_request_db(
@@ -39,7 +37,7 @@ def get_request_db(
     return SentinelDB(access_token=credentials.credentials)
 
 
-def _service_payload(service: Dict) -> Dict:
+def _service_payload(service: dict) -> dict:
     return {
         "id": service.get("id"),
         "name": service.get("name"),
@@ -52,7 +50,7 @@ def _service_payload(service: Dict) -> Dict:
     }
 
 
-def _incident_payload(incident: Dict) -> Dict:
+def _incident_payload(incident: dict) -> dict:
     service = incident.get("services") or {}
     return {
         "id": incident.get("id"),
@@ -70,7 +68,7 @@ def _incident_payload(incident: Dict) -> Dict:
     }
 
 
-def _timeline_for_incident(incident: Dict) -> List[Dict]:
+def _timeline_for_incident(incident: dict) -> list[dict]:
     events = [
         {
             "timestamp": incident.get("detected_at"),
@@ -87,7 +85,7 @@ def _timeline_for_incident(incident: Dict) -> List[Dict]:
     return events
 
 
-def _event_payload(event: Dict) -> Dict:
+def _event_payload(event: dict) -> dict:
     return {
         "id": event.get("id"),
         "incident_id": event.get("incident_id"),
@@ -101,7 +99,7 @@ def _event_payload(event: Dict) -> Dict:
 
 @router.get("/api/services")
 async def list_services(
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     services = db.list_services(current_user["id"])
@@ -111,7 +109,7 @@ async def list_services(
 @router.post("/api/services")
 async def create_service(
     request: ServiceCreateRequest,
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     service = db.add_service(
@@ -129,7 +127,7 @@ async def create_service(
 @router.delete("/api/services/{service_id}")
 async def delete_service(
     service_id: str,
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     service = db.get_service(service_id)
@@ -142,9 +140,9 @@ async def delete_service(
 @router.get("/api/incidents")
 async def list_incidents(
     limit: int = 50,
-    severity: Optional[str] = None,
-    status: Optional[str] = None,
-    current_user: Dict = Depends(get_current_user),
+    severity: str | None = None,
+    status: str | None = None,
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     incidents = db.list_incidents(current_user["id"], limit=limit, severity=severity, status=status)
@@ -154,7 +152,7 @@ async def list_incidents(
 @router.get("/api/incidents/{incident_id}")
 async def get_incident(
     incident_id: str,
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     incident = db.get_incident(incident_id)
@@ -166,7 +164,7 @@ async def get_incident(
 @router.get("/api/incidents/{incident_id}/events")
 async def list_incident_events(
     incident_id: str,
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     incident = db.get_incident(incident_id)
@@ -179,7 +177,7 @@ async def list_incident_events(
 @router.post("/api/postmortems/generate")
 async def generate_postmortem(
     request: PostmortemGenerateRequest,
-    current_user: Dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: SentinelDB = Depends(get_request_db),
 ):
     incident = db.get_incident(request.incident_id)

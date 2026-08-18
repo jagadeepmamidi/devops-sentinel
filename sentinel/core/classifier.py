@@ -11,7 +11,6 @@ Calculates confidence score for failures based on:
 Only triggers incidents if confidence >= threshold (default 0.6)
 """
 
-from typing import Dict, Tuple
 from enum import Enum
 
 
@@ -172,7 +171,7 @@ class FailureClassifier:
         service_criticality: float,
         blast_radius: int,
         is_canary: bool = False
-    ) -> Tuple[bool, float, str]:
+    ) -> tuple[bool, float, str]:
         """
         Determine if incident should be triggered based on confidence
         
