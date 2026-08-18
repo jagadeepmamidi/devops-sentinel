@@ -52,7 +52,18 @@ Run `sentinel init --mode supabase` only when using existing Supabase auth and p
 
 ## Configuration
 
-`.env` is loaded from the current project directory. Local-first example:
+`.env` is loaded from the current project directory. Provider keys can also be stored in a user-level file, similar to CLI auth stores:
+
+```bash
+sentinel config set openrouter_api_key
+sentinel config set openai_api_key
+sentinel config list
+sentinel config remove openrouter_api_key
+```
+
+`config set` prompts with hidden input and stores values in `~/.sentinel/config.json` with restrictive permissions. Existing process variables and project `.env` values take precedence. `sentinel config` always masks secrets. Local mode needs no login; `sentinel login` is only for Supabase compatibility mode.
+
+Local-first example:
 
 ```env
 SENTINEL_MODE=local
@@ -69,8 +80,25 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-key
 ```
 
-Configuration precedence: CLI options, environment variables, project `.env`, defaults.
+Configuration precedence: process environment, project `.env`, user config, defaults.
 Secrets are redacted by `sentinel config`.
+
+Service commands use the `services` namespace:
+
+```bash
+sentinel services add production-api https://api.example.com/health
+sentinel services list
+sentinel services check <service-id>
+```
+
+HTTP 2xx and 3xx responses count as reachable/healthy. Redirects still appear with their response code.
+
+MCP support is optional:
+
+```bash
+pip install "devops-sentinel-next[mcp]"
+sentinel mcp
+```
 
 ## Architecture
 

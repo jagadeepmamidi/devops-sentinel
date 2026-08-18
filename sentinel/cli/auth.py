@@ -30,6 +30,85 @@ CONFIG_DIR = Path.home() / ".sentinel"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 CREDENTIALS_FILE = CONFIG_DIR / "credentials.json"
 
+SUPPORTED_CONFIG_KEYS = {
+    "openrouter_api_key": "OPENROUTER_API_KEY",
+    "openai_api_key": "OPENAI_API_KEY",
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "slack_webhook_url": "SLACK_WEBHOOK_URL",
+    "supabase_url": "SUPABASE_URL",
+    "supabase_key": "SUPABASE_KEY",
+    "supabase_anon_key": "SUPABASE_ANON_KEY",
+    "sentinel_web_url": "SENTINEL_WEB_URL",
+}
+
+
+def _read_user_config() -> dict:
+    """Read persisted user settings without failing CLI startup."""
+    if not CONFIG_FILE.exists():
+        return {}
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    values = data.get("env", {}) if isinstance(data, dict) else {}
+    return values if isinstance(values, dict) else {}
+
+
+def load_user_config_into_env() -> None:
+    """Load saved settings without overriding process or project environment."""
+    for env_name, value in _read_user_config().items():
+        if env_name in SUPPORTED_CONFIG_KEYS.values() and isinstance(value, str) and value:
+            os.environ.setdefault(env_name, value)
+
+
+def _write_user_config(values: dict[str, str]) -> None:
+    ensure_config_dir()
+    payload = {"version": 1, "env": values}
+    temporary = CONFIG_FILE.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(CONFIG_FILE)
+    if sys.platform != "win32":
+        CONFIG_FILE.chmod(0o600)
+
+
+def set_user_config(key: str, value: str) -> str:
+    """Persist one supported setting and return its environment variable name."""
+    env_name = SUPPORTED_CONFIG_KEYS.get(key.lower().replace("-", "_"))
+    if not env_name:
+        raise ValueError(f"Unsupported config key: {key}")
+    values = _read_user_config()
+    values[env_name] = value
+    _write_user_config(values)
+    os.environ[env_name] = value
+    return env_name
+
+
+def remove_user_config(key: str) -> str:
+    """Remove one supported setting and return its environment variable name."""
+    env_name = SUPPORTED_CONFIG_KEYS.get(key.lower().replace("-", "_"))
+    if not env_name:
+        raise ValueError(f"Unsupported config key: {key}")
+    values = _read_user_config()
+    values.pop(env_name, None)
+    _write_user_config(values)
+    return env_name
+
+
+def user_config_values() -> dict[str, str]:
+    """Return supported persisted settings for masked display."""
+    return {
+        key: value
+        for key, value in _read_user_config().items()
+        if key in SUPPORTED_CONFIG_KEYS.values() and isinstance(value, str)
+    }
+
+
+def mask_secret(value: str | None) -> str:
+    """Mask secrets while retaining a small verification suffix."""
+    if not value:
+        return "Not set"
+    return "*" * max(0, len(value) - 4) + value[-4:]
+
 
 def ensure_config_dir():
     """Create config directory if it doesn't exist."""
@@ -193,8 +272,8 @@ def extract_token_from_input(
 class AuthCallbackHandler(BaseHTTPRequestHandler):
     """HTTP handler for OAuth callback."""
 
-    token_data = None
-    expected_state = None
+    token_data: dict | None = None
+    expected_state: str | None = None
 
     def log_message(self, format, *args):
         """Suppress HTTP logs."""
@@ -539,7 +618,7 @@ def require_auth(func):
 @click.option(
     "--web-url",
     envvar="SENTINEL_WEB_URL",
-    help="Website URL for browser auth flow (e.g. https://devops-sentinel.dev)",
+    help="Website URL for Supabase compatibility-mode browser auth.",
 )
 def login(token: str | None, device: bool, supabase_url: str | None, web_url: str | None):
     """
@@ -554,9 +633,16 @@ def login(token: str | None, device: bool, supabase_url: str | None, web_url: st
         sentinel login --token YOUR_API_TOKEN
         sentinel login --device
     """
-    if get_storage_mode() == "local":
+    storage_mode = get_storage_mode()
+    if storage_mode == "local":
         click.echo("\n[SENTINEL] Local mode enabled; login is not required.")
         click.echo("  Data is stored in SQLite. Use `sentinel config` to see its path.")
+        return
+    if storage_mode == "none":
+        click.echo(click.style("\nError: Sentinel is not initialized.", fg="red"))
+        click.echo(
+            "  Run `sentinel init` for local mode, or `sentinel init --mode supabase` for team auth."
+        )
         return
 
     # Check for existing login
@@ -655,6 +741,10 @@ def whoami():
         return
 
     user = get_current_user()
+    if not user:
+        click.echo(f"\n{click.style('Current User', bold=True)}")
+        click.echo("  Session has no user profile. Run `sentinel login` again.")
+        return
     creds = load_credentials()
 
     click.echo(f"\n{click.style('Current User', bold=True)}")
