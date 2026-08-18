@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-sentinel-next"
-version = "0.1.1"
+version = "0.1.2"
 description = "Agent-accessible SRE operations platform for health checks, incidents, postmortems, and safe automation"
 readme = "README.md"
 license = { text = "MIT" }
@@ -109,6 +109,7 @@ packages = [
   "sentinel.notifications",
   "sentinel.setup",
   "sentinel.tools",
+  "sentinel.mcp",
 ]
 py-modules = [
   "agents",

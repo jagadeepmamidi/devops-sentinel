@@ -38,11 +38,17 @@ from ..core.postmortem_generator import PostmortemGenerator
 
 # Auth module
 from .auth import (
+    SUPPORTED_CONFIG_KEYS,
     get_current_user,
     get_storage_mode,
     is_logged_in,
+    load_user_config_into_env,
     login,
     logout,
+    mask_secret,
+    remove_user_config,
+    set_user_config,
+    user_config_values,
     whoami,
 )
 from .db import get_db
@@ -51,7 +57,9 @@ from .db import get_db
 from .projects import projects
 from .services import services
 
-load_dotenv()
+load_dotenv(dotenv_path=Path.cwd() / ".env")
+# Project/process environment wins over user-level persisted settings.
+load_user_config_into_env()
 
 
 def classify_incident(response_code: int | None, error: str = "") -> tuple[str, str]:
@@ -191,7 +199,7 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                         datetime.now(timezone.utc).replace(tzinfo=None) - start
                     ).total_seconds() * 1000
                     status_code = response.status_code
-                    is_healthy = status_code == 200
+                    is_healthy = status_code in range(200, 400)
                     state = advance_monitoring_state(state, is_healthy)
 
                     if service and db.connected:
@@ -293,11 +301,11 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                                 f"[DevOps Sentinel] Incident opened for {url}: HTTP {status_code} ({elapsed:.0f}ms)"
                             )
 
-                except httpx.HTTPError as e:
+                except httpx.HTTPError as error:
                     status = click.style("X FAILED", fg="red")
                     state = advance_monitoring_state(state, False)
                     if service and db.connected:
-                        db.log_health_check(service["id"], 0, 0, False, str(e))
+                        db.log_health_check(service["id"], 0, 0, False, str(error))
                         db.update_service_status(service["id"], "down", 0)
                     opened_incident = False
                     if (
@@ -310,7 +318,7 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                             has_active_incident=bool(active_incident_id),
                         )
                     ):
-                        severity, detail = classify_incident(None, str(e))
+                        severity, detail = classify_incident(None, str(error))
                         incident = db.create_incident(
                             user["id"],
                             service["id"],
@@ -326,7 +334,7 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                             json.dumps(
                                 {
                                     "status": "failed",
-                                    "error": str(e),
+                                    "error": str(error),
                                     "failure_streak": state.consecutive_failures,
                                     "failure_threshold": failure_threshold,
                                     "incident_opened": opened_incident,
@@ -336,12 +344,12 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                         )
                     else:
                         click.echo(
-                            f"  {status} | {str(e)[:50]} | Failure streak {state.consecutive_failures}/"
+                            f"  {status} | {str(error)[:50]} | Failure streak {state.consecutive_failures}/"
                             f"{failure_threshold} | Check #{check_count}"
                         )
                     if opened_incident:
                         await send_notification(
-                            f"[DevOps Sentinel] Failure for {url}: {str(e)[:180]}"
+                            f"[DevOps Sentinel] Failure for {url}: {str(error)[:180]}"
                         )
 
                 await asyncio.sleep(interval)
@@ -380,7 +388,7 @@ def health(ctx, url, timeout):
                     "url": url,
                     "status_code": response.status_code,
                     "latency_ms": round(elapsed, 2),
-                    "healthy": response.status_code == 200,
+                    "healthy": response.status_code in range(200, 400),
                     "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 }
 
@@ -539,7 +547,7 @@ def status(ctx):
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 resp = await client.get(f"{api_url}/health")
-                return resp.status_code == 200
+                return resp.status_code in range(200, 400)
         except httpx.HTTPError:
             return False
 
@@ -573,12 +581,15 @@ def status(ctx):
     click.echo()
 
 
-@cli.command()
-def config():
-    """Show current configuration."""
+@cli.group(invoke_without_command=True)
+@click.pass_context
+def config(ctx):
+    """Show or manage configuration and provider API keys."""
+    if ctx.invoked_subcommand is not None:
+        return
+
     click.echo(f"\n{click.style('Configuration', bold=True)}")
     click.echo("-" * 40)
-
     storage_mode = get_storage_mode()
     db = get_db() if storage_mode == "local" else None
     configs = [
@@ -596,18 +607,49 @@ def config():
             if os.getenv("SUPABASE_URL")
             else "Not set",
         ),
-        (
-            "SUPABASE_KEY",
-            "***" if (os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")) else "Not set",
-        ),
-        ("OPENROUTER_API_KEY", "***" if os.getenv("OPENROUTER_API_KEY") else "Not set"),
-        ("OPENAI_API_KEY", "***" if os.getenv("OPENAI_API_KEY") else "Not set"),
-        ("SLACK_WEBHOOK_URL", "***" if os.getenv("SLACK_WEBHOOK_URL") else "Not set"),
+        ("SUPABASE_KEY", mask_secret(os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY"))),
+        ("OPENROUTER_API_KEY", mask_secret(os.getenv("OPENROUTER_API_KEY"))),
+        ("OPENAI_API_KEY", mask_secret(os.getenv("OPENAI_API_KEY"))),
+        ("ANTHROPIC_API_KEY", mask_secret(os.getenv("ANTHROPIC_API_KEY"))),
+        ("SLACK_WEBHOOK_URL", mask_secret(os.getenv("SLACK_WEBHOOK_URL"))),
     ]
-
     for key, value in configs:
         click.echo(f"  {key}: {value}")
+    click.echo("\n  User config: ~/.sentinel/config.json")
+    click.echo("  Set a key: sentinel config set openrouter_api_key")
     click.echo()
+
+
+@config.command("set")
+@click.argument("key", type=click.Choice(list(SUPPORTED_CONFIG_KEYS), case_sensitive=False))
+@click.option("--value", help="Value for non-interactive use; avoid shell history for secrets.")
+def config_set(key, value):
+    """Save an API key or integration setting in the user config."""
+    value = value or click.prompt(f"{key} value", hide_input=True)
+    if not value.strip():
+        raise click.ClickException("Value cannot be empty.")
+    env_name = set_user_config(key, value.strip())
+    click.echo(f"Saved {env_name} in the user config.")
+
+
+@config.command("list")
+def config_list():
+    """List saved settings without exposing secret values."""
+    values = user_config_values()
+    if not values:
+        click.echo("No user settings saved.\n  sentinel config set openrouter_api_key")
+        return
+    for key, value in sorted(values.items()):
+        click.echo(f"{key}: {mask_secret(value)}")
+
+
+@config.command("remove")
+@click.argument("key", type=click.Choice(list(SUPPORTED_CONFIG_KEYS), case_sensitive=False))
+def config_remove(key):
+    """Remove a saved API key or integration setting."""
+    env_name = remove_user_config(key)
+    os.environ.pop(env_name, None)
+    click.echo(f"Removed {env_name} from the user config.")
 
 
 @cli.command()
@@ -747,7 +789,14 @@ def doctor(ctx, strict):
 @cli.command("mcp")
 def mcp_server():
     """Start the MCP server for Cursor / Claude Desktop."""
-    from sentinel.mcp.server import main
+    try:
+        from sentinel.mcp.server import main
+    except ModuleNotFoundError as error:
+        if error.name == "mcp":
+            raise click.ClickException(
+                'MCP dependency missing. Install with `pip install "devops-sentinel-next[mcp]"`.'
+            ) from error
+        raise
 
     main()
 
@@ -757,14 +806,16 @@ def mcp_server():
 def setup(ctx):
     """Guided first-run setup for CLI users."""
     click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Guided setup")
-    click.echo("  This will configure login, first service, and a quick verification.\n")
+    click.echo("  This will configure optional keys, first service, and a quick verification.\n")
 
     if not Path(".env").exists():
         click.echo("  .env not found, creating defaults...")
         ctx.invoke(init)
 
-    if not is_logged_in() and click.confirm(
-        "  You are not logged in. Run browser login now?", default=True
+    if (
+        get_storage_mode() == "supabase"
+        and not is_logged_in()
+        and click.confirm("  You are not logged in. Run browser login now?", default=True)
     ):
         ctx.invoke(
             login,
@@ -780,7 +831,7 @@ def setup(ctx):
 
     registered = False
     db = get_db()
-    if is_logged_in() and db.connected:
+    if (get_storage_mode() == "local" or is_logged_in()) and db.connected:
         user = get_current_user()
         if user and user.get("id"):
             service = db.add_service(
@@ -796,7 +847,8 @@ def setup(ctx):
         else:
             click.echo(
                 click.style(
-                    "  WARN Login state is invalid; run `sentinel login` again.", fg="yellow"
+                    "  WARN Identity is invalid; run `sentinel login` again in Supabase mode.",
+                    fg="yellow",
                 )
             )
     else:
@@ -811,7 +863,7 @@ def setup(ctx):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.get(service_url)
-                return response.status_code == 200
+                return response.status_code in range(200, 400)
         except httpx.HTTPError:
             return False
 

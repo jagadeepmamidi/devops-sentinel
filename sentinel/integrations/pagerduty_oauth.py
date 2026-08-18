@@ -7,7 +7,7 @@ PagerDuty OAuth - One-Click On-Call Integration
 
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import aiohttp
@@ -17,97 +17,100 @@ from fastapi.responses import RedirectResponse
 from sentinel.auth.auth_service import get_current_user
 
 # OAuth Configuration
-PAGERDUTY_CLIENT_ID = os.environ.get('PAGERDUTY_CLIENT_ID', '')
-PAGERDUTY_CLIENT_SECRET = os.environ.get('PAGERDUTY_CLIENT_SECRET', '')
-APP_URL = os.environ.get('APP_URL', 'http://localhost:8000')
+PAGERDUTY_CLIENT_ID = os.environ.get("PAGERDUTY_CLIENT_ID", "")
+PAGERDUTY_CLIENT_SECRET = os.environ.get("PAGERDUTY_CLIENT_SECRET", "")
+APP_URL = os.environ.get("APP_URL", "http://localhost:8000")
 
 
 class PagerDutyOAuth:
     """
     PagerDuty OAuth 2.0 Flow
-    
+
     Enables:
     - On-call schedule sync
     - Incident escalation
     - Team member sync
     """
-    
+
     AUTHORIZE_URL = "https://identity.pagerduty.com/oauth/authorize"
     TOKEN_URL = "https://identity.pagerduty.com/oauth/token"
-    
+
     def __init__(self, supabase_client=None):
         self.supabase = supabase_client
         self._state_store = {}
-    
+
     def get_authorization_url(self, user_id: str) -> str:
         """Generate PagerDuty authorization URL"""
         state = secrets.token_urlsafe(32)
-        self._state_store[state] = {'user_id': user_id}
-        
+        self._state_store[state] = {"user_id": user_id}
+
         params = {
-            'client_id': PAGERDUTY_CLIENT_ID,
-            'redirect_uri': f"{APP_URL}/api/pagerduty/oauth/callback",
-            'response_type': 'code',
-            'state': state
+            "client_id": PAGERDUTY_CLIENT_ID,
+            "redirect_uri": f"{APP_URL}/api/pagerduty/oauth/callback",
+            "response_type": "code",
+            "state": state,
         }
-        
+
         return f"{self.AUTHORIZE_URL}?{urlencode(params)}"
-    
+
     async def handle_callback(self, code: str, state: str) -> dict:
-        """Handle OAuth callback"""
+        """Handle OAuth callback."""
+        if not code or not state:
+            raise HTTPException(400, "Missing OAuth code or state")
         state_data = self._state_store.pop(state, None)
         if not state_data:
             raise HTTPException(400, "Invalid state")
-        
+
         # Exchange code for token
-        async with aiohttp.ClientSession() as session, session.post(
-            self.TOKEN_URL,
-            data={
-                'grant_type': 'authorization_code',
-                'client_id': PAGERDUTY_CLIENT_ID,
-                'client_secret': PAGERDUTY_CLIENT_SECRET,
-                'redirect_uri': f"{APP_URL}/api/pagerduty/oauth/callback",
-                'code': code
-            }
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                self.TOKEN_URL,
+                data={
+                    "grant_type": "authorization_code",
+                    "client_id": PAGERDUTY_CLIENT_ID,
+                    "client_secret": PAGERDUTY_CLIENT_SECRET,
+                    "redirect_uri": f"{APP_URL}/api/pagerduty/oauth/callback",
+                    "code": code,
+                },
+            ) as resp,
+        ):
             tokens = await resp.json()
-        
-        if 'error' in tokens:
-            raise HTTPException(400, tokens.get('error_description', 'OAuth failed'))
-        
+
+        if "error" in tokens:
+            raise HTTPException(400, tokens.get("error_description", "OAuth failed"))
+
         # Get current user
-        async with aiohttp.ClientSession() as session, session.get(
-            "https://api.pagerduty.com/users/me",
-            headers={
-                'Authorization': f"Bearer {tokens['access_token']}",
-                'Content-Type': 'application/json'
-            }
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                "https://api.pagerduty.com/users/me",
+                headers={
+                    "Authorization": f"Bearer {tokens['access_token']}",
+                    "Content-Type": "application/json",
+                },
+            ) as resp,
+        ):
             pd_data = await resp.json()
-        
-        pd_user = pd_data.get('user', {})
-        
+
+        pd_user = pd_data.get("user", {})
+
         # Store integration
         integration = {
-            'user_id': state_data['user_id'],
-            'pagerduty_user_id': pd_user.get('id'),
-            'pagerduty_email': pd_user.get('email'),
-            'access_token': tokens['access_token'],
-            'refresh_token': tokens.get('refresh_token'),
-            'installed_at': datetime.utcnow().isoformat()
+            "user_id": state_data["user_id"],
+            "pagerduty_user_id": pd_user.get("id"),
+            "pagerduty_email": pd_user.get("email"),
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens.get("refresh_token"),
+            "installed_at": datetime.now(timezone.utc).isoformat(),
         }
-        
+
         if self.supabase:
-            self.supabase.table('pagerduty_integrations').upsert(
-                integration,
-                on_conflict='user_id'
+            self.supabase.table("pagerduty_integrations").upsert(
+                integration, on_conflict="user_id"
             ).execute()
-        
-        return {
-            'email': pd_user.get('email'),
-            'name': pd_user.get('name'),
-            'success': True
-        }
+
+        return {"email": pd_user.get("email"), "name": pd_user.get("name"), "success": True}
 
 
 # FastAPI Router
@@ -119,23 +122,25 @@ async def start_oauth(user: dict = Depends(get_current_user)):
     """Start PagerDuty OAuth flow"""
     if not PAGERDUTY_CLIENT_ID:
         raise HTTPException(500, "PagerDuty OAuth not configured")
-    
+
     oauth = PagerDutyOAuth()
-    return {"authorization_url": oauth.get_authorization_url(user['id'])}
+    return {"authorization_url": oauth.get_authorization_url(user["id"])}
 
 
 @router.get("/callback")
-async def oauth_callback(code: str = None, state: str = None, error: str = None):
-    """Handle PagerDuty OAuth callback"""
+async def oauth_callback(
+    code: str | None = None, state: str | None = None, error: str | None = None
+):
+    """Handle PagerDuty OAuth callback."""
     if error:
         return RedirectResponse(f"{APP_URL}/settings/integrations?error={error}")
-    
+    if not code or not state:
+        return RedirectResponse(f"{APP_URL}/settings/integrations?error=missing_code_or_state")
+
     try:
         oauth = PagerDutyOAuth()
         await oauth.handle_callback(code, state)
-        return RedirectResponse(
-            f"{APP_URL}/settings/integrations?pagerduty=connected"
-        )
+        return RedirectResponse(f"{APP_URL}/settings/integrations?pagerduty=connected")
     except HTTPException as e:
         return RedirectResponse(f"{APP_URL}/settings/integrations?error={e.detail}")
 

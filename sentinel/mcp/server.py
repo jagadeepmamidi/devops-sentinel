@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -14,7 +15,7 @@ from sentinel.core.anomaly_detector import AnomalyDetector
 from sentinel.core.doctor import run_doctor
 from sentinel.core.postmortem_generator import PostmortemGenerator
 
-load_dotenv()
+load_dotenv(dotenv_path=Path.cwd() / ".env")
 mcp = FastMCP("devops-sentinel")
 
 
@@ -23,18 +24,22 @@ def _error(code: str, message: str) -> dict[str, Any]:
 
 
 def _incident_service() -> IncidentService | dict[str, Any]:
-    from sentinel.cli.auth import get_current_user, is_logged_in
+    from sentinel.cli.auth import get_current_user, get_storage_mode, is_logged_in
     from sentinel.cli.db import get_db
 
-    if not os.getenv("SUPABASE_URL") or not (
-        os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
-    ):
-        return _error("not_configured", "Set SUPABASE_URL and SUPABASE_KEY or SUPABASE_ANON_KEY.")
+    mode = get_storage_mode()
+    if mode == "none":
+        return _error("not_configured", "Run `sentinel init` before using MCP tools.")
+    if mode == "supabase" and not os.getenv("SUPABASE_URL"):
+        return _error("not_configured", "Configure SUPABASE_URL for Supabase mode.")
     if not is_logged_in():
-        return _error("not_logged_in", "Run `sentinel login` before using account-scoped tools.")
+        return _error(
+            "not_logged_in",
+            "Run `sentinel login` in Supabase mode before using account-scoped tools.",
+        )
     user = get_current_user()
     if not user or not user.get("id"):
-        return _error("invalid_session", "Run `sentinel login` again.")
+        return _error("invalid_session", "Run `sentinel login` again in Supabase mode.")
     db = get_db()
     if not db.connected:
         return _error("db_not_connected", "Check credentials and run `sentinel doctor`.")
