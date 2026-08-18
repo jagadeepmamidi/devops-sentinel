@@ -1,7 +1,8 @@
 """Regression tests for remediation safety controls."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from src.core.auto_runbook_executor import AutoRunbookExecutor
 from src.tools.custom_health_check_tool import CustomHealthCheckTool

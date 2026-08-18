@@ -5,9 +5,9 @@ PagerDuty Integration - Critical Incident Escalation
 Route critical incidents to on-call engineers via PagerDuty
 """
 
-from datetime import datetime
-from typing import Dict, Optional, List
 import asyncio
+from datetime import datetime
+
 import aiohttp
 
 
@@ -24,7 +24,7 @@ class PagerDutyIntegration:
     - Incident notes sync
     """
     
-    def __init__(self, integration_key: str, api_token: Optional[str] = None):
+    def __init__(self, integration_key: str, api_token: str | None = None):
         self.integration_key = integration_key
         self.api_token = api_token
         self.events_url = "https://events.pagerduty.com/v2/enqueue"
@@ -32,10 +32,10 @@ class PagerDutyIntegration:
     
     async def trigger_incident(
         self,
-        incident: Dict,
+        incident: dict,
         severity: str = 'critical',
-        custom_details: Optional[Dict] = None
-    ) -> Dict:
+        custom_details: dict | None = None
+    ) -> dict:
         """
         Trigger PagerDuty incident
         
@@ -76,28 +76,27 @@ class PagerDutyIntegration:
             ]
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.events_url,
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            ) as response:
-                if response.status == 202:
-                    result = await response.json()
-                    return {
-                        'status': 'triggered',
-                        'dedup_key': result.get('dedup_key'),
-                        'message': result.get('message')
-                    }
-                else:
-                    error_text = await response.text()
-                    raise Exception(f"PagerDuty trigger failed: {error_text}")
+        async with aiohttp.ClientSession() as session, session.post(
+            self.events_url,
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        ) as response:
+            if response.status == 202:
+                result = await response.json()
+                return {
+                    'status': 'triggered',
+                    'dedup_key': result.get('dedup_key'),
+                    'message': result.get('message')
+                }
+            else:
+                error_text = await response.text()
+                raise Exception(f"PagerDuty trigger failed: {error_text}")
     
     async def acknowledge_incident(
         self,
         incident_id: str,
         acknowledged_by: str = 'DevOps Sentinel'
-    ) -> Dict:
+    ) -> dict:
         """
         Acknowledge PagerDuty incident
         
@@ -115,22 +114,21 @@ class PagerDutyIntegration:
             }
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.events_url,
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            ) as response:
-                if response.status == 202:
-                    return {'status': 'acknowledged'}
-                else:
-                    raise Exception(f"PagerDuty acknowledge failed: {await response.text()}")
+        async with aiohttp.ClientSession() as session, session.post(
+            self.events_url,
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        ) as response:
+            if response.status == 202:
+                return {'status': 'acknowledged'}
+            else:
+                raise Exception(f"PagerDuty acknowledge failed: {await response.text()}")
     
     async def resolve_incident(
         self,
         incident_id: str,
-        resolution_note: Optional[str] = None
-    ) -> Dict:
+        resolution_note: str | None = None
+    ) -> dict:
         """
         Resolve PagerDuty incident
         
@@ -148,23 +146,22 @@ class PagerDutyIntegration:
             }
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.events_url,
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            ) as response:
-                if response.status == 202:
-                    return {'status': 'resolved'}
-                else:
-                    raise Exception(f"PagerDuty resolve failed: {await response.text()}")
+        async with aiohttp.ClientSession() as session, session.post(
+            self.events_url,
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        ) as response:
+            if response.status == 202:
+                return {'status': 'resolved'}
+            else:
+                raise Exception(f"PagerDuty resolve failed: {await response.text()}")
     
     async def add_note(
         self,
         pagerduty_incident_id: str,
         note: str,
         user_email: str
-    ) -> Dict:
+    ) -> dict:
         """
         Add note to PagerDuty incident (requires API token)
         
@@ -182,25 +179,24 @@ class PagerDutyIntegration:
             }
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.api_url}/incidents/{pagerduty_incident_id}/notes",
-                json=payload,
-                headers={
-                    "Authorization": f"Token token={self.api_token}",
-                    "Content-Type": "application/json",
-                    "From": user_email
-                }
-            ) as response:
-                if response.status == 201:
-                    return {'status': 'note_added'}
-                else:
-                    raise Exception(f"Failed to add note: {await response.text()}")
+        async with aiohttp.ClientSession() as session, session.post(
+            f"{self.api_url}/incidents/{pagerduty_incident_id}/notes",
+            json=payload,
+            headers={
+                "Authorization": f"Token token={self.api_token}",
+                "Content-Type": "application/json",
+                "From": user_email
+            }
+        ) as response:
+            if response.status == 201:
+                return {'status': 'note_added'}
+            else:
+                raise Exception(f"Failed to add note: {await response.text()}")
     
     async def get_incident_status(
         self,
         pagerduty_incident_id: str
-    ) -> Dict:
+    ) -> dict:
         """
         Get PagerDuty incident status (requires API token)
         
@@ -233,9 +229,9 @@ class PagerDutyIntegration:
     
     async def escalate_to_backup(
         self,
-        incident: Dict,
+        incident: dict,
         escalation_reason: str = 'Primary on-call not responding'
-    ) -> Dict:
+    ) -> dict:
         """
         Escalate to backup on-call (re-trigger with higher urgency)
         
@@ -257,7 +253,7 @@ class PagerDutyIntegration:
             }
         )
     
-    def should_page(self, incident: Dict) -> bool:
+    def should_page(self, incident: dict) -> bool:
         """
         Determine if incident should trigger PagerDuty page
         

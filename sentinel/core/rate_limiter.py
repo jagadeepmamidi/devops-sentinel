@@ -5,9 +5,8 @@ Rate Limiter - API Rate Limiting for Free Tier Protection
 Prevent abuse of free tier with intelligent rate limiting
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, Optional
 import asyncio
+from datetime import datetime, timedelta
 
 
 class RateLimiter:
@@ -85,8 +84,8 @@ class RateLimiter:
         self,
         user_id: str,
         action: str,
-        tier: Optional[str] = None
-    ) -> Dict:
+        tier: str | None = None
+    ) -> dict:
         """
         Check if user action is within rate limits
         
@@ -144,7 +143,7 @@ class RateLimiter:
         self,
         user_id: str,
         action: str
-    ) -> Dict:
+    ) -> dict:
         """
         Get remaining quota for an action
         
@@ -265,7 +264,7 @@ class RateLimitExceeded(Exception):
         
         super().__init__(self.message)
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             'error': 'rate_limit_exceeded',
             'action': self.action,

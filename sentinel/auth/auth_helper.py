@@ -5,9 +5,7 @@ Authentication Helper - Supabase Auth Integration
 Simple auth helpers for user authentication
 """
 
-from datetime import datetime
-from typing import Dict, Optional
-from fastapi import Request, HTTPException, Depends
+from fastapi import Depends, HTTPException, Request
 
 
 class AuthHelper:
@@ -23,7 +21,7 @@ class AuthHelper:
     def __init__(self, supabase_client):
         self.supabase = supabase_client
     
-    async def verify_token(self, token: str) -> Optional[Dict]:
+    async def verify_token(self, token: str) -> dict | None:
         """
         Verify JWT token from Supabase
         
@@ -48,7 +46,7 @@ class AuthHelper:
         
         return None
     
-    async def get_user_from_request(self, request: Request) -> Optional[Dict]:
+    async def get_user_from_request(self, request: Request) -> dict | None:
         """Extract and verify user from request"""
         auth_header = request.headers.get('Authorization', '')
         
@@ -60,7 +58,7 @@ class AuthHelper:
 
 
 # Dependency for protected routes
-async def get_current_user(request: Request) -> Dict:
+async def get_current_user(request: Request) -> dict:
     """
     FastAPI dependency for protected routes
     
@@ -95,7 +93,7 @@ async def get_current_user(request: Request) -> Dict:
     raise HTTPException(401, "Invalid token")
 
 
-async def get_optional_user(request: Request) -> Optional[Dict]:
+async def get_optional_user(request: Request) -> dict | None:
     """
     FastAPI dependency for optionally authenticated routes
     
@@ -116,7 +114,7 @@ def require_tier(required_tier: str):
         async def pro_feature(user = Depends(require_tier('pro'))):
             ...
     """
-    async def dependency(user: Dict = Depends(get_current_user)):
+    async def dependency(user: dict = Depends(get_current_user)):
         user_tier = user.get('tier', 'free')
         
         tier_hierarchy = {
@@ -147,7 +145,7 @@ def require_team_access(team_id_param: str = 'team_id'):
     """
     async def dependency(
         request: Request,
-        user: Dict = Depends(get_current_user)
+        user: dict = Depends(get_current_user)
     ):
         team_id = request.path_params.get(team_id_param)
         user_teams = user.get('teams', [])
@@ -170,7 +168,7 @@ def require_team_access(team_id_param: str = 'team_id'):
 
 # Rate limit check with auth context
 async def check_rate_limit(
-    user: Dict,
+    user: dict,
     action: str,
     supabase_client
 ) -> bool:

@@ -10,11 +10,11 @@ Uses scikit-learn's Isolation Forest to detect anomalies in:
 Enables "predict before it fails" capability.
 """
 
-import numpy as np
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
-import pickle
 import os
+import pickle
+from datetime import datetime
+
+import numpy as np
 
 try:
     from sklearn.ensemble import IsolationForest
@@ -66,7 +66,7 @@ class AnomalyDetector:
     def train(
         self,
         service_id: str,
-        historical_data: List[Dict],
+        historical_data: list[dict],
         force_retrain: bool = False
     ) -> bool:
         """
@@ -135,8 +135,8 @@ class AnomalyDetector:
     def detect(
         self,
         service_id: str,
-        current_metrics: Dict
-    ) -> Tuple[bool, float, Optional[str]]:
+        current_metrics: dict
+    ) -> tuple[bool, float, str | None]:
         """
         Detect if current metrics are anomalous
         
@@ -185,9 +185,9 @@ class AnomalyDetector:
     def should_alert(
         self,
         service_id: str,
-        current_metrics: Dict,
+        current_metrics: dict,
         sensitivity: float = 0.8
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """
         Determine if anomaly warrants an alert
         
@@ -215,7 +215,7 @@ class AnomalyDetector:
         
         return False, f"Anomaly not severe enough (score: {score:.3f})"
     
-    def _extract_features(self, data: List[Dict]) -> np.ndarray:
+    def _extract_features(self, data: list[dict]) -> np.ndarray:
         """Extract feature matrix from health check data"""
         features = []
         
@@ -232,7 +232,7 @@ class AnomalyDetector:
         
         return np.array(features)
     
-    def _identify_anomaly_type(self, metrics: Dict, score: float) -> str:
+    def _identify_anomaly_type(self, metrics: dict, score: float) -> str:
         """Identify which metric is causing the anomaly"""
         response_time = metrics.get('response_time_ms', 0)
         error_rate = metrics.get('error_rate', 0)
@@ -284,7 +284,7 @@ class AnomalyDetector:
             print(f"Failed to load model for {service_id}: {e}")
             return False
     
-    def get_model_info(self, service_id: str) -> Optional[Dict]:
+    def get_model_info(self, service_id: str) -> dict | None:
         """Get information about trained model"""
         if service_id not in self.models:
             if not self._load_model(service_id):

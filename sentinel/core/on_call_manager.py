@@ -5,9 +5,8 @@ On-Call Manager - Rotation & Escalation
 Manages on-call schedules, rotations, and escalation policies
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime, timedelta
 
 
 class OnCallManager:
@@ -28,8 +27,8 @@ class OnCallManager:
     async def get_current_on_call(
         self,
         team_id: str,
-        service_id: Optional[str] = None
-    ) -> Dict:
+        service_id: str | None = None
+    ) -> dict:
         """
         Get who is currently on-call
         
@@ -73,9 +72,9 @@ class OnCallManager:
     async def _check_override(
         self,
         team_id: str,
-        service_id: Optional[str],
+        service_id: str | None,
         timestamp: datetime
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Check if there's an on-call override for this time"""
         query = self.supabase.table('on_call_overrides').select('*').eq(
             'team_id', team_id
@@ -103,9 +102,9 @@ class OnCallManager:
     async def _get_active_schedule(
         self,
         team_id: str,
-        service_id: Optional[str],
+        service_id: str | None,
         timestamp: datetime
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Get the active on-call schedule"""
         query = self.supabase.table('on_call_schedules').select(
             '*'
@@ -123,9 +122,9 @@ class OnCallManager:
     
     async def _calculate_current_rotation(
         self,
-        schedule: Dict,
+        schedule: dict,
         timestamp: datetime
-    ) -> Dict:
+    ) -> dict:
         """
         Calculate who's on-call based on rotation type
         
@@ -183,11 +182,11 @@ class OnCallManager:
         self,
         team_id: str,
         name: str,
-        participants: List[str],
+        participants: list[str],
         rotation_type: str = 'weekly',
-        start_date: Optional[datetime] = None,
-        service_id: Optional[str] = None
-    ) -> Dict:
+        start_date: datetime | None = None,
+        service_id: str | None = None
+    ) -> dict:
         """
         Create a new on-call schedule
         
@@ -231,8 +230,8 @@ class OnCallManager:
         start_time: datetime,
         end_time: datetime,
         reason: str = 'Manual override',
-        service_id: Optional[str] = None
-    ) -> Dict:
+        service_id: str | None = None
+    ) -> dict:
         """
         Override on-call assignment for a specific time period
         
@@ -273,7 +272,7 @@ class OnCallManager:
         self,
         team_id: str,
         severity: str
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get escalation chain for a given severity
         
@@ -311,7 +310,7 @@ class OnCallManager:
         self,
         incident_id: str,
         current_level: int = 0
-    ) -> Dict:
+    ) -> dict:
         """
         Trigger next level of escalation
         

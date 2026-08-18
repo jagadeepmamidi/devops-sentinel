@@ -5,9 +5,8 @@ Deployment Correlator - Link Incidents to Deployments
 Correlates incidents with recent deployments to identify bad releases
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime, timedelta
 
 
 class DeploymentCorrelator:
@@ -31,8 +30,8 @@ class DeploymentCorrelator:
         service_id: str,
         version: str,
         environment: str = 'production',
-        metadata: Optional[Dict] = None
-    ) -> Dict:
+        metadata: dict | None = None
+    ) -> dict:
         """
         Record a deployment
         
@@ -147,7 +146,7 @@ class DeploymentCorrelator:
     async def check_deployment_health(
         self,
         deployment_id: str
-    ) -> Dict:
+    ) -> dict:
         """
         Check if a deployment is healthy
         
@@ -198,7 +197,7 @@ class DeploymentCorrelator:
         self,
         service_id: str,
         limit: int = 10
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get recent deployment history for a service
         
@@ -228,7 +227,7 @@ class DeploymentCorrelator:
     async def suggest_rollback(
         self,
         service_id: str
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """
         Suggest rollback to last known good version
         
@@ -272,7 +271,7 @@ class DeploymentCorrelator:
         self,
         deployment_id_1: str,
         deployment_id_2: str
-    ) -> Dict:
+    ) -> dict:
         """
         Compare two deployments
         
@@ -295,7 +294,7 @@ class DeploymentCorrelator:
         self,
         service_id: str,
         days: int = 30
-    ) -> Dict:
+    ) -> dict:
         """
         Analyze deployment trends over time
         

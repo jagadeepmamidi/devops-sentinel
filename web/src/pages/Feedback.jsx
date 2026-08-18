@@ -1,63 +1,74 @@
-import { useState } from 'react'
-import SiteTopNav from '../components/site/SiteTopNav'
-import SiteFooter from '../components/site/SiteFooter'
-import './Feedback.css'
+import { useState } from "react";
+import SiteTopNav from "../components/site/SiteTopNav";
+import SiteFooter from "../components/site/SiteFooter";
+import "./Feedback.css";
 
 const NAV_LINKS = [
-  { to: '/docs', label: 'Docs' },
-  { to: '/', label: 'Home' },
-]
+  { to: "/docs", label: "Docs" },
+  { to: "/", label: "Home" },
+];
 
 const FOOTER_LINKS = [
-  { to: '/terms', label: 'Terms' },
-  { to: '/privacy', label: 'Privacy' },
-  { to: '/about', label: 'About' },
-]
+  { to: "/terms", label: "Terms" },
+  { to: "/privacy", label: "Privacy" },
+  { to: "/about", label: "About" },
+];
 
 export default function Feedback() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    type: 'feedback',
-    message: '',
-  })
-  const [submitted, setSubmitted] = useState(false)
+    name: "",
+    email: "",
+    type: "feedback",
+    message: "",
+  });
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
+    event.preventDefault();
 
     // TODO: send to backend endpoint
-    console.log('Feedback submitted:', formData)
+    console.log("Feedback submitted:", formData);
 
-    setSubmitted(true)
+    setSubmitted(true);
     setTimeout(() => {
-      setSubmitted(false)
-      setFormData({ name: '', email: '', type: 'feedback', message: '' })
-    }, 3000)
-  }
+      setSubmitted(false);
+      setFormData({ name: "", email: "", type: "feedback", message: "" });
+    }, 3000);
+  };
 
   const handleChange = (event) => {
     setFormData((previous) => ({
       ...previous,
       [event.target.name]: event.target.value,
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="site-page feedback-page">
-      <a className="site-skip-link" href="#feedback-main">Skip to content</a>
+      <a className="site-skip-link" href="#feedback-main">
+        Skip to content
+      </a>
 
       <SiteTopNav links={NAV_LINKS} />
 
-      <main id="feedback-main" className="site-main site-container feedback-main">
+      <main
+        id="feedback-main"
+        className="site-main site-container feedback-main"
+      >
         <section className="site-card feedback-header-card">
           <p className="site-label">Feedback</p>
           <h1 className="site-title">Help us improve DevOps Sentinel</h1>
-          <p className="site-text">We review every report and use it to prioritize roadmap work.</p>
+          <p className="site-text">
+            We review every report and use it to prioritize roadmap work.
+          </p>
         </section>
 
         {submitted ? (
-          <section className="site-card soft feedback-success">
+          <section
+            className="site-card soft feedback-success"
+            role="status"
+            aria-live="polite"
+          >
             <h2>Thanks for your feedback</h2>
             <p className="site-text">Your message was received successfully.</p>
           </section>
@@ -73,6 +84,7 @@ export default function Feedback() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -85,6 +97,7 @@ export default function Feedback() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -92,7 +105,12 @@ export default function Feedback() {
 
               <div className="feedback-field">
                 <label htmlFor="type">Type</label>
-                <select id="type" name="type" value={formData.type} onChange={handleChange}>
+                <select
+                  id="type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                >
                   <option value="feedback">General Feedback</option>
                   <option value="bug">Bug Report</option>
                   <option value="feature">Feature Request</option>
@@ -108,12 +126,15 @@ export default function Feedback() {
                   rows="8"
                   value={formData.message}
                   onChange={handleChange}
-                  placeholder="Describe feedback, issue, or request"
+                  placeholder="Describe feedback, issue, or request…"
                   required
                 />
               </div>
 
-              <button type="submit" className="site-btn primary feedback-submit-btn">
+              <button
+                type="submit"
+                className="site-btn primary feedback-submit-btn"
+              >
                 Submit feedback
               </button>
             </form>
@@ -123,5 +144,5 @@ export default function Feedback() {
 
       <SiteFooter links={FOOTER_LINKS} text="DevOps Sentinel feedback" />
     </div>
-  )
+  );
 }

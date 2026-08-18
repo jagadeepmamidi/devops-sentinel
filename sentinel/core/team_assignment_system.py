@@ -5,9 +5,8 @@ Team Assignment System - Collaborative Incident Ownership
 Assign incidents to team members and track ownership
 """
 
-from datetime import datetime
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 
 class TeamAssignmentSystem:
@@ -28,10 +27,10 @@ class TeamAssignmentSystem:
     async def assign_incident(
         self,
         incident_id: str,
-        assigned_to: Optional[str] = None,
-        assigned_by: Optional[str] = None,
+        assigned_to: str | None = None,
+        assigned_by: str | None = None,
         reason: str = 'auto'
-    ) -> Dict:
+    ) -> dict:
         """
         Assign incident to team member
         
@@ -64,7 +63,7 @@ class TeamAssignmentSystem:
             'incident_id': incident_id,
             'assigned_to': assigned_to,
             'assigned_by': assigned_by or 'system',
-            'assigned_at': datetime.utcnow().isoformat(),
+            'assigned_at': datetime.now(timezone.utc).isoformat(),
             'reason': reason,
             'status': 'assigned'
         }
@@ -84,7 +83,7 @@ class TeamAssignmentSystem:
         
         return assignment
     
-    async def _auto_assign(self, team_id: str, severity: str) -> str:
+    async def _auto_assign(self, team_id: str, severity: str) -> str | None:
         """
         Auto-assign based on on-call schedule or load balancing
         
@@ -122,7 +121,7 @@ class TeamAssignmentSystem:
         new_assignee: str,
         reassigned_by: str,
         reason: str = 'manual'
-    ) -> Dict:
+    ) -> dict:
         """
         Reassign incident to different team member
         
@@ -141,7 +140,7 @@ class TeamAssignmentSystem:
             # Mark old assignment as superseded
             await self.supabase.table('incident_assignments').update({
                 'status': 'reassigned',
-                'reassigned_at': datetime.utcnow().isoformat()
+                'reassigned_at': datetime.now(timezone.utc).isoformat()
             }).eq('id', current.data[0]['id']).execute()
         
         # Create new assignment
@@ -156,7 +155,7 @@ class TeamAssignmentSystem:
         self,
         incident_id: str,
         unassigned_by: str
-    ) -> Dict:
+    ) -> dict:
         """
         Remove assignment from incident
         
@@ -167,7 +166,7 @@ class TeamAssignmentSystem:
         # Mark assignment as unassigned
         await self.supabase.table('incident_assignments').update({
             'status': 'unassigned',
-            'unassigned_at': datetime.utcnow().isoformat(),
+            'unassigned_at': datetime.now(timezone.utc).isoformat(),
             'unassigned_by': unassigned_by
         }).eq('incident_id', incident_id).eq('status', 'assigned').execute()
         
@@ -179,7 +178,7 @@ class TeamAssignmentSystem:
         
         return {'incident_id': incident_id, 'status': 'unassigned'}
     
-    async def get_team_workload(self, team_id: str) -> List[Dict]:
+    async def get_team_workload(self, team_id: str) -> list[dict]:
         """
         Get current workload for all team members
         
@@ -204,7 +203,7 @@ class TeamAssignmentSystem:
             ).execute()
             
             # Count resolved this week
-            week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
             resolved = await self.supabase.table('incidents').select(
                 'id', count='exact'
             ).eq('assigned_to', member['user_id']).eq(
@@ -227,7 +226,7 @@ class TeamAssignmentSystem:
         user_id: str,
         status: str = 'assigned',
         limit: int = 20
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get all assignments for a user
         
@@ -253,7 +252,7 @@ class TeamAssignmentSystem:
     async def get_assignment_history(
         self,
         incident_id: str
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Get full assignment history for incident
         
@@ -269,7 +268,7 @@ class TeamAssignmentSystem:
     async def _log_assignment(
         self,
         incident_id: str,
-        assignment: Dict
+        assignment: dict
     ):
         """Log assignment to incident timeline"""
         await self.supabase.table('incident_timeline').insert({
@@ -280,10 +279,10 @@ class TeamAssignmentSystem:
                 'assigned_by': assignment['assigned_by'],
                 'reason': assignment['reason']
             },
-            'created_at': datetime.utcnow().isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat()
         }).execute()
     
-    async def get_team_stats(self, team_id: str) -> Dict:
+    async def get_team_stats(self, team_id: str) -> dict:
         """
         Get team assignment statistics
         
@@ -321,7 +320,6 @@ class TeamAssignmentSystem:
 
 
 # Helper to avoid circular import
-from datetime import timedelta
 
 
 # Example usage
@@ -355,7 +353,7 @@ if __name__ == "__main__":
             
             async def execute(self):
                 class Result:
-                    data = [{'team_id': 'team-1', 'severity': 'P1', 'service_id': 'svc-1'}]
+                    data = ({'team_id': 'team-1', 'severity': 'P1', 'service_id': 'svc-1'},)
                     count = 2
                 return Result()
         

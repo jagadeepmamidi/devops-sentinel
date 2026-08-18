@@ -4,72 +4,98 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 
-from sentinel.cli.auth import get_current_user, is_logged_in
+from sentinel.cli.auth import get_current_user, get_storage_mode, is_logged_in
+from sentinel.cli.db import get_db
 
 
 async def _check_api_health(api_url: str) -> bool:
     try:
         async with httpx.AsyncClient(timeout=4) as client:
-            resp = await client.get(f"{api_url}/health")
-            return resp.status_code == 200
-    except Exception:
+            response = await client.get(f"{api_url}/health")
+            return response.status_code == 200
+    except httpx.HTTPError:
         return False
 
 
-def run_doctor(strict: bool = False) -> Dict[str, Any]:
-    """Run environment and connectivity diagnostics."""
+def run_doctor(strict: bool = False) -> dict[str, Any]:
+    """Run diagnostics with mode-aware storage checks."""
     api_url = os.getenv("API_URL", "http://localhost:8000")
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+    mode = get_storage_mode()
     web_url = os.getenv("SENTINEL_WEB_URL")
     llm_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
-
     api_ok = asyncio.run(_check_api_health(api_url))
     auth_ok = is_logged_in()
     user = get_current_user() if auth_ok else None
+    user_email = user.get("email", "unknown") if isinstance(user, dict) else "unknown"
 
-    checks: List[Dict[str, str]] = [
-        {
-            "name": "Supabase URL",
-            "status": "ok" if supabase_url else "fail",
-            "detail": supabase_url or "Missing SUPABASE_URL",
-        },
-        {
-            "name": "Supabase Key",
-            "status": "ok" if supabase_key else "fail",
-            "detail": "Configured" if supabase_key else "Missing SUPABASE_KEY or SUPABASE_ANON_KEY",
-        },
-        {
-            "name": "CLI Login",
-            "status": "ok" if auth_ok else "warn",
-            "detail": f"Logged in as {user.get('email', 'unknown')}" if auth_ok else "Not logged in",
-        },
+    if mode == "local":
+        local_db = get_db()
+        storage_checks = [
+            {
+                "name": "Storage (SQLite)",
+                "status": "ok" if local_db.connected else "fail",
+                "detail": str(local_db.path)
+                if local_db.connected
+                else "SQLite could not be opened",
+            },
+            {
+                "name": "CLI Identity",
+                "status": "ok" if auth_ok else "fail",
+                "detail": "Local identity active" if auth_ok else "Local identity unavailable",
+            },
+        ]
+    else:
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+        storage_checks = [
+            {
+                "name": "Supabase URL",
+                "status": "ok" if supabase_url else "fail",
+                "detail": supabase_url or "Missing SUPABASE_URL",
+            },
+            {
+                "name": "Supabase Key",
+                "status": "ok" if supabase_key else "fail",
+                "detail": "Configured"
+                if supabase_key
+                else "Missing SUPABASE_KEY or SUPABASE_ANON_KEY",
+            },
+            {
+                "name": "CLI Login",
+                "status": "ok" if auth_ok else "warn",
+                "detail": f"Logged in as {user_email}" if auth_ok else "Not logged in",
+            },
+        ]
+
+    checks = storage_checks + [
         {
             "name": "Web Auth URL",
             "status": "ok" if web_url else "warn",
-            "detail": web_url or "SENTINEL_WEB_URL not set (fallback auth is still supported)",
+            "detail": web_url or "Not required for local mode",
         },
         {
             "name": "LLM Provider Key",
             "status": "ok" if llm_key else "warn",
-            "detail": "Configured" if llm_key else "Missing OPENROUTER_API_KEY or OPENAI_API_KEY",
+            "detail": "Configured" if llm_key else "Optional; postmortems use fallback mode",
         },
         {
             "name": "API Health",
             "status": "ok" if api_ok else "warn",
-            "detail": f"{api_url}/health reachable" if api_ok else f"API not reachable at {api_url}/health",
+            "detail": f"{api_url}/health reachable"
+            if api_ok
+            else f"API not reachable at {api_url}/health",
         },
     ]
 
-    failed = [c for c in checks if c["status"] == "fail"]
-    warnings = [c for c in checks if c["status"] == "warn"]
-    passed = len(failed) == 0 and (len(warnings) == 0 if strict else True)
-
+    failed = [check for check in checks if check["status"] == "fail"]
+    warnings = [check for check in checks if check["status"] == "warn"]
+    passed = not failed and (not warnings if strict else True)
     return {
+        "mode": mode,
         "checks": checks,
         "strict": strict,
         "passed": passed,

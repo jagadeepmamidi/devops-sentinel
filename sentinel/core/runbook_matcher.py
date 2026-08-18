@@ -12,7 +12,6 @@ Tracks runbook usage and success rates for continuous improvement.
 """
 
 import re
-from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
 
@@ -42,9 +41,9 @@ class RunbookMatcher:
         self,
         service_id: str,
         error_message: str,
-        error_code: Optional[int] = None,
-        tags: Optional[List[str]] = None
-    ) -> List[Dict]:
+        error_code: int | None = None,
+        tags: list[str] | None = None
+    ) -> list[dict]:
         """
         Find runbooks that match the incident
         
@@ -93,9 +92,9 @@ class RunbookMatcher:
         self,
         service_id: str,
         error_message: str,
-        error_code: Optional[int] = None,
-        tags: Optional[List[str]] = None
-    ) -> Optional[Dict]:
+        error_code: int | None = None,
+        tags: list[str] | None = None
+    ) -> dict | None:
         """
         Get the single best runbook for this incident
         
@@ -125,7 +124,7 @@ class RunbookMatcher:
         self,
         runbook_id: str,
         success: bool,
-        incident_id: Optional[str] = None
+        incident_id: str | None = None
     ):
         """
         Record runbook usage and update effectiveness metrics
@@ -151,9 +150,9 @@ class RunbookMatcher:
         service_id: str,
         title: str,
         description: str,
-        steps: List[Dict],
-        error_pattern: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        steps: list[dict],
+        error_pattern: str | None = None,
+        tags: list[str] | None = None
     ) -> str:
         """
         Create a new runbook
@@ -192,10 +191,10 @@ class RunbookMatcher:
     
     def _calculate_match_score(
         self,
-        runbook: Dict,
+        runbook: dict,
         error_message: str,
-        error_code: Optional[int],
-        tags: List[str]
+        error_code: int | None,
+        tags: list[str]
     ) -> float:
         """
         Calculate how well runbook matches the incident
@@ -236,7 +235,7 @@ class RunbookMatcher:
         
         return min(score, 1.0)
     
-    def _get_confidence(self, runbook: Dict, match_score: float) -> str:
+    def _get_confidence(self, runbook: dict, match_score: float) -> str:
         """
         Get confidence level for runbook match
         
@@ -259,7 +258,7 @@ class RunbookMatcher:
         else:
             return "low"
     
-    async def _fetch_runbooks(self, service_id: str) -> List[Dict]:
+    async def _fetch_runbooks(self, service_id: str) -> list[dict]:
         """
         Fetch runbooks from database
         
@@ -280,9 +279,9 @@ class RunbookMatcher:
     
     async def suggest_new_runbook(
         self,
-        incident: Dict,
+        incident: dict,
         resolution_steps: str
-    ) -> Dict:
+    ) -> dict:
         """
         Suggest creating a new runbook based on incident resolution
         
@@ -319,7 +318,7 @@ class RunbookMatcher:
                         r'[0-9a-f-]{36}', pattern)
         return pattern[:200]  # Limit length
     
-    def _suggest_tags(self, incident: Dict) -> List[str]:
+    def _suggest_tags(self, incident: dict) -> list[str]:
         """Suggest tags based on incident details"""
         tags = []
         error_msg = incident.get('error_message', '').lower()
@@ -342,7 +341,7 @@ class RunbookMatcher:
         
         return tags
     
-    def _parse_resolution_steps(self, resolution_text: str) -> List[Dict]:
+    def _parse_resolution_steps(self, resolution_text: str) -> list[dict]:
         """Parse resolution text into structured steps"""
         # Split by numbered list or newlines
         lines = resolution_text.split('\n')

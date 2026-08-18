@@ -5,9 +5,9 @@ Tests for Rate Limiter
 Tests rate limiting functionality
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timedelta
+
+import pytest
 
 from sentinel.core.rate_limiter import RateLimiter, RateLimitExceeded
 

@@ -5,9 +5,9 @@ Tests for Auth Service
 Tests authentication functionality
 """
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
 from sentinel.auth.auth_service import AuthService, get_current_user, get_optional_user
 

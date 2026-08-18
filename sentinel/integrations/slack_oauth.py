@@ -12,15 +12,13 @@ Slack OAuth - One-Click Integration
 import os
 import secrets
 from datetime import datetime
-from typing import Dict, Optional
 from urllib.parse import urlencode
 
 import aiohttp
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from sentinel.auth.auth_service import get_current_user, get_optional_user
-
+from sentinel.auth.auth_service import get_current_user
 
 # OAuth Configuration
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID', '')
@@ -91,7 +89,7 @@ class SlackOAuth:
         code: str,
         state: str,
         redirect_uri: str = None
-    ) -> Dict:
+    ) -> dict:
         """
         Handle OAuth callback from Slack
         
@@ -122,21 +120,20 @@ class SlackOAuth:
         
         return workspace
     
-    async def _exchange_code(self, code: str, redirect_uri: str) -> Dict:
+    async def _exchange_code(self, code: str, redirect_uri: str) -> dict:
         """Exchange authorization code for access tokens"""
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                self.TOKEN_URL,
-                data={
-                    'client_id': SLACK_CLIENT_ID,
-                    'client_secret': SLACK_CLIENT_SECRET,
-                    'code': code,
-                    'redirect_uri': redirect_uri
-                }
-            ) as resp:
-                return await resp.json()
+        async with aiohttp.ClientSession() as session, session.post(
+            self.TOKEN_URL,
+            data={
+                'client_id': SLACK_CLIENT_ID,
+                'client_secret': SLACK_CLIENT_SECRET,
+                'code': code,
+                'redirect_uri': redirect_uri
+            }
+        ) as resp:
+            return await resp.json()
     
-    async def _store_tokens(self, user_id: str, tokens: Dict) -> Dict:
+    async def _store_tokens(self, user_id: str, tokens: dict) -> dict:
         """Store Slack tokens in database"""
         workspace_info = {
             'user_id': user_id,
@@ -194,7 +191,7 @@ router = APIRouter(prefix="/api/slack/oauth", tags=["slack-oauth"])
 
 @router.get("/start")
 async def start_oauth(
-    user: Dict = Depends(get_current_user)
+    user: dict = Depends(get_current_user)
 ):
     """
     Start Slack OAuth flow
@@ -250,7 +247,7 @@ async def oauth_callback(
 
 @router.get("/integrations")
 async def list_integrations(
-    user: Dict = Depends(get_current_user)
+    user: dict = Depends(get_current_user)
 ):
     """List user's Slack integrations"""
     oauth = SlackOAuth()
@@ -261,7 +258,7 @@ async def list_integrations(
 @router.delete("/integrations/{team_id}")
 async def remove_integration(
     team_id: str,
-    user: Dict = Depends(get_current_user)
+    user: dict = Depends(get_current_user)
 ):
     """Remove a Slack integration"""
     oauth = SlackOAuth()

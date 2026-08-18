@@ -5,9 +5,8 @@ Cost Tracker - AI Usage Monitoring and Budget Management
 Track AI API costs per user and prevent budget overruns
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, Optional
 import asyncio
+from datetime import datetime
 
 
 class CostTracker:
@@ -51,7 +50,7 @@ class CostTracker:
         input_tokens: int,
         output_tokens: int,
         operation: str = 'unknown'
-    ) -> Dict:
+    ) -> dict:
         """
         Log every AI API call
         
@@ -166,7 +165,7 @@ class CostTracker:
         
         return 'free'
     
-    async def get_usage_breakdown(self, user_id: str) -> Dict:
+    async def get_usage_breakdown(self, user_id: str) -> dict:
         """Get detailed usage breakdown for user"""
         month_start = datetime.utcnow().replace(day=1)
         
@@ -201,7 +200,7 @@ class CostTracker:
             'by_model': by_model
         }
     
-    async def get_admin_dashboard(self) -> Dict:
+    async def get_admin_dashboard(self) -> dict:
         """Admin view of all AI costs"""
         month_start = datetime.utcnow().replace(day=1)
         
@@ -284,7 +283,6 @@ class CostTracker:
 
 class BudgetExceeded(Exception):
     """Raised when user exceeds AI budget"""
-    pass
 
 
 # Example usage

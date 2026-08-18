@@ -5,11 +5,10 @@ SSL Certificate Monitor - Track SSL Expiration
 Monitors SSL certificate expiration and alerts before expiry
 """
 
-import ssl
-import socket
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
 import asyncio
+import socket
+import ssl
+from datetime import datetime
 
 
 class SSLCertificateMonitor:
@@ -29,8 +28,8 @@ class SSLCertificateMonitor:
         self,
         hostname: str,
         port: int = 443,
-        alert_days: Optional[list] = None
-    ) -> Dict:
+        alert_days: list | None = None
+    ) -> dict:
         """
         Check SSL certificate for a domain
         
@@ -103,7 +102,7 @@ class SSLCertificateMonitor:
                 'is_healthy': False,
                 'error': f'DNS resolution failed for {hostname}'
             }
-        except socket.timeout:
+        except TimeoutError:
             return {
                 'is_healthy': False,
                 'error': f'Connection timeout to {hostname}:{port}'
@@ -111,10 +110,10 @@ class SSLCertificateMonitor:
         except Exception as e:
             return {
                 'is_healthy': False,
-                'error': f'Certificate check failed: {str(e)}'
+                'error': f'Certificate check failed: {e!s}'
             }
     
-    def _get_certificate(self, hostname: str, port: int) -> Optional[Dict]:
+    def _get_certificate(self, hostname: str, port: int) -> dict | None:
         """
         Synchronously retrieve SSL certificate
         
@@ -135,8 +134,8 @@ class SSLCertificateMonitor:
     async def check_multiple_domains(
         self,
         domains: list,
-        alert_days: Optional[list] = None
-    ) -> Dict[str, Dict]:
+        alert_days: list | None = None
+    ) -> dict[str, dict]:
         """
         Check multiple domains in parallel
         

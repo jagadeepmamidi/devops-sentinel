@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 for module in ['aiohttp', 'fastapi', 'pydantic']:
     sys.modules[module] = MagicMock()
 
-import asyncio
-import unittest
-from src.api.quick_health_check import QuickHealthCheck
+import unittest  # noqa: E402
+from src.api.quick_health_check import QuickHealthCheck  # noqa: E402
+
 
 class TestSSRFProtection(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

@@ -9,9 +9,8 @@ Routes incidents to the right people based on:
 - Escalation policies
 """
 
-from typing import List, Dict, Optional
-from datetime import datetime
 import asyncio
+from datetime import datetime, timezone
 
 
 class AlertRouter:
@@ -46,9 +45,9 @@ class AlertRouter:
     
     async def route_incident(
         self,
-        incident: Dict,
+        incident: dict,
         immediate: bool = True
-    ) -> Dict:
+    ) -> dict:
         """
         Route incident to appropriate responders
         
@@ -60,8 +59,7 @@ class AlertRouter:
             Routing result with assigned users and channels
         """
         severity = incident.get('severity', 'P2')
-        service_id = incident.get('service_id')
-        service_name = incident.get('service_name', 'Unknown')
+        service_id = str(incident.get('service_id') or '')
         
         # Get on-call person
         on_call = await self._get_on_call_user(severity, service_id)
@@ -77,7 +75,7 @@ class AlertRouter:
             'assigned_name': on_call['name'] if on_call else None,
             'channels': channels,
             'escalation_policy': self.escalation_rules.get(severity),
-            'routed_at': datetime.utcnow()
+            'routed_at': datetime.now(timezone.utc)
         }
         
         # Send notifications
@@ -91,7 +89,7 @@ class AlertRouter:
         incident_id: str,
         current_assignee: str,
         reason: str = "No acknowledgment"
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """
         Escalate incident to next person in rotation
         
@@ -127,7 +125,7 @@ class AlertRouter:
             'assigned_name': next_on_call['name'],
             'escalated_from': current_assignee,
             'escalation_reason': reason,
-            'escalated_at': datetime.utcnow()
+            'escalated_at': datetime.now(timezone.utc)
         }
         
         # Send escalation notification
@@ -135,7 +133,7 @@ class AlertRouter:
         
         return routing
     
-    def _get_notification_channels(self, severity: str) -> List[str]:
+    def _get_notification_channels(self, severity: str) -> list[str]:
         """
         Determine which channels to notify based on severity
         
@@ -159,7 +157,7 @@ class AlertRouter:
         severity: str,
         service_id: str,
         priority: int = 1
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """
         Get current on-call user from database
         
@@ -188,8 +186,8 @@ class AlertRouter:
     
     async def _send_notifications(
         self,
-        incident: Dict,
-        routing: Dict
+        incident: dict,
+        routing: dict
     ):
         """
         Send notifications to all configured channels
@@ -222,42 +220,42 @@ class AlertRouter:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
     
-    async def _send_slack_notification(self, incident: Dict, routing: Dict):
+    async def _send_slack_notification(self, incident: dict, routing: dict):
         """Send Slack notification (placeholder)"""
         # TODO: Implement actual Slack integration
         print(f"📢 Slack: {routing['severity']} incident {incident.get('id')} → {routing['assigned_name']}")
     
-    async def _send_email_notification(self, incident: Dict, routing: Dict):
+    async def _send_email_notification(self, incident: dict, routing: dict):
         """Send email notification (placeholder)"""
         # TODO: Implement actual email sending
         print(f"📧 Email: {routing['severity']} incident → {routing['assigned_to']}")
     
-    async def _send_pagerduty_notification(self, incident: Dict, routing: Dict):
+    async def _send_pagerduty_notification(self, incident: dict, routing: dict):
         """Send PagerDuty page (placeholder)"""
         # TODO: Implement PagerDuty integration
         print(f"📟 PagerDuty: Paging {routing['assigned_name']}")
     
-    async def _send_sms_notification(self, incident: Dict, routing: Dict):
+    async def _send_sms_notification(self, incident: dict, routing: dict):
         """Send SMS notification (placeholder)"""
         # TODO: Implement SMS (Twilio)
-        print(f"📱 SMS: Alert sent")
+        print("📱 SMS: Alert sent")
     
-    async def _send_discord_notification(self, incident: Dict, routing: Dict):
+    async def _send_discord_notification(self, incident: dict, routing: dict):
         """Send Discord notification (placeholder)"""
         # TODO: Implement Discord webhook
-        print(f"💬 Discord: Alert sent")
+        print("💬 Discord: Alert sent")
     
-    async def _send_escalation_notification(self, incident: Dict, routing: Dict):
+    async def _send_escalation_notification(self, incident: dict, routing: dict):
         """Send escalation notification"""
         print(f"⚠️  ESCALATED: {incident.get('id')} → {routing['assigned_name']}")
         # TODO: Send to all channels with ESCALATION prefix
     
-    async def _fetch_incident(self, incident_id: str) -> Optional[Dict]:
+    async def _fetch_incident(self, incident_id: str) -> dict | None:
         """Fetch incident from database (placeholder)"""
         # TODO: Implement actual DB query
         return None
     
-    def get_escalation_timeout(self, severity: str) -> Optional[int]:
+    def get_escalation_timeout(self, severity: str) -> int | None:
         """
         Get escalation timeout in minutes for severity level
         

@@ -5,10 +5,9 @@ Anomaly Detector - Statistical Anomaly Detection
 Detect anomalies in metrics without ML training
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-import statistics
 import math
+import statistics
+from datetime import datetime, timedelta
 
 
 class AnomalyDetector:
@@ -42,9 +41,9 @@ class AnomalyDetector:
         self,
         metric_name: str,
         current_value: float,
-        historical_values: List[float],
+        historical_values: list[float],
         method: str = 'z_score'
-    ) -> Dict:
+    ) -> dict:
         """
         Detect if current value is anomalous
         
@@ -85,9 +84,9 @@ class AnomalyDetector:
     def _detect_zscore(
         self,
         value: float,
-        history: List[float],
+        history: list[float],
         threshold: float
-    ) -> Dict:
+    ) -> dict:
         """Z-score based anomaly detection"""
         mean = statistics.mean(history)
         stdev = statistics.stdev(history) if len(history) > 1 else 0
@@ -126,8 +125,8 @@ class AnomalyDetector:
     def _detect_iqr(
         self,
         value: float,
-        history: List[float]
-    ) -> Dict:
+        history: list[float]
+    ) -> dict:
         """IQR (Interquartile Range) based detection"""
         sorted_history = sorted(history)
         n = len(sorted_history)
@@ -167,8 +166,8 @@ class AnomalyDetector:
     async def check_service(
         self,
         service_id: str,
-        current_metrics: Dict
-    ) -> List[Dict]:
+        current_metrics: dict
+    ) -> list[dict]:
         """
         Check all metrics for a service
         
@@ -207,7 +206,7 @@ class AnomalyDetector:
         self,
         service_id: str,
         hours: int = 24
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         """Get historical metrics for service"""
         if not self.supabase:
             return {}
@@ -230,9 +229,9 @@ class AnomalyDetector:
     
     def _calculate_error_rates(
         self,
-        checks: List[Dict],
+        checks: list[dict],
         window: int = 10
-    ) -> List[float]:
+    ) -> list[float]:
         """Calculate rolling error rates"""
         if len(checks) < window:
             return []
@@ -245,7 +244,7 @@ class AnomalyDetector:
         
         return rates
     
-    def explain_anomaly(self, detection: Dict, metric_name: str) -> str:
+    def explain_anomaly(self, detection: dict, metric_name: str) -> str:
         """Generate human-readable explanation"""
         if not detection.get('is_anomaly'):
             return "No anomaly detected"
@@ -290,7 +289,7 @@ class StreamingAnomalyDetector:
         metric_name: str,
         value: float,
         threshold: float = 3.0
-    ) -> Dict:
+    ) -> dict:
         """
         Update with new value and check for anomaly
         
@@ -335,14 +334,14 @@ class StreamingAnomalyDetector:
             'direction': 'high' if z_score > 0 else 'low'
         }
     
-    def get_state(self) -> Dict:
+    def get_state(self) -> dict:
         """Get current detector state"""
         return {
             'ema': self.ema.copy(),
             'emv': self.emv.copy()
         }
     
-    def load_state(self, state: Dict):
+    def load_state(self, state: dict):
         """Load detector state (for persistence)"""
         self.ema = state.get('ema', {})
         self.emv = state.get('emv', {})

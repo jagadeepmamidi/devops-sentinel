@@ -5,9 +5,8 @@ Alert Explainer - "Why Did Sentinel Page Me?" Feature
 Generate plain-English explanations for every alert
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 
 class AlertExplainer:
@@ -24,7 +23,7 @@ class AlertExplainer:
     def __init__(self, supabase_client):
         self.supabase = supabase_client
     
-    async def explain_alert(self, incident_id: str) -> Dict:
+    async def explain_alert(self, incident_id: str) -> dict:
         """
         Generate full explanation for an alert
         
@@ -55,13 +54,13 @@ class AlertExplainer:
             'context': self._generate_context(incident, deployment, dependencies),
             'history': None,
             'suggested_actions': self._generate_actions(incident, similar),
-            'generated_at': datetime.utcnow().isoformat()
+            'generated_at': datetime.now(timezone.utc).isoformat()
         }
         
         # Add history if similar incident found
         if similar:
             explanation['history'] = {
-                'related_incident_id': similar['id'],
+                'related_incident_id': similar.get('id'),
                 'occurred': similar.get('detected_at'),
                 'similarity': similar.get('similarity_score', 0.85),
                 'resolution': similar.get('resolution_notes'),
@@ -70,7 +69,7 @@ class AlertExplainer:
         
         return explanation
     
-    def _generate_summary(self, incident: Dict, service: Optional[Dict]) -> str:
+    def _generate_summary(self, incident: dict, service: dict | None) -> str:
         """Generate one-line summary"""
         severity = incident.get('severity', 'P2')
         service_name = service.get('name', 'Unknown Service') if service else 'Unknown Service'
@@ -87,10 +86,10 @@ class AlertExplainer:
     
     def _generate_reasons(
         self,
-        incident: Dict,
-        service: Optional[Dict],
-        baseline: Optional[Dict]
-    ) -> List[str]:
+        incident: dict,
+        service: dict | None,
+        baseline: dict | None
+    ) -> list[str]:
         """Generate list of reasons why this alert was triggered"""
         reasons = []
         
@@ -159,10 +158,10 @@ class AlertExplainer:
     
     def _generate_context(
         self,
-        incident: Dict,
-        deployment: Optional[Dict],
-        dependencies: List[Dict]
-    ) -> List[str]:
+        incident: dict,
+        deployment: dict | None,
+        dependencies: list[dict]
+    ) -> list[str]:
         """Generate contextual information"""
         context = []
         
@@ -172,7 +171,7 @@ class AlertExplainer:
             if deployed_at:
                 try:
                     deploy_time = datetime.fromisoformat(deployed_at.replace('Z', '+00:00'))
-                    minutes_ago = (datetime.utcnow() - deploy_time.replace(tzinfo=None)).seconds // 60
+                    minutes_ago = (datetime.now(timezone.utc) - deploy_time.replace(tzinfo=None)).seconds // 60
                     
                     if minutes_ago < 60:
                         context.append(
@@ -183,8 +182,8 @@ class AlertExplainer:
                         # Check deployment status
                         if deployment.get('status') == 'failed':
                             context.append("WARNING: Recent deployment marked as FAILED")
-                except:
-                    pass
+                except (TypeError, ValueError):
+                    context.append("Deployment context unavailable")
         
         # Dependency context
         if dependencies:
@@ -208,16 +207,16 @@ class AlertExplainer:
     
     def _generate_actions(
         self,
-        incident: Dict,
-        similar: Optional[Dict]
-    ) -> List[str]:
+        incident: dict,
+        similar: dict | None
+    ) -> list[str]:
         """Generate suggested next actions"""
         actions = []
         
         # If similar incident found with resolution
         if similar and similar.get('resolution_notes'):
             actions.append(
-                f"SUGGESTED: {similar.get('resolution_notes')[:200]}"
+                f"SUGGESTED: {str(similar.get('resolution_notes', ''))[:200]}"
             )
         
         # Failure type specific actions
@@ -248,7 +247,7 @@ class AlertExplainer:
         
         return actions
     
-    async def _get_incident(self, incident_id: str) -> Optional[Dict]:
+    async def _get_incident(self, incident_id: str) -> dict | None:
         """Get incident details"""
         result = await self.supabase.table('incidents').select(
             '*'
@@ -256,7 +255,7 @@ class AlertExplainer:
         
         return result.data[0] if result.data else None
     
-    async def _get_service(self, service_id: str) -> Optional[Dict]:
+    async def _get_service(self, service_id: str) -> dict | None:
         """Get service details"""
         result = await self.supabase.table('services').select(
             '*'
@@ -264,7 +263,7 @@ class AlertExplainer:
         
         return result.data[0] if result.data else None
     
-    async def _get_baseline(self, service_id: str) -> Optional[Dict]:
+    async def _get_baseline(self, service_id: str) -> dict | None:
         """Get service baseline metrics"""
         result = await self.supabase.table('baselines').select(
             '*'
@@ -274,9 +273,9 @@ class AlertExplainer:
         
         return result.data[0] if result.data else None
     
-    async def _get_recent_deployment(self, service_id: str) -> Optional[Dict]:
+    async def _get_recent_deployment(self, service_id: str) -> dict | None:
         """Get most recent deployment"""
-        one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         
         result = await self.supabase.table('deployments').select(
             '*'
@@ -286,7 +285,7 @@ class AlertExplainer:
         
         return result.data[0] if result.data else None
     
-    async def _find_similar_incident(self, incident: Dict) -> Optional[Dict]:
+    async def _find_similar_incident(self, incident: dict) -> dict | None:
         """Find similar past incident"""
         # Look for incidents with same service and failure type
         result = await self.supabase.table('incidents').select(
@@ -304,7 +303,7 @@ class AlertExplainer:
         
         return None
     
-    async def _get_affected_dependencies(self, service_id: str) -> List[Dict]:
+    async def _get_affected_dependencies(self, service_id: str) -> list[dict]:
         """Get upstream dependencies that might be affected"""
         result = await self.supabase.table('service_dependencies').select(
             'upstream_service_id'
@@ -360,10 +359,10 @@ if __name__ == "__main__":
         explanation = await explainer.explain_alert('inc-1')
         
         print(f"Summary: {explanation['summary']}")
-        print(f"Reasons:")
+        print("Reasons:")
         for reason in explanation['reasons']:
             print(f"  - {reason}")
-        print(f"Actions:")
+        print("Actions:")
         for action in explanation['suggested_actions']:
             print(f"  - {action}")
     

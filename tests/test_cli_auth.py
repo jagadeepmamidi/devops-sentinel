@@ -8,28 +8,27 @@ Tests cover:
 - Config directory creation
 """
 
-import pytest
 import json
-import tempfile
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 # Import auth module functions
 import sys
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sentinel.cli.auth import (
-    ensure_config_dir,
-    save_credentials,
-    load_credentials,
     clear_credentials,
-    get_current_user,
-    get_access_token,
-    is_logged_in,
-    CONFIG_DIR,
-    CREDENTIALS_FILE,
+    ensure_config_dir,
     extract_token_from_input,
+    get_access_token,
+    get_current_user,
+    is_logged_in,
+    load_credentials,
     resolve_supabase_key,
+    save_credentials,
 )
 
 

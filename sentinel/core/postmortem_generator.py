@@ -6,7 +6,6 @@ Generate structured postmortems from incident data using AI
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 
 class PostmortemGenerator:
@@ -77,10 +76,10 @@ class PostmortemGenerator:
     
     async def generate(
         self,
-        incident: Dict,
-        events: List[Dict],
-        resolution: Optional[str] = None
-    ) -> Dict:
+        incident: dict,
+        events: list[dict],
+        resolution: str | None = None
+    ) -> dict:
         """
         Generate postmortem from incident data
         
@@ -95,8 +94,6 @@ class PostmortemGenerator:
         # Extract key information
         title = incident.get('title', 'Untitled Incident')
         severity = incident.get('severity', 'P2')
-        service = incident.get('service_name', 'Unknown')
-        description = incident.get('description', '')
         
         # Calculate duration
         start = incident.get('detected_at')
@@ -144,10 +141,10 @@ class PostmortemGenerator:
     
     async def _generate_with_ai(
         self,
-        incident: Dict,
-        events: List[Dict],
-        resolution: Optional[str]
-    ) -> Dict:
+        incident: dict,
+        events: list[dict],
+        resolution: str | None
+    ) -> dict:
         """Generate sections using AI"""
         # Would call OpenAI/Claude here
         # For now, use intelligent templates
@@ -155,10 +152,10 @@ class PostmortemGenerator:
     
     def _generate_template_sections(
         self,
-        incident: Dict,
-        events: List[Dict],
-        resolution: Optional[str]
-    ) -> Dict:
+        incident: dict,
+        events: list[dict],
+        resolution: str | None
+    ) -> dict:
         """Generate sections using templates (no AI)"""
         service = incident.get('service_name', 'the service')
         title = incident.get('title', 'the incident')
@@ -243,7 +240,7 @@ class PostmortemGenerator:
             'lessons': lessons
         }
     
-    def _format_timeline(self, events: List[Dict]) -> str:
+    def _format_timeline(self, events: list[dict]) -> str:
         """Format events into timeline"""
         if not events:
             return "| Time | Event |\n|------|-------|\n| N/A | No events recorded |"
@@ -262,8 +259,8 @@ class PostmortemGenerator:
     
     def _calculate_duration(
         self,
-        start: Optional[str],
-        end: Optional[str]
+        start: str | None,
+        end: str | None
     ) -> str:
         """Calculate incident duration"""
         if not start or not end:
@@ -283,7 +280,7 @@ class PostmortemGenerator:
             mins = minutes % 60
             return f"{hours}h {mins}m"
             
-        except:
+        except Exception:
             return "Unknown"
     
     def enforce_blameless(self, text: str) -> str:
@@ -312,16 +309,16 @@ class PostmortemGenerator:
 
 
 # FastAPI routes
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+
+from fastapi import APIRouter, HTTPException  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
 router = APIRouter(prefix="/api/postmortems", tags=["postmortems"])
 
 
 class GenerateRequest(BaseModel):
     incident_id: str
-    resolution_notes: Optional[str] = None
+    resolution_notes: str | None = None
 
 
 @router.post("/generate")

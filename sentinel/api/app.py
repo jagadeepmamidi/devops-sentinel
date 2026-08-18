@@ -4,9 +4,9 @@ Canonical FastAPI application for the monitoring MVP.
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -18,7 +18,6 @@ from sentinel.api.quick_health_check import router as quick_health_router
 from sentinel.auth.auth_service import router as auth_router
 from sentinel.setup.ai_setup import router as ai_setup_router
 from sentinel.setup.supabase_setup import router as supabase_setup_router
-
 
 APP_NAME = "DevOps Sentinel API"
 APP_VERSION = "0.3.0"

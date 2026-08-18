@@ -5,8 +5,6 @@ OpenAI/OpenRouter Quick Setup
 Helps users get AI keys with guidance
 """
 
-import os
-from typing import Dict, List
 import aiohttp
 from fastapi import APIRouter
 
@@ -51,7 +49,7 @@ class AIProviderSetup:
         }
     }
     
-    def get_provider_options(self) -> List[Dict]:
+    def get_provider_options(self) -> list[dict]:
         """Get all provider options"""
         return [
             {
@@ -62,7 +60,7 @@ class AIProviderSetup:
             for key, info in self.PROVIDERS.items()
         ]
     
-    def get_setup_instructions(self, provider: str) -> List[Dict]:
+    def get_setup_instructions(self, provider: str) -> list[dict]:
         """Get setup instructions for a specific provider"""
         info = self.PROVIDERS.get(provider)
         if not info:
@@ -86,7 +84,7 @@ class AIProviderSetup:
             {
                 'step': 3,
                 'title': 'Add to Your Environment',
-                'description': f'Add this to your .env file:',
+                'description': 'Add this to your .env file:',
                 'code': f'{info["env_key"]}=sk-your-api-key-here'
             },
             {
@@ -97,7 +95,7 @@ class AIProviderSetup:
             }
         ]
     
-    async def verify_key(self, provider: str, api_key: str) -> Dict:
+    async def verify_key(self, provider: str, api_key: str) -> dict:
         """Verify an API key works"""
         if provider == 'openai':
             return await self._verify_openai(api_key)
@@ -107,54 +105,51 @@ class AIProviderSetup:
             return await self._verify_anthropic(api_key)
         return {'valid': False, 'error': 'Unknown provider'}
     
-    async def _verify_openai(self, api_key: str) -> Dict:
+    async def _verify_openai(self, api_key: str) -> dict:
         """Verify OpenAI key"""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    'https://api.openai.com/v1/models',
-                    headers={'Authorization': f'Bearer {api_key}'}
-                ) as resp:
-                    if resp.status == 200:
-                        return {'valid': True, 'message': 'OpenAI key verified!'}
-                    return {'valid': False, 'error': 'Invalid API key'}
+            async with aiohttp.ClientSession() as session, session.get(
+                'https://api.openai.com/v1/models',
+                headers={'Authorization': f'Bearer {api_key}'}
+            ) as resp:
+                if resp.status == 200:
+                    return {'valid': True, 'message': 'OpenAI key verified!'}
+                return {'valid': False, 'error': 'Invalid API key'}
         except Exception as e:
             return {'valid': False, 'error': str(e)}
     
-    async def _verify_openrouter(self, api_key: str) -> Dict:
+    async def _verify_openrouter(self, api_key: str) -> dict:
         """Verify OpenRouter key"""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    'https://openrouter.ai/api/v1/models',
-                    headers={'Authorization': f'Bearer {api_key}'}
-                ) as resp:
-                    if resp.status == 200:
-                        return {'valid': True, 'message': 'OpenRouter key verified!'}
-                    return {'valid': False, 'error': 'Invalid API key'}
+            async with aiohttp.ClientSession() as session, session.get(
+                'https://openrouter.ai/api/v1/models',
+                headers={'Authorization': f'Bearer {api_key}'}
+            ) as resp:
+                if resp.status == 200:
+                    return {'valid': True, 'message': 'OpenRouter key verified!'}
+                return {'valid': False, 'error': 'Invalid API key'}
         except Exception as e:
             return {'valid': False, 'error': str(e)}
     
-    async def _verify_anthropic(self, api_key: str) -> Dict:
+    async def _verify_anthropic(self, api_key: str) -> dict:
         """Verify Anthropic key"""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    'https://api.anthropic.com/v1/messages',
-                    headers={
-                        'x-api-key': api_key,
-                        'anthropic-version': '2023-06-01',
-                        'content-type': 'application/json'
-                    },
-                    json={
-                        'model': 'claude-3-haiku-20240307',
-                        'max_tokens': 1,
-                        'messages': [{'role': 'user', 'content': 'Hi'}]
-                    }
-                ) as resp:
-                    if resp.status in [200, 400]:  # 400 = valid key, bad request
-                        return {'valid': True, 'message': 'Anthropic key verified!'}
-                    return {'valid': False, 'error': 'Invalid API key'}
+            async with aiohttp.ClientSession() as session, session.post(
+                'https://api.anthropic.com/v1/messages',
+                headers={
+                    'x-api-key': api_key,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json'
+                },
+                json={
+                    'model': 'claude-3-haiku-20240307',
+                    'max_tokens': 1,
+                    'messages': [{'role': 'user', 'content': 'Hi'}]
+                }
+            ) as resp:
+                if resp.status in [200, 400]:  # 400 = valid key, bad request
+                    return {'valid': True, 'message': 'Anthropic key verified!'}
+                return {'valid': False, 'error': 'Invalid API key'}
         except Exception as e:
             return {'valid': False, 'error': str(e)}
 

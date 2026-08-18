@@ -11,9 +11,6 @@ Builds and analyzes service dependency graph for:
 Uses NetworkX for graph operations.
 """
 
-from typing import Dict, List, Set, Optional, Tuple
-from collections import defaultdict
-import json
 
 try:
     import networkx as nx
@@ -98,7 +95,7 @@ class DependencyAnalyzer:
         self._initialized = True
         print(f"Built dependency graph: {len(self.graph.nodes)} services, {len(self.graph.edges)} dependencies")
     
-    def calculate_blast_radius(self, service_id: str) -> Dict:
+    def calculate_blast_radius(self, service_id: str) -> dict:
         """
         Calculate how many downstream services are affected if this service fails
         
@@ -147,7 +144,7 @@ class DependencyAnalyzer:
             'severity_multiplier': severity_multiplier
         }
     
-    def get_cascade_prediction(self, failed_service_id: str) -> List[Dict]:
+    def get_cascade_prediction(self, failed_service_id: str) -> list[dict]:
         """
         Predict which services will fail next (cascade failures)
         
@@ -196,7 +193,7 @@ class DependencyAnalyzer:
         
         return cascade_risks
     
-    def identify_single_points_of_failure(self) -> List[Dict]:
+    def identify_single_points_of_failure(self) -> list[dict]:
         """
         Find services that are single points of failure (SPOFs)
         
@@ -263,7 +260,7 @@ class DependencyAnalyzer:
         # For now, return 1.0 (healthy)
         return 1.0
     
-    def visualize_graph(self) -> Dict:
+    def visualize_graph(self) -> dict:
         """
         Generate graph data for frontend visualization (D3.js/React Flow compatible)
         
@@ -301,8 +298,8 @@ class DependencyAnalyzer:
     def _get_hard_dependents(
         self,
         service_id: str,
-        descendants: Set[str]
-    ) -> Set[str]:
+        descendants: set[str]
+    ) -> set[str]:
         """Filter descendants for hard dependencies only"""
         hard_deps = set()
         
@@ -330,7 +327,7 @@ class DependencyAnalyzer:
     def _is_on_critical_path(
         self,
         service_id: str,
-        descendants: Set[str]
+        descendants: set[str]
     ) -> bool:
         """Check if service is on critical path (descendant has no alternatives)"""
         for desc in descendants:
@@ -345,12 +342,12 @@ class DependencyAnalyzer:
         
         return False
     
-    async def _fetch_services(self) -> List[Dict]:
+    async def _fetch_services(self) -> list[dict]:
         """Fetch services from database (placeholder)"""
         # TODO: Implement actual DB query
         return []
     
-    async def _fetch_dependencies(self) -> List[Dict]:
+    async def _fetch_dependencies(self) -> list[dict]:
         """Fetch dependencies from database (placeholder)"""
         # TODO: Implement actual DB query
         return []
