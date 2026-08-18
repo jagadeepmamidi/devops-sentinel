@@ -407,7 +407,7 @@ class SlackIntegration:
 
 
 # FastAPI routes
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request  # noqa: E402
 
 router = APIRouter(prefix="/api/integrations/slack", tags=["slack"])
 
@@ -422,8 +422,6 @@ async def slack_events(request: Request):
         return {'challenge': body.get('challenge')}
     
     # Handle events
-    event = body.get('event', {})
-    event_type = event.get('type')
     
     # Process event (would dispatch to handlers)
     

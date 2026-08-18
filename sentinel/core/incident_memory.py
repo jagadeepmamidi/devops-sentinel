@@ -154,7 +154,7 @@ class IncidentMemory:
                 past_hour = datetime.fromisoformat(past_time.replace('Z', '+00:00')).hour
                 if abs(curr_hour - past_hour) <= 1:
                     reasons.append("Occurred at similar time of day")
-            except:
+            except Exception:
                 pass
         
         # Vector similarity is high
@@ -271,7 +271,7 @@ class IncidentMemory:
             AND embedding IS NOT NULL
         """
         
-        params = [embedding]
+        params: list[object] = [embedding]
         
         if service_id:
             query += " AND service_id = $2"

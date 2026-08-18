@@ -10,7 +10,7 @@ Routes incidents to the right people based on:
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class AlertRouter:
@@ -59,8 +59,7 @@ class AlertRouter:
             Routing result with assigned users and channels
         """
         severity = incident.get('severity', 'P2')
-        service_id = incident.get('service_id')
-        service_name = incident.get('service_name', 'Unknown')
+        service_id = str(incident.get('service_id') or '')
         
         # Get on-call person
         on_call = await self._get_on_call_user(severity, service_id)
@@ -76,7 +75,7 @@ class AlertRouter:
             'assigned_name': on_call['name'] if on_call else None,
             'channels': channels,
             'escalation_policy': self.escalation_rules.get(severity),
-            'routed_at': datetime.utcnow()
+            'routed_at': datetime.now(timezone.utc)
         }
         
         # Send notifications
@@ -126,7 +125,7 @@ class AlertRouter:
             'assigned_name': next_on_call['name'],
             'escalated_from': current_assignee,
             'escalation_reason': reason,
-            'escalated_at': datetime.utcnow()
+            'escalated_at': datetime.now(timezone.utc)
         }
         
         # Send escalation notification

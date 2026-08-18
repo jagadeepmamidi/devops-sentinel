@@ -6,7 +6,7 @@ Generate plain-English explanations for every alert
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class AlertExplainer:
@@ -54,13 +54,13 @@ class AlertExplainer:
             'context': self._generate_context(incident, deployment, dependencies),
             'history': None,
             'suggested_actions': self._generate_actions(incident, similar),
-            'generated_at': datetime.utcnow().isoformat()
+            'generated_at': datetime.now(timezone.utc).isoformat()
         }
         
         # Add history if similar incident found
         if similar:
             explanation['history'] = {
-                'related_incident_id': similar['id'],
+                'related_incident_id': similar.get('id'),
                 'occurred': similar.get('detected_at'),
                 'similarity': similar.get('similarity_score', 0.85),
                 'resolution': similar.get('resolution_notes'),
@@ -171,7 +171,7 @@ class AlertExplainer:
             if deployed_at:
                 try:
                     deploy_time = datetime.fromisoformat(deployed_at.replace('Z', '+00:00'))
-                    minutes_ago = (datetime.utcnow() - deploy_time.replace(tzinfo=None)).seconds // 60
+                    minutes_ago = (datetime.now(timezone.utc) - deploy_time.replace(tzinfo=None)).seconds // 60
                     
                     if minutes_ago < 60:
                         context.append(
@@ -182,8 +182,8 @@ class AlertExplainer:
                         # Check deployment status
                         if deployment.get('status') == 'failed':
                             context.append("WARNING: Recent deployment marked as FAILED")
-                except:
-                    pass
+                except (TypeError, ValueError):
+                    context.append("Deployment context unavailable")
         
         # Dependency context
         if dependencies:
@@ -216,7 +216,7 @@ class AlertExplainer:
         # If similar incident found with resolution
         if similar and similar.get('resolution_notes'):
             actions.append(
-                f"SUGGESTED: {similar.get('resolution_notes')[:200]}"
+                f"SUGGESTED: {str(similar.get('resolution_notes', ''))[:200]}"
             )
         
         # Failure type specific actions
@@ -275,7 +275,7 @@ class AlertExplainer:
     
     async def _get_recent_deployment(self, service_id: str) -> dict | None:
         """Get most recent deployment"""
-        one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         
         result = await self.supabase.table('deployments').select(
             '*'

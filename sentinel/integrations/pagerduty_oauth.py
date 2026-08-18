@@ -132,7 +132,7 @@ async def oauth_callback(code: str = None, state: str = None, error: str = None)
     
     try:
         oauth = PagerDutyOAuth()
-        result = await oauth.handle_callback(code, state)
+        await oauth.handle_callback(code, state)
         return RedirectResponse(
             f"{APP_URL}/settings/integrations?pagerduty=connected"
         )

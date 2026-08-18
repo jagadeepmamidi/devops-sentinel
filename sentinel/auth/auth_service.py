@@ -186,7 +186,7 @@ class AuthService:
         try:
             self.client.auth.sign_out()
             return True
-        except:
+        except Exception:
             return False
     
     async def refresh_token(self, refresh_token: str) -> dict:
@@ -239,7 +239,7 @@ class AuthService:
             
             return None
             
-        except:
+        except Exception:
             return None
     
     async def reset_password(self, email: str) -> bool:
@@ -250,7 +250,7 @@ class AuthService:
         try:
             self.client.auth.reset_password_email(email)
             return True
-        except:
+        except Exception:
             # Don't reveal if email exists
             return True
     
@@ -268,7 +268,7 @@ class AuthService:
                 'password': new_password
             })
             return True
-        except:
+        except Exception:
             raise HTTPException(400, "Failed to update password")
     
     # Private helpers
@@ -291,7 +291,7 @@ class AuthService:
                 'subscription_tier': 'free',
                 'updated_at': datetime.utcnow().isoformat()
             }).execute()
-        except:
+        except Exception:
             pass  # Profile might already exist
     
     async def _get_user_profile(self, user_id: str) -> dict | None:
@@ -305,7 +305,7 @@ class AuthService:
             ).eq('id', user_id).execute()
             
             return result.data[0] if result.data else None
-        except:
+        except Exception:
             return None
     
     def _mock_auth_response(

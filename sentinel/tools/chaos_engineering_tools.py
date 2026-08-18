@@ -261,7 +261,7 @@ class ChaosEngineeringTools:
         print(f"[CHAOS] Testing {service_id} response to {dependency_id} {failure_mode}")
         
         # Baseline with healthy dependency
-        baseline = await self._measure_service_health(service_id)
+        await self._measure_service_health(service_id)
         
         # Inject failure
         await self._simulate_dependency_failure(dependency_id, failure_mode)

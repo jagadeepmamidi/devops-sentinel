@@ -94,8 +94,6 @@ class PostmortemGenerator:
         # Extract key information
         title = incident.get('title', 'Untitled Incident')
         severity = incident.get('severity', 'P2')
-        service = incident.get('service_name', 'Unknown')
-        description = incident.get('description', '')
         
         # Calculate duration
         start = incident.get('detected_at')
@@ -282,7 +280,7 @@ class PostmortemGenerator:
             mins = minutes % 60
             return f"{hours}h {mins}m"
             
-        except:
+        except Exception:
             return "Unknown"
     
     def enforce_blameless(self, text: str) -> str:
@@ -312,8 +310,8 @@ class PostmortemGenerator:
 
 # FastAPI routes
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
 router = APIRouter(prefix="/api/postmortems", tags=["postmortems"])
 

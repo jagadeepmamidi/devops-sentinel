@@ -155,7 +155,6 @@ class QuickHealthCheck:
             
             # Parse certificate
             not_after = cert.get('notAfter', '')
-            not_before = cert.get('notBefore', '')
             issuer = dict(x[0] for x in cert.get('issuer', []))
             
             # Calculate days until expiry
@@ -236,7 +235,7 @@ class QuickHealthCheck:
 
 
 # FastAPI endpoint
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query  # noqa: E402
 
 router = APIRouter(tags=["quick-check"])
 

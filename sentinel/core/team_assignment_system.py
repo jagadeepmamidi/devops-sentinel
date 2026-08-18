@@ -6,7 +6,7 @@ Assign incidents to team members and track ownership
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 
 class TeamAssignmentSystem:
@@ -63,7 +63,7 @@ class TeamAssignmentSystem:
             'incident_id': incident_id,
             'assigned_to': assigned_to,
             'assigned_by': assigned_by or 'system',
-            'assigned_at': datetime.utcnow().isoformat(),
+            'assigned_at': datetime.now(timezone.utc).isoformat(),
             'reason': reason,
             'status': 'assigned'
         }
@@ -83,7 +83,7 @@ class TeamAssignmentSystem:
         
         return assignment
     
-    async def _auto_assign(self, team_id: str, severity: str) -> str:
+    async def _auto_assign(self, team_id: str, severity: str) -> str | None:
         """
         Auto-assign based on on-call schedule or load balancing
         
@@ -140,7 +140,7 @@ class TeamAssignmentSystem:
             # Mark old assignment as superseded
             await self.supabase.table('incident_assignments').update({
                 'status': 'reassigned',
-                'reassigned_at': datetime.utcnow().isoformat()
+                'reassigned_at': datetime.now(timezone.utc).isoformat()
             }).eq('id', current.data[0]['id']).execute()
         
         # Create new assignment
@@ -166,7 +166,7 @@ class TeamAssignmentSystem:
         # Mark assignment as unassigned
         await self.supabase.table('incident_assignments').update({
             'status': 'unassigned',
-            'unassigned_at': datetime.utcnow().isoformat(),
+            'unassigned_at': datetime.now(timezone.utc).isoformat(),
             'unassigned_by': unassigned_by
         }).eq('incident_id', incident_id).eq('status', 'assigned').execute()
         
@@ -203,7 +203,7 @@ class TeamAssignmentSystem:
             ).execute()
             
             # Count resolved this week
-            week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
             resolved = await self.supabase.table('incidents').select(
                 'id', count='exact'
             ).eq('assigned_to', member['user_id']).eq(
@@ -279,7 +279,7 @@ class TeamAssignmentSystem:
                 'assigned_by': assignment['assigned_by'],
                 'reason': assignment['reason']
             },
-            'created_at': datetime.utcnow().isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat()
         }).execute()
     
     async def get_team_stats(self, team_id: str) -> dict:
@@ -320,7 +320,7 @@ class TeamAssignmentSystem:
 
 
 # Helper to avoid circular import
-from datetime import timedelta
+
 
 # Example usage
 if __name__ == "__main__":
@@ -353,7 +353,7 @@ if __name__ == "__main__":
             
             async def execute(self):
                 class Result:
-                    data = [{'team_id': 'team-1', 'severity': 'P1', 'service_id': 'svc-1'}]
+                    data = ({'team_id': 'team-1', 'severity': 'P1', 'service_id': 'svc-1'},)
                     count = 2
                 return Result()
         
