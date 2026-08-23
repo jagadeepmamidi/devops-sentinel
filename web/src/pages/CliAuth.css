@@ -14,17 +14,6 @@
 .cli-auth-terminal {
   padding: 22px;
 }
-.cli-auth-orb {
-  display: grid;
-  width: 120px;
-  height: 120px;
-  margin: -8px auto 10px;
-  place-items: center;
-}
-.cli-auth-orb .brand-orb {
-  width: 120px;
-  height: 120px;
-}
 .cli-auth-provider-row,
 .cli-auth-email-row {
   display: flex;
@@ -138,15 +127,6 @@
 .cli-auth-key-modal {
   width: min(460px, 100%);
   padding: 24px;
-}
-.cli-auth-key-orb {
-  width: 56px;
-  height: 56px;
-  margin-bottom: 8px;
-}
-.cli-auth-key-orb .brand-orb {
-  width: 56px;
-  height: 56px;
 }
 .cli-auth-key-modal h2 {
   margin: 9px 0;

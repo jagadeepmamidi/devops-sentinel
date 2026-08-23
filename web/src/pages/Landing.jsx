@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import SiteTopNav from "../components/site/SiteTopNav";
 import SiteFooter from "../components/site/SiteFooter";
-import BrandOrb from "../components/BrandOrb";
 import "./Landing.css";
 
 const NAV_LINKS = [
@@ -187,10 +186,6 @@ export default function Landing() {
 			<SiteTopNav links={NAV_LINKS} />
 			<main id="landing-main" className="site-main site-container landing-main">
 				<section className="landing-hero" aria-labelledby="landing-title">
-					<div className="landing-orb-stage">
-						<BrandOrb size="large" label="Animated DevOps Sentinel logo orb" />
-						<span className="landing-orb-status">● agent signal / ready</span>
-					</div>
 					<p className="landing-eyebrow">
 						<span aria-hidden="true">✳</span> DevOps Sentinel Next{" "}
 						<b>Now available on PyPI</b>

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SiteTopNav from "../components/site/SiteTopNav";
 import SiteFooter from "../components/site/SiteFooter";
-import BrandOrb from "../components/BrandOrb";
 import { supabase } from "../lib/supabase";
 import "./CliAuth.css";
 
@@ -136,9 +135,6 @@ export default function CliAuth() {
       <SiteTopNav links={NAV_LINKS} />
       <main id="auth-main" className="site-main site-container cli-auth-main">
         <section className="site-card cli-auth-panel">
-          <div className="cli-auth-orb">
-            <BrandOrb size="medium" label="Sentinel authentication orb" />
-          </div>
           <p className="site-label">Secure access / OAuth 2.0</p>
           <h1 className="site-title">Sign in to continue in terminal</h1>
           <p className="site-text">
@@ -246,9 +242,6 @@ $ sentinel monitor https://api.example.com/health`}</pre>
             aria-modal="true"
             aria-labelledby="api-key-title"
           >
-            <div className="cli-auth-key-orb">
-              <BrandOrb size="small" label="AI setup status" />
-            </div>
             <p className="site-label">One last setup step</p>
             <h2 id="api-key-title">Connect an AI provider?</h2>
             <p className="site-text">

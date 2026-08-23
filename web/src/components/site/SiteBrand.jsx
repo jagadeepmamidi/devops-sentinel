@@ -1,11 +1,15 @@
 import { Link } from "react-router-dom";
-import BrandOrb from "../BrandOrb";
 
-export default function SiteBrand({ to = "/" }) {
+export default function SiteBrand({ to = "/", onNavigate }) {
   return (
-    <Link to={to} className="site-brand" aria-label="DevOps Sentinel home">
-      <span className="site-brand-badge">
-        <BrandOrb size="small" label="DevOps Sentinel logo" />
+    <Link
+      to={to}
+      className="site-brand"
+      aria-label="DevOps Sentinel home"
+      onClick={onNavigate}
+    >
+      <span className="site-brand-mark" aria-hidden="true">
+        S
       </span>
       <span className="site-brand-text">DevOps Sentinel</span>
     </Link>
