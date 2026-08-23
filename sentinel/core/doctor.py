@@ -21,6 +21,16 @@ async def _check_api_health(api_url: str) -> bool:
         return False
 
 
+def _check_agent_runtime() -> tuple[str, str]:
+    """Confirm optional CrewAI factory and tool bridge are importable."""
+    try:
+        from agents import SentinelAgents  # noqa: F401
+
+        return "ok", "CrewAI agent factory and tool bridge importable"
+    except (ImportError, RuntimeError, TypeError, ValueError) as error:
+        return "warn", f"Agent factory unavailable: {error}"
+
+
 def run_doctor(strict: bool = False) -> dict[str, Any]:
     """Run diagnostics with mode-aware storage checks."""
     api_url = os.getenv("API_URL", "http://localhost:8000")
@@ -90,6 +100,9 @@ def run_doctor(strict: bool = False) -> dict[str, Any]:
             else f"API not reachable at {api_url}/health",
         },
     ]
+
+    agent_status, agent_detail = _check_agent_runtime()
+    checks.append({"name": "Agent Runtime", "status": agent_status, "detail": agent_detail})
 
     failed = [check for check in checks if check["status"] == "fail"]
     warnings = [check for check in checks if check["status"] == "warn"]
