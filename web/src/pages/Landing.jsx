@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import SiteTopNav from "../components/site/SiteTopNav";
 import SiteFooter from "../components/site/SiteFooter";
+import BrandOrb from "../components/BrandOrb";
 import "./Landing.css";
 
 const NAV_LINKS = [
@@ -38,9 +39,7 @@ function ProductPreview() {
 					<i />
 					<i />
 				</span>
-				<span className="window-breadcrumb">
-					sentinel / production / overview
-				</span>
+				<span className="window-breadcrumb">sentinel / production / overview</span>
 				<span className="window-secure">● connected</span>
 			</div>
 			<div className="product-window-body">
@@ -188,6 +187,10 @@ export default function Landing() {
 			<SiteTopNav links={NAV_LINKS} />
 			<main id="landing-main" className="site-main site-container landing-main">
 				<section className="landing-hero" aria-labelledby="landing-title">
+					<div className="landing-orb-stage">
+						<BrandOrb size="large" label="Animated DevOps Sentinel logo orb" />
+						<span className="landing-orb-status">● agent signal / ready</span>
+					</div>
 					<p className="landing-eyebrow">
 						<span aria-hidden="true">✳</span> DevOps Sentinel Next{" "}
 						<b>Now available on PyPI</b>
@@ -198,8 +201,8 @@ export default function Landing() {
 						<em>before they become incidents.</em>
 					</h1>
 					<p className="landing-hero-copy">
-						Open-source monitoring and incident operations for teams that want
-						fast signal, durable context, and safe automation.
+						Open-source monitoring and incident operations for teams that want fast
+						signal, durable context, and safe automation.
 					</p>
 					<div className="landing-hero-actions">
 						<Link to="/cli-auth" className="site-btn primary">
@@ -209,11 +212,7 @@ export default function Landing() {
 							Read documentation
 						</Link>
 					</div>
-					<div
-						className="landing-install"
-						role="group"
-						aria-label="Install command"
-					>
+					<div className="landing-install" role="group" aria-label="Install command">
 						<code>
 							<span>$</span> {INSTALL_COMMAND}
 						</code>
@@ -232,12 +231,10 @@ export default function Landing() {
 				>
 					<div className="landing-section-intro">
 						<span className="site-label">One view, full context</span>
-						<h2 id="preview-title">
-							Your production picture, without the noise.
-						</h2>
+						<h2 id="preview-title">Your production picture, without the noise.</h2>
 						<p className="site-text">
-							Health checks, service state, active incidents, and
-							evidence-backed next steps in one operational surface.
+							Health checks, service state, active incidents, and evidence-backed next
+							steps in one operational surface.
 						</p>
 					</div>
 					<ProductPreview />
@@ -256,8 +253,8 @@ export default function Landing() {
 							<span className="capability-number">01</span>
 							<h3>Find the signal</h3>
 							<p>
-								Check one endpoint or your whole service surface with latency,
-								SSL, and failure evidence.
+								Check one endpoint or your whole service surface with latency, SSL, and
+								failure evidence.
 							</p>
 							<Link to="/docs">
 								Explore health checks <span aria-hidden="true">→</span>
@@ -267,8 +264,8 @@ export default function Landing() {
 							<span className="capability-number">02</span>
 							<h3>Build the timeline</h3>
 							<p>
-								Keep detection, investigation, response, and resolution events
-								attached to every incident.
+								Keep detection, investigation, response, and resolution events attached
+								to every incident.
 							</p>
 							<div className="mini-timeline" aria-hidden="true">
 								<span>

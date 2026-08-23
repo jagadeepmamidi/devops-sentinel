@@ -24,6 +24,7 @@ import httpx
 
 # Load environment
 from dotenv import load_dotenv
+from httpx import HTTPError
 
 from .. import __version__
 from ..core.monitoring_policy import (
@@ -74,16 +75,27 @@ def classify_incident(response_code: int | None, error: str = "") -> tuple[str, 
 
 
 def print_banner():
-    """Print ASCII banner"""
-    banner = """
-========================================
-      DEVOPS SENTINEL - SRE AGENT
-========================================
+    """Print branded startup banner for an interactive terminal session."""
+    banner = r"""
++--------------------------------------------+
+|        WELCOME TO DEVOPS SENTINEL          |
+|                                            |
+|                SSSSSSS                    |
+|               SS                         |
+|               SS                         |
+|                SSSSS                     |
+|                    SS                    |
+|                    SS                    |
+|               SSSSSSS                    |
+|                                            |
+|  Observe services - Investigate incidents |
+|  Coordinate agents - Ship safer           |
++--------------------------------------------+
 """
     click.echo(click.style(banner, fg="cyan"))
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="DevOps Sentinel")
 @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
 @click.pass_context
@@ -100,6 +112,8 @@ def cli(ctx, output_json):
     """
     ctx.ensure_object(dict)
     ctx.obj["json"] = output_json
+    if ctx.invoked_subcommand is None and not output_json:
+        print_banner()
 
 
 @cli.command()
@@ -183,7 +197,7 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                     return
                 try:
                     await client.post(webhook, json={"text": message}, timeout=5)
-                except httpx.HTTPError:
+                except HTTPError:
                     if not ctx.obj.get("json"):
                         click.echo(
                             click.style("  WARN Failed to send Slack notification.", fg="yellow")
@@ -301,7 +315,8 @@ def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_thr
                                 f"[DevOps Sentinel] Incident opened for {url}: HTTP {status_code} ({elapsed:.0f}ms)"
                             )
 
-                except httpx.HTTPError as error:
+                except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError):
+                    error = sys.exc_info()[1]
                     status = click.style("X FAILED", fg="red")
                     state = advance_monitoring_state(state, False)
                     if service and db.connected:
@@ -406,7 +421,8 @@ def health(ctx, url, timeout):
                     click.echo(f"  Latency: {result['latency_ms']}ms")
                     click.echo()
 
-            except httpx.HTTPError as e:
+            except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError):
+                e = sys.exc_info()[1]
                 if ctx.obj.get("json"):
                     click.echo(
                         json.dumps({"url": url, "healthy": False, "error": str(e)}, indent=2)
@@ -548,7 +564,7 @@ def status(ctx):
             async with httpx.AsyncClient(timeout=5) as client:
                 resp = await client.get(f"{api_url}/health")
                 return resp.status_code in range(200, 400)
-        except httpx.HTTPError:
+        except HTTPError:
             return False
 
     api_ok = asyncio.run(check_api())
@@ -864,7 +880,7 @@ def setup(ctx):
             async with httpx.AsyncClient(timeout=10) as client:
                 response = await client.get(service_url)
                 return response.status_code in range(200, 400)
-        except httpx.HTTPError:
+        except HTTPError:
             return False
 
     health_ok = asyncio.run(quick_check())

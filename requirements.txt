@@ -39,6 +39,7 @@ bandit==1.7.7
 
 # Utilities
 python-dotenv==1.0.0
+cryptography>=42.0.0
 
 # ==============================
 # PHASE 1: Core Intelligence

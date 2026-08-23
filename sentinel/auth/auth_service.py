@@ -5,6 +5,7 @@ Supabase Auth Service
 Complete authentication flow with Supabase
 """
 
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -14,6 +15,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
 
 # Initialize Supabase client
+logger = logging.getLogger(__name__)
 Client: Any = Any
 create_client: Any = None
 supabase: Any = None
@@ -32,6 +34,7 @@ except ImportError:
 
 # Security scheme
 security = HTTPBearer(auto_error=False)
+security_dependency = Depends(security)
 
 
 # Request/Response models
@@ -94,6 +97,8 @@ class AuthService:
             User data and session tokens
         """
         if not self.client:
+            if not self._dev_auth_enabled():
+                raise HTTPException(503, "Authentication service is not configured")
             return self._mock_auth_response(email, name)
 
         try:
@@ -120,7 +125,7 @@ class AuthService:
 
             raise HTTPException(400, "Failed to create user")
 
-        except Exception as e:
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as e:
             if "already registered" in str(e).lower():
                 raise HTTPException(409, "Email already registered")
             raise HTTPException(400, str(e))
@@ -158,7 +163,7 @@ class AuthService:
 
             raise HTTPException(401, "Invalid credentials")
 
-        except Exception as e:
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as e:
             if "invalid" in str(e).lower():
                 raise HTTPException(401, "Invalid email or password")
             raise HTTPException(400, str(e))
@@ -171,7 +176,8 @@ class AuthService:
         try:
             self.client.auth.sign_out()
             return True
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Supabase sign-out failed: %s", error)
             return False
 
     async def refresh_token(self, refresh_token: str) -> dict:
@@ -182,6 +188,8 @@ class AuthService:
             New session tokens
         """
         if not self.client:
+            if not self._dev_auth_enabled():
+                raise HTTPException(503, "Authentication service is not configured")
             return self._mock_auth_response("user@example.com")
 
         try:
@@ -196,12 +204,15 @@ class AuthService:
 
             raise HTTPException(401, "Invalid refresh token")
 
-        except Exception:
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Supabase refresh failed: %s", error)
             raise HTTPException(401, "Failed to refresh token")
 
     async def get_user(self, access_token: str) -> dict | None:
         """Get current authenticated user"""
         if not self.client:
+            if not self._dev_auth_enabled():
+                return None
             return {
                 "id": "mock-user-1",
                 "email": "user@example.com",
@@ -225,7 +236,8 @@ class AuthService:
 
             return None
 
-        except Exception:
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Supabase user lookup failed: %s", error)
             return None
 
     async def reset_password(self, email: str) -> bool:
@@ -236,7 +248,8 @@ class AuthService:
         try:
             self.client.auth.reset_password_email(email)
             return True
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Password reset request failed: %s", error)
             # Don't reveal if email exists
             return True
 
@@ -248,7 +261,8 @@ class AuthService:
         try:
             self.client.auth.update_user({"password": new_password})
             return True
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Password update failed: %s", error)
             raise HTTPException(400, "Failed to update password")
 
     # Private helpers
@@ -268,8 +282,8 @@ class AuthService:
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             ).execute()
-        except Exception:
-            pass  # Profile might already exist
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Profile upsert skipped: %s", error)
 
     async def _get_user_profile(self, user_id: str) -> dict | None:
         """Get user profile from database"""
@@ -286,11 +300,17 @@ class AuthService:
 
             value = result.data[0] if result.data else None
             return value if isinstance(value, dict) else None
-        except Exception:
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Profile lookup failed: %s", error)
             return None
 
     def _mock_auth_response(self, email: str, name: str | None = None) -> dict:
         """Mock response for development"""
+        expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+        try:
+            expires_at = int(expiry.timestamp())
+        except (OverflowError, OSError, ValueError):
+            expires_at = 0
         return {
             "user": {
                 "id": "mock-user-" + email.split("@")[0],
@@ -298,14 +318,14 @@ class AuthService:
                 "name": name or email.split("@")[0],
                 "tier": "free",
             },
-            "access_token": "mock-access-token-" + str(datetime.now(timezone.utc).timestamp()),
+            "access_token": "mock-access-token-" + str(max(0, expires_at - 3600)),
             "refresh_token": "mock-refresh-token",
-            "expires_at": int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp()),
+            "expires_at": expires_at,
         }
 
 
 # Dependency for protected routes
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = security_dependency) -> dict:
     """
     FastAPI dependency for authenticated routes
 
@@ -327,7 +347,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 async def get_optional_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials = security_dependency,
 ) -> dict | None:
     """Dependency for optionally authenticated routes"""
     if not credentials:
@@ -339,6 +359,7 @@ async def get_optional_user(
 
 # API Router
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+current_user_dependency = Depends(get_current_user)
 
 
 @router.post("/signup", response_model=AuthResponse)
@@ -358,7 +379,7 @@ async def signin(request: SignInRequest):
 
 
 @router.post("/signout")
-async def signout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def signout(credentials: HTTPAuthorizationCredentials = security_dependency):
     """Sign out current session"""
     if not credentials:
         return {"status": "ok"}
@@ -376,7 +397,7 @@ async def refresh(refresh_token: str):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(user: dict = Depends(get_current_user)):
+async def get_me(user: dict = current_user_dependency):
     """Get current user profile"""
     return {
         "id": user["id"],
@@ -397,7 +418,7 @@ async def forgot_password(email: EmailStr):
 
 @router.post("/update-password")
 async def update_password(
-    new_password: str, credentials: HTTPAuthorizationCredentials = Depends(security)
+    new_password: str, credentials: HTTPAuthorizationCredentials = security_dependency
 ):
     """Update password for authenticated user"""
     if not credentials:
