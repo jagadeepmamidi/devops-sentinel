@@ -1,6 +1,6 @@
 # Terms of Service for DevOps Sentinel
 
-**Last Updated**: February 14, 2026
+**Last Updated**: August 23, 2026
 **Effective Date**: February 14, 2026
 
 ---
