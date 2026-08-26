@@ -1,36 +1,37 @@
-"""
-DevOps Sentinel CLI - Projects Command
-=======================================
+"""Manage projects from terminal."""
 
-Manage projects from the terminal.
-"""
+from __future__ import annotations
 
 import json
 
 import click
+from rich.console import Console
+from rich.table import Table
 
 from .auth import get_current_user, is_logged_in
 from .db import get_db
 
 
-def _require_user():
-    """Return current user when login state is valid."""
-    if not is_logged_in():
-        click.echo(
-            click.style(
-                "Error: No active identity. Run `sentinel init --mode local` or `sentinel login`.",
-                fg="red",
-            )
-        )
-        return None
+def _json(ctx):
+    return bool(ctx.find_root().obj.get("json"))
 
+
+def _require_user():
+    if not is_logged_in():
+        raise click.ClickException(
+            "No active identity. Run `sentinel init --mode local` or `sentinel login`."
+        )
     user = get_current_user()
     if not user or not user.get("id"):
-        click.echo(
-            click.style("Error: Identity state is invalid. Run `sentinel login` again.", fg="red")
-        )
-        return None
+        raise click.ClickException("Identity state invalid. Run `sentinel login` again.")
     return user
+
+
+def _db_or_fail():
+    db = get_db()
+    if not db.connected:
+        raise click.ClickException("Storage not configured. Run `sentinel init --mode local`.")
+    return db
 
 
 @click.group()
@@ -39,88 +40,47 @@ def projects():
 
 
 @projects.command("list")
-@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
-def projects_list(output_json):
-    """List all projects."""
-    user = _require_user()
-    if not user:
-        return
-
-    db = get_db()
-    if not db.connected:
-        click.echo(
-            click.style(
-                "Error: Storage not configured. Run `sentinel init --mode local`.", fg="red"
+@click.pass_context
+def projects_list(ctx):
+    """List projects."""
+    data = _db_or_fail().list_projects(_require_user()["id"])
+    if _json(ctx):
+        click.echo(json.dumps(data, indent=2, default=str))
+    else:
+        table = Table(title="Projects")
+        table.add_column("Name", style="bold")
+        table.add_column("Description")
+        table.add_column("Created")
+        for item in data:
+            table.add_row(
+                str(item.get("name", "Unnamed")),
+                str(item.get("description", "")),
+                str(item.get("created_at", ""))[:10],
             )
-        )
-        return
-
-    projects_data = db.list_projects(user["id"])
-
-    if output_json:
-        click.echo(json.dumps(projects_data, indent=2, default=str))
-        return
-
-    if not projects_data:
-        click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} No projects found.")
-        click.echo("  Create one with: sentinel projects create <name>")
-        return
-
-    click.echo(f"\n{click.style('Projects', bold=True)}")
-    click.echo("-" * 60)
-    click.echo(f"{'Name':<25} {'Services':<10} {'Created'}")
-    click.echo("-" * 60)
-
-    for proj in projects_data:
-        name = proj.get("name", "Unnamed")[:24]
-        created = str(proj.get("created_at", ""))[:10]
-        click.echo(f"{name:<25} {'--':<10} {created}")
-
-    click.echo()
+        Console().print(table)
 
 
 @projects.command("create")
 @click.argument("name")
-@click.option("--description", "-d", default="", help="Project description")
-@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
-def projects_create(name, description, output_json):
-    """Create a new project."""
-    user = _require_user()
-    if not user:
-        return
-
-    db = get_db()
-    if not db.connected:
-        click.echo(click.style("Error: Database not configured.", fg="red"))
-        return
-
-    project = db.create_project(user["id"], name, description)
-
-    if output_json:
-        click.echo(json.dumps(project, indent=2, default=str))
-        return
-
-    if project:
-        click.echo(f"\n{click.style('OK', fg='green')} Created project: {name}")
-        click.echo(f"  ID: {project.get('id', 'unknown')[:8]}...")
-    else:
-        click.echo(click.style("Error: Failed to create project.", fg="red"))
+@click.option("--description", "-d", default="")
+@click.pass_context
+def projects_create(ctx, name, description):
+    """Create project."""
+    project = _db_or_fail().create_project(_require_user()["id"], name, description)
+    if not project:
+        raise click.ClickException("Failed to create project.")
+    click.echo(json.dumps(project, default=str) if _json(ctx) else f"Created project: {name}")
 
 
 @projects.command("delete")
 @click.argument("project_id")
-@click.option("--force", "-f", is_flag=True, help="Skip confirmation")
+@click.option("--force", "-f", is_flag=True)
 def projects_delete(project_id, force):
-    """Delete a project."""
-    user = _require_user()
-    if not user:
-        return
-
+    """Delete project."""
+    _require_user()
+    db = _db_or_fail()
     if not force and not click.confirm(f"Delete project {project_id[:8]}...?"):
         return
-
-    db = get_db()
-    if db.delete_project(project_id):
-        click.echo(f"{click.style('OK', fg='green')} Project deleted.")
-    else:
-        click.echo(click.style("Error: Failed to delete project.", fg="red"))
+    if not db.delete_project(project_id):
+        raise click.ClickException("Failed to delete project.")
+    click.echo("Project deleted.")

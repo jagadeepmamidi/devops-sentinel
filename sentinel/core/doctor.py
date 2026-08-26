@@ -16,7 +16,7 @@ async def _check_api_health(api_url: str) -> bool:
     try:
         async with httpx.AsyncClient(timeout=4) as client:
             response = await client.get(f"{api_url}/health")
-            return response.status_code == 200
+            return response.status_code in range(200, 400)
     except httpx.HTTPError:
         return False
 

@@ -16,7 +16,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from importlib import import_module
 from pathlib import Path
 
 import click
@@ -27,15 +27,13 @@ from dotenv import load_dotenv
 from httpx import HTTPError
 
 from .. import __version__
-from ..core.monitoring_policy import (
-    MonitoringState,
-    MonitoringThresholds,
-    advance_monitoring_state,
-    seed_monitoring_state,
-    should_open_incident,
-    should_resolve_incident,
-)
-from ..core.postmortem_generator import PostmortemGenerator
+from ..application.incidents import IncidentService
+
+
+def _monitor_components():
+    module = import_module("sentinel.core.monitor_runner")
+    return module.MonitorRunner, module.check_url_once
+
 
 # Auth module
 from .auth import (
@@ -61,6 +59,22 @@ from .services import services
 load_dotenv(dotenv_path=Path.cwd() / ".env")
 # Project/process environment wins over user-level persisted settings.
 load_user_config_into_env()
+
+
+def _render(name, *args):
+    return getattr(import_module("sentinel.cli.render"), name)(*args)
+
+
+def console():
+    return _render("console")
+
+
+def incidents_table(items):
+    return _render("incidents_table", items)
+
+
+def incident_detail(incident, events):
+    return _render("incident_detail", incident, events)
 
 
 def classify_incident(response_code: int | None, error: str = "") -> tuple[str, str]:
@@ -117,436 +131,349 @@ def cli(ctx, output_json):
 
 
 @cli.command()
-@click.argument("url")
-@click.option("--interval", "-i", default=30, help="Check interval in seconds")
-@click.option("--timeout", "-t", default=10, help="Request timeout in seconds")
-@click.option("--notify", is_flag=True, help="Send Slack notification on failure")
-@click.option(
-    "--failure-threshold",
-    default=3,
-    type=click.IntRange(1, 20),
-    show_default=True,
-    help="Failures required before opening an incident",
-)
-@click.option(
-    "--recovery-threshold",
-    default=2,
-    type=click.IntRange(1, 20),
-    show_default=True,
-    help="Healthy checks required before resolving an incident",
-)
+@click.argument("target", required=False)
+@click.option("--all", "monitor_all", is_flag=True, help="Monitor all registered active services")
+@click.option("--interval", "-i", type=float, default=None, help="Check interval in seconds")
+@click.option("--timeout", "-t", type=float, default=10, show_default=True)
+@click.option("--notify", is_flag=True, help="Reserved for notification integrations")
+@click.option("--failure-threshold", default=3, type=click.IntRange(1, 20), show_default=True)
+@click.option("--recovery-threshold", default=2, type=click.IntRange(1, 20), show_default=True)
 @click.pass_context
-def monitor(ctx, url, interval, timeout, notify, failure_threshold, recovery_threshold):
-    """
-    Monitor a URL for health status.
-
-    Examples:
-
-        sentinel monitor https://api.example.com/health
-
-        sentinel monitor https://httpbin.org/status/200 --interval 60
-    """
-
-    async def _monitor():
-        if not ctx.obj.get("json"):
-            click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Monitoring: {url}")
-            click.echo(f"  Interval: {interval}s | Timeout: {timeout}s")
-            click.echo("  Press Ctrl+C to stop\n")
-            if notify:
-                click.echo("  Notifications: enabled")
-
-        check_count = 0
-        notify_warned = False
-        db = get_db()
-        user = get_current_user() if is_logged_in() else None
+def monitor(
+    ctx, target, monitor_all, interval, timeout, notify, failure_threshold, recovery_threshold
+):
+    """Monitor registered service by name or URL."""
+    del notify
+    MonitorRunner = _monitor_components()[0]
+    output_json = ctx.obj.get("json", False)
+    db = get_db()
+    user = get_current_user() if is_logged_in() else None
+    registered = db.list_services(user["id"]) if user and db.connected else []
+    if monitor_all:
+        if target:
+            raise click.UsageError("TARGET cannot be used with --all")
+        targets = [svc for svc in registered if svc.get("is_active", True)]
+        if not targets:
+            raise click.ClickException("No active registered services found.")
+    elif not target:
+        raise click.UsageError("Provide a service name, URL, or --all")
+    else:
         service = None
-        active_incident_id = None
-        thresholds = MonitoringThresholds(
-            failure_threshold=failure_threshold,
-            recovery_threshold=recovery_threshold,
-        )
-        state = MonitoringState()
-
         if user and db.connected:
-            service = db.get_service_by_url(user["id"], url)
-            if service:
-                active_incident = db.get_active_incident_for_service(user["id"], service["id"])
-                active_incident_id = active_incident["id"] if active_incident else None
-                recent_checks = db.get_latest_health_checks(
-                    service["id"],
-                    limit=max(failure_threshold, recovery_threshold),
-                )
-                state = seed_monitoring_state(recent_checks)
+            service = db.get_service_by_name(user["id"], target) or db.get_service_by_url(
+                user["id"], target
+            )
+        if service:
+            targets = [service]
+        elif target.startswith(("http://", "https://")):
+            targets = [{"name": target, "url": target, "check_interval": interval or 30}]
+        else:
+            raise click.ClickException(f"Registered service not found: {target}")
 
-        async with httpx.AsyncClient(timeout=timeout) as client:
+    async def run_target(service):
+        try:
+            runner = MonitorRunner(
+                service["url"],
+                interval=interval
+                if interval is not None
+                else float(service.get("check_interval") or 30),
+                timeout=timeout,
+                db=db if service.get("id") else None,
+                user_id=user["id"] if user and service.get("id") else None,
+                service=service if service.get("id") else None,
+                failure_threshold=failure_threshold,
+                recovery_threshold=recovery_threshold,
+            )
+        except (TypeError, ValueError) as error:
+            raise click.ClickException(f"Invalid monitor configuration: {error}") from error
 
-            async def send_notification(message: str):
-                nonlocal notify_warned
-                if not notify:
-                    return
-                webhook = os.getenv("SLACK_WEBHOOK_URL")
-                if not webhook:
-                    if not notify_warned and not ctx.obj.get("json"):
-                        click.echo(
-                            click.style(
-                                "  WARN --notify set, but SLACK_WEBHOOK_URL is missing.",
-                                fg="yellow",
-                            )
-                        )
-                    notify_warned = True
-                    return
-                try:
-                    await client.post(webhook, json={"text": message}, timeout=5)
-                except HTTPError:
-                    if not ctx.obj.get("json"):
-                        click.echo(
-                            click.style("  WARN Failed to send Slack notification.", fg="yellow")
-                        )
+        def render(result):
+            result["service"] = service.get("name", service["url"])
+            if output_json:
+                click.echo(json.dumps(result, default=str))
+                return
+            state = (
+                "HEALTHY"
+                if result["healthy"]
+                else ("DEGRADED" if result.get("status_code") else "DOWN")
+            )
+            click.echo(
+                f"{result['service']} {click.style(state, fg='green' if result['healthy'] else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | check #{result['check']}"
+            )
 
-            while True:
-                check_count += 1
-                start = datetime.now(timezone.utc).replace(tzinfo=None)
+        await runner.run_forever(render)
 
-                try:
-                    response = await client.get(url)
-                    elapsed = (
-                        datetime.now(timezone.utc).replace(tzinfo=None) - start
-                    ).total_seconds() * 1000
-                    status_code = response.status_code
-                    is_healthy = status_code in range(200, 400)
-                    state = advance_monitoring_state(state, is_healthy)
-
-                    if service and db.connected:
-                        db.log_health_check(service["id"], status_code, int(elapsed), is_healthy)
-                        db.update_service_status(
-                            service["id"],
-                            "healthy" if is_healthy else "degraded",
-                            int(elapsed),
-                        )
-
-                    if is_healthy:
-                        status = click.style("OK HEALTHY", fg="green")
-                        if (
-                            active_incident_id
-                            and db.connected
-                            and should_resolve_incident(
-                                state,
-                                thresholds,
-                                has_active_incident=True,
-                            )
-                        ):
-                            db.resolve_incident(
-                                active_incident_id,
-                                action_plan=(
-                                    f"Recovered automatically after {state.consecutive_healthy} "
-                                    "consecutive healthy checks."
-                                ),
-                            )
-                            if notify:
-                                await send_notification(
-                                    f"[DevOps Sentinel] Recovered: {url} is healthy again."
-                                )
-                            active_incident_id = None
-                        if ctx.obj.get("json"):
-                            click.echo(
-                                json.dumps(
-                                    {
-                                        "status": "healthy",
-                                        "code": status_code,
-                                        "latency_ms": round(elapsed, 2),
-                                        "healthy_streak": state.consecutive_healthy,
-                                        "recovery_threshold": recovery_threshold,
-                                        "check": check_count,
-                                    }
-                                )
-                            )
-                        else:
-                            click.echo(
-                                f"  {status} | {status_code} | {elapsed:.0f}ms | "
-                                f"Healthy streak {state.consecutive_healthy}/{recovery_threshold} | "
-                                f"Check #{check_count}"
-                            )
-                    else:
-                        status = click.style("WARN WARNING", fg="yellow")
-                        opened_incident = False
-                        if (
-                            service
-                            and user
-                            and db.connected
-                            and should_open_incident(
-                                state,
-                                thresholds,
-                                has_active_incident=bool(active_incident_id),
-                            )
-                        ):
-                            severity, detail = classify_incident(status_code)
-                            incident = db.create_incident(
-                                user["id"],
-                                service["id"],
-                                severity,
-                                detail,
-                                error_code=status_code,
-                                status="alerting",
-                            )
-                            active_incident_id = incident["id"] if incident else None
-                            opened_incident = active_incident_id is not None
-                        if ctx.obj.get("json"):
-                            click.echo(
-                                json.dumps(
-                                    {
-                                        "status": "warning",
-                                        "code": status_code,
-                                        "latency_ms": round(elapsed, 2),
-                                        "failure_streak": state.consecutive_failures,
-                                        "failure_threshold": failure_threshold,
-                                        "incident_opened": opened_incident,
-                                        "check": check_count,
-                                    }
-                                )
-                            )
-                        else:
-                            click.echo(
-                                f"  {status} | {status_code} | {elapsed:.0f}ms | "
-                                f"Failure streak {state.consecutive_failures}/{failure_threshold} | "
-                                f"Check #{check_count}"
-                            )
-                        if opened_incident:
-                            await send_notification(
-                                f"[DevOps Sentinel] Incident opened for {url}: HTTP {status_code} ({elapsed:.0f}ms)"
-                            )
-
-                except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError):
-                    error = sys.exc_info()[1]
-                    status = click.style("X FAILED", fg="red")
-                    state = advance_monitoring_state(state, False)
-                    if service and db.connected:
-                        db.log_health_check(service["id"], 0, 0, False, str(error))
-                        db.update_service_status(service["id"], "down", 0)
-                    opened_incident = False
-                    if (
-                        service
-                        and user
-                        and db.connected
-                        and should_open_incident(
-                            state,
-                            thresholds,
-                            has_active_incident=bool(active_incident_id),
-                        )
-                    ):
-                        severity, detail = classify_incident(None, str(error))
-                        incident = db.create_incident(
-                            user["id"],
-                            service["id"],
-                            severity,
-                            detail,
-                            error_code=None,
-                            status="alerting",
-                        )
-                        active_incident_id = incident["id"] if incident else None
-                        opened_incident = active_incident_id is not None
-                    if ctx.obj.get("json"):
-                        click.echo(
-                            json.dumps(
-                                {
-                                    "status": "failed",
-                                    "error": str(error),
-                                    "failure_streak": state.consecutive_failures,
-                                    "failure_threshold": failure_threshold,
-                                    "incident_opened": opened_incident,
-                                    "check": check_count,
-                                }
-                            )
-                        )
-                    else:
-                        click.echo(
-                            f"  {status} | {str(error)[:50]} | Failure streak {state.consecutive_failures}/"
-                            f"{failure_threshold} | Check #{check_count}"
-                        )
-                    if opened_incident:
-                        await send_notification(
-                            f"[DevOps Sentinel] Failure for {url}: {str(error)[:180]}"
-                        )
-
-                await asyncio.sleep(interval)
+    async def run_all():
+        await asyncio.gather(*(run_target(service) for service in targets))
 
     try:
-        asyncio.run(_monitor())
+        asyncio.run(run_all())
     except KeyboardInterrupt:
-        click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Monitoring stopped.")
+        if not output_json:
+            click.echo("Monitoring stopped.")
 
 
 @cli.command()
 @click.argument("url")
-@click.option("--timeout", "-t", default=10, help="Request timeout in seconds")
+@click.option("--timeout", "-t", default=10, show_default=True)
 @click.pass_context
 def health(ctx, url, timeout):
-    """
-    Run a single health check on a URL.
+    """Run one health check. Exit 1 when unhealthy or unreachable."""
+    check_url_once = _monitor_components()[1]
+    result = asyncio.run(check_url_once(url, timeout)).as_dict()
+    if ctx.obj.get("json"):
+        click.echo(json.dumps(result, indent=2, default=str))
+    elif result["healthy"]:
+        click.echo(
+            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms"
+        )
+    elif result.get("status_code"):
+        click.echo(
+            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms"
+        )
+    else:
+        click.echo(f"{click.style('X', fg='red')} {url} | UNREACHABLE | {result.get('error', '')}")
+    if not result["healthy"]:
+        raise click.exceptions.Exit(1)
 
-    Examples:
 
-        sentinel health https://api.example.com/health
-
-        sentinel health https://httpbin.org/status/200
-    """
-
-    async def _check():
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            start = datetime.now(timezone.utc).replace(tzinfo=None)
-            try:
-                response = await client.get(url)
-                elapsed = (
-                    datetime.now(timezone.utc).replace(tzinfo=None) - start
-                ).total_seconds() * 1000
-
-                result = {
-                    "url": url,
-                    "status_code": response.status_code,
-                    "latency_ms": round(elapsed, 2),
-                    "healthy": response.status_code in range(200, 400),
-                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                }
-
-                if ctx.obj.get("json"):
-                    click.echo(json.dumps(result, indent=2))
-                else:
-                    if result["healthy"]:
-                        click.echo(f"\n{click.style('OK', fg='green')} {url}")
-                        click.echo(f"  Status: {click.style('HEALTHY', fg='green')}")
-                    else:
-                        click.echo(f"\n{click.style('WARN', fg='yellow')} {url}")
-                        click.echo(f"  Status: {click.style('DEGRADED', fg='yellow')}")
-
-                    click.echo(f"  Response: {result['status_code']}")
-                    click.echo(f"  Latency: {result['latency_ms']}ms")
-                    click.echo()
-
-            except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError):
-                e = sys.exc_info()[1]
-                if ctx.obj.get("json"):
-                    click.echo(
-                        json.dumps({"url": url, "healthy": False, "error": str(e)}, indent=2)
-                    )
-                else:
-                    click.echo(f"\n{click.style('X', fg='red')} {url}")
-                    click.echo(f"  Status: {click.style('UNREACHABLE', fg='red')}")
-                    click.echo(f"  Error: {e!s}")
-                    click.echo()
-
-    asyncio.run(_check())
+def _incident_service_or_fail() -> IncidentService:
+    user = get_current_user() if is_logged_in() else None
+    db = get_db()
+    if not user or not db.connected:
+        raise click.ClickException(
+            "Storage or identity unavailable. Run `sentinel init --mode local`."
+        )
+    return IncidentService(db, user["id"])
 
 
 @cli.group()
 def incidents():
     """Manage and view incidents."""
-    return
 
 
 @incidents.command("list")
-@click.option("--limit", "-n", default=10, help="Number of incidents to show")
-@click.option(
-    "--severity",
-    "-s",
-    type=click.Choice(["critical", "high", "medium", "low"]),
-    help="Filter by severity",
-)
-@click.option(
-    "--status",
-    type=click.Choice(["detecting", "alerting", "investigating", "resolved"]),
-    help="Filter by status",
-)
+@click.option("--limit", "-n", default=10, show_default=True)
+@click.option("--severity", "-s", type=click.Choice(["critical", "high", "medium", "low"]))
+@click.option("--status", type=click.Choice(["detecting", "alerting", "investigating", "resolved"]))
 @click.pass_context
 def incidents_list(ctx, limit, severity, status):
     """List recent incidents."""
-    incidents_data = []
-    if is_logged_in():
-        user = get_current_user()
-        if user:
-            db = get_db()
-            if db.connected:
-                incidents_data = db.list_incidents(
-                    user["id"],
-                    limit=limit,
-                    severity=severity,
-                    status=status,
-                )
+    data = _incident_service_or_fail().list(limit, severity, status)
     if ctx.obj.get("json"):
-        click.echo(json.dumps(incidents_data, indent=2, default=str))
-        return
-    click.echo(f"\n{click.style('Recent Incidents', bold=True)}")
-    click.echo("-" * 70)
-    click.echo(f"{'ID':<12} {'Severity':<10} {'Service':<20} {'Status':<12} {'Created'}")
-    click.echo("-" * 70)
-    if not incidents_data:
-        click.echo("No incidents found. Add a service and run monitoring to collect incidents.")
-        click.echo()
-        return
-    for inc in incidents_data:
-        sev_raw = str(inc.get("severity", "unknown")).lower()
-        sev_color = {"critical": "red", "high": "yellow", "medium": "blue", "low": "white"}.get(
-            sev_raw, "white"
+        click.echo(json.dumps(data, indent=2, default=str))
+    else:
+        console().print(incidents_table(data))
+
+
+@incidents.command("show")
+@click.argument("incident_id")
+@click.pass_context
+def incidents_show(ctx, incident_id):
+    """Show incident details and event timeline."""
+    service = _incident_service_or_fail()
+    incident = service.get(incident_id)
+    if not incident:
+        raise click.ClickException("Incident not found.")
+    events = service.events(incident_id) or []
+    if ctx.obj.get("json"):
+        click.echo(json.dumps({"incident": incident, "events": events}, indent=2, default=str))
+    else:
+        console().print(incident_detail(incident, events))
+
+
+@incidents.command("ack")
+@click.argument("incident_id")
+@click.option("--note")
+@click.pass_context
+def incidents_ack(ctx, incident_id, note):
+    """Acknowledge incident and move it to investigating."""
+    if not _incident_service_or_fail().acknowledge(incident_id, note):
+        raise click.ClickException("Incident not found, or already resolved.")
+    result = {"incident_id": incident_id, "status": "investigating"}
+    click.echo(
+        json.dumps(result)
+        if ctx.obj.get("json")
+        else f"Acknowledged {incident_id}; status: investigating"
+    )
+
+
+@incidents.command("resolve")
+@click.argument("incident_id")
+@click.option("--action-plan")
+@click.pass_context
+def incidents_resolve(ctx, incident_id, action_plan):
+    """Resolve incident and append resolution event."""
+    if not _incident_service_or_fail().resolve(incident_id, action_plan):
+        raise click.ClickException("Incident not found, or resolution failed.")
+    result = {"incident_id": incident_id, "status": "resolved"}
+    click.echo(json.dumps(result) if ctx.obj.get("json") else f"Resolved {incident_id}")
+
+
+@incidents.command("export")
+@click.argument("incident_id")
+@click.option(
+    "--format", "export_format", type=click.Choice(["md", "json"]), default="md", show_default=True
+)
+@click.option("--output", "-o", type=click.Path())
+def incidents_export(incident_id, export_format, output):
+    """Export incident detail and timeline."""
+    service = _incident_service_or_fail()
+    incident = service.get(incident_id)
+    if not incident:
+        raise click.ClickException("Incident not found.")
+    events = service.events(incident_id) or []
+    if export_format == "json":
+        content = json.dumps({"incident": incident, "events": events}, indent=2, default=str)
+    else:
+        content = "\n".join(
+            [
+                f"# Incident {incident_id}",
+                f"- Status: {incident.get('status')}",
+                f"- Severity: {incident.get('severity')}",
+                f"- Error: {incident.get('error_message') or 'n/a'}",
+                "",
+                "## Timeline",
+                *[
+                    f"- {event.get('created_at', '')}: {event.get('description', '')}"
+                    for event in events
+                ],
+            ]
         )
-        sev = click.style(sev_raw, fg=sev_color, bold=True)
-        service = (inc.get("services") or {}).get("name", "unknown")[:19]
-        created = str(inc.get("detected_at", ""))[:19].replace("T", " ")
-        click.echo(
-            f"{str(inc.get('id', ''))[:12]:<12} "
-            f"{sev:<19} "
-            f"{service:<20} "
-            f"{inc.get('status', 'unknown'):<12} "
-            f"{created}"
-        )
-    click.echo()
+    if output:
+        Path(output).write_text(content, encoding="utf-8")
+        click.echo(f"Exported incident to {output}")
+    else:
+        click.echo(content)
 
 
 @cli.group()
 def postmortem():
     """Generate and view postmortems."""
-    return
 
 
 @postmortem.command("generate")
 @click.argument("incident_id")
-@click.option("--output", "-o", type=click.Path(), help="Save to file")
+@click.option("--output", "-o", type=click.Path())
 @click.pass_context
 def postmortem_generate(ctx, incident_id, output):
-    """Generate an AI-powered postmortem for an incident."""
-    click.echo(
-        f"\n{click.style('[SENTINEL]', fg='cyan')} Generating postmortem for {incident_id}..."
-    )
-    db = get_db()
-    incident = db.get_incident(incident_id) if db.connected else None
-    if not incident:
-        click.echo(click.style("Error: Incident not found or database not configured.", fg="red"))
-        raise SystemExit(1)
+    """Generate and save postmortem for incident."""
+    from ..core.postmortem_generator import PostmortemGenerator
 
-    postmortem = asyncio.run(
+    service = _incident_service_or_fail()
+    incident = service.get(incident_id)
+    if not incident:
+        raise click.ClickException("Incident not found.")
+    generated = asyncio.run(
         PostmortemGenerator().generate(
-            incident={
-                "id": incident["id"],
-                "title": incident.get("error_message") or f"Incident {incident['id']}",
-                "severity": incident.get("severity", "medium"),
-                "service_name": (incident.get("services") or {}).get("name", "Unknown service"),
-                "description": incident.get("error_message") or "",
-                "detected_at": incident.get("detected_at"),
-                "resolved_at": incident.get("resolved_at")
-                or datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-            },
-            events=[
-                {"timestamp": incident.get("detected_at"), "description": "Incident detected"},
-                {"timestamp": incident.get("resolved_at"), "description": "Incident resolved"},
-            ],
-            resolution=incident.get("action_plan"),
+            incident, service.events(incident_id) or [], incident.get("action_plan")
         )
     )
-    postmortem_text = postmortem["markdown"]
-    db.save_postmortem(incident_id, postmortem_text)
-
+    markdown = generated["markdown"]
+    if not service.db.save_postmortem(incident_id, markdown):
+        raise click.ClickException("Failed to save postmortem.")
     if output:
-        Path(output).write_text(postmortem_text)
-        click.echo(f"\n{click.style('OK', fg='green')} Postmortem saved to {output}")
+        Path(output).write_text(markdown, encoding="utf-8")
+    if ctx.obj.get("json"):
+        click.echo(
+            json.dumps({"incident_id": incident_id, **generated, "output": output}, default=str)
+        )
+    elif output:
+        click.echo(f"Postmortem saved to {output}")
     else:
-        click.echo(postmortem_text)
+        click.echo(markdown)
+
+
+@postmortem.command("list")
+@click.option("--limit", "-n", default=50, show_default=True)
+@click.pass_context
+def postmortem_list(ctx, limit):
+    """List generated postmortems."""
+    service = _incident_service_or_fail()
+    data = service.db.list_postmortems(service.user_id, limit)
+    if ctx.obj.get("json"):
+        click.echo(json.dumps(data, indent=2, default=str))
+    else:
+        console().print(incidents_table(data))
+
+
+@postmortem.command("view")
+@click.argument("incident_id")
+@click.pass_context
+def postmortem_view(ctx, incident_id):
+    """View saved postmortem."""
+    incident = _incident_service_or_fail().get(incident_id)
+    if not incident or not incident.get("postmortem"):
+        raise click.ClickException("Postmortem not found.")
+    if ctx.obj.get("json"):
+        click.echo(json.dumps({"incident_id": incident_id, "postmortem": incident["postmortem"]}))
+    else:
+        click.echo(incident["postmortem"])
+
+
+@cli.command()
+@click.option("--interval", type=float, default=5, show_default=True)
+@click.pass_context
+def dashboard(ctx, interval):
+    """Live status dashboard for registered services."""
+    if ctx.obj.get("json"):
+        raise click.UsageError("dashboard does not support --json")
+    user = get_current_user() if is_logged_in() else None
+    db = get_db()
+    if not user or not db.connected:
+        raise click.ClickException(
+            "Storage or identity unavailable. Run `sentinel init --mode local`."
+        )
+    from rich.live import Live
+    from rich.table import Table
+
+    async def run_dashboard():
+        with Live("Loading...", refresh_per_second=4) as live:
+            while True:
+                data = db.list_services(user["id"])
+
+                async def check(service):
+                    result = (await _monitor_components()[1](service["url"])).as_dict()
+                    result["name"] = service.get("name", service["url"])
+                    return result
+
+                results = await asyncio.gather(*(check(service) for service in data))
+                table = Table(title="Sentinel Dashboard")
+                table.add_column("Service", style="bold")
+                table.add_column("URL")
+                table.add_column("Status")
+                table.add_column("Latency")
+                for result in results:
+                    healthy = result["healthy"]
+                    style = (
+                        "green" if healthy else ("yellow" if result.get("status_code") else "red")
+                    )
+                    state = "healthy" if healthy else "down"
+                    table.add_row(
+                        result["name"],
+                        result["url"],
+                        f"[{style}]{state}[/{style}]",
+                        f"{result.get('latency_ms') or 0:.0f}ms",
+                    )
+                live.update(table)
+                await asyncio.sleep(interval)
+
+    try:
+        asyncio.run(run_dashboard())
+    except KeyboardInterrupt:
+        click.echo("Dashboard stopped.")
+
+
+@cli.command()
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]))
+def completion(shell):
+    """Print shell completion script."""
+    from click.shell_completion import get_completion_class
+
+    completion_class = get_completion_class(shell)
+    if completion_class is None:
+        raise click.ClickException(f"Unsupported shell: {shell}")
+    click.echo(completion_class(cli, {}, "sentinel", "_SENTINEL_COMPLETE").source())
 
 
 @cli.command()
@@ -721,31 +648,6 @@ SLACK_WEBHOOK_URL=
     os.environ["SENTINEL_MODE"] = mode
     if mode == "local":
         os.environ.setdefault("SENTINEL_DATA_DIR", ".sentinel")
-
-    # Create sentinel.yaml config
-    config_path = Path("sentinel.yaml")
-    if not config_path.exists():
-        config_content = """# DevOps Sentinel Configuration
-version: 1
-
-services:
-  - name: api
-    url: http://localhost:8000/health
-    interval: 30
-    
-notifications:
-  slack:
-    enabled: true
-    channel: "#alerts"
-    
-monitoring:
-  anomaly_detection: true
-  auto_postmortem: true
-"""
-        config_path.write_text(config_content)
-        click.echo(f"  {click.style('OK', fg='green')} Created sentinel.yaml")
-    else:
-        click.echo(f"  {click.style('*', fg='yellow')} sentinel.yaml already exists")
 
     if mode == "local":
         click.echo(

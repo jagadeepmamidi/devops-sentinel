@@ -15,14 +15,9 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-try:
-    from supabase import Client, create_client
-
-    SUPABASE_AVAILABLE = True
-except ImportError:  # Local mode must not require the Supabase package.
-    Client = Any
-    create_client = None
-    SUPABASE_AVAILABLE = False
+# Supabase stays optional and lazy: local CLI startup must not import its Pydantic stack.
+Client = Any
+SUPABASE_AVAILABLE = False
 
 from .auth import get_storage_mode, load_credentials
 
@@ -30,9 +25,13 @@ from .auth import get_storage_mode, load_credentials
 def get_supabase_client(
     access_token: str | None = None,
     refresh_token: str | None = None,
-) -> Client | None:
+) -> Any:
     """Create a Supabase client when compatibility mode is configured."""
-    if not SUPABASE_AVAILABLE or not create_client or get_storage_mode() != "supabase":
+    if get_storage_mode() != "supabase":
+        return None
+    try:
+        from supabase import create_client
+    except ImportError:
         return None
 
     url = os.getenv("SUPABASE_URL")
@@ -85,7 +84,7 @@ class SentinelDB:
         self,
         access_token: str | None = None,
         refresh_token: str | None = None,
-        client: Client | None = None,
+        client: Any = None,
         db_path: Path | str | None = None,
     ):
         self.client = client or get_supabase_client(access_token, refresh_token)
@@ -110,6 +109,10 @@ class SentinelDB:
         if self._sqlite:
             self._sqlite.close()
             self._sqlite = None
+
+    def _connection(self) -> sqlite3.Connection:
+        assert self._sqlite is not None
+        return self._sqlite
 
     def _execute(self, builder: Any) -> Any:
         return builder.execute() if builder is not None else None
@@ -164,13 +167,19 @@ class SentinelDB:
     def _dict(row: sqlite3.Row | None) -> dict | None:
         return dict(row) if row else None
 
+    def _execute_sql(self, query: str, params: tuple = ()):
+        """Execute SQL with bound parameters; callers supply constant SQL."""
+        assert self._sqlite is not None
+        connection = self._sqlite
+        return connection.execute(query, params)  # nosec B608
+
     def _rows(self, query: str, params: tuple = ()) -> list[dict]:
         assert self._sqlite is not None
-        return [dict(row) for row in self._sqlite.execute(query, params).fetchall()]
+        return [dict(row) for row in self._execute_sql(query, params).fetchall()]
 
     def _row(self, query: str, params: tuple = ()) -> dict | None:
         assert self._sqlite is not None
-        return self._dict(self._sqlite.execute(query, params).fetchone())
+        return self._dict(self._connection().execute(query, params).fetchone())
 
     def _commit(self) -> None:
         assert self._sqlite is not None
@@ -202,7 +211,7 @@ class SentinelDB:
                 "created_at": now,
                 "updated_at": now,
             }
-            self._sqlite.execute(
+            self._connection().execute(
                 "INSERT INTO projects VALUES (:id,:user_id,:name,:description,:created_at,:updated_at)",
                 item,
             )
@@ -219,7 +228,7 @@ class SentinelDB:
 
     def delete_project(self, project_id: str) -> bool:
         if self.local:
-            self._sqlite.execute("DELETE FROM projects WHERE id=?", (project_id,))
+            self._connection().execute("DELETE FROM projects WHERE id=?", (project_id,))
             self._commit()
             return True
         if not self.client:
@@ -291,7 +300,7 @@ class SentinelDB:
                 "created_at": now,
                 "updated_at": now,
             }
-            self._sqlite.execute(
+            self._connection().execute(
                 "INSERT INTO services VALUES (:id,:user_id,:project_id,:name,:url,:check_interval,:is_active,:last_status,:last_response_time_ms,:last_checked_at,:created_at,:updated_at)",
                 item,
             )
@@ -307,7 +316,7 @@ class SentinelDB:
 
     def delete_service(self, service_id: str) -> bool:
         if self.local:
-            self._sqlite.execute("DELETE FROM services WHERE id=?", (service_id,))
+            self._connection().execute("DELETE FROM services WHERE id=?", (service_id,))
             self._commit()
             return True
         if not self.client:
@@ -315,10 +324,68 @@ class SentinelDB:
         self._execute(self.client.table("services").delete().eq("id", service_id))
         return True
 
+    def get_service_by_name(self, user_id: str, name: str) -> dict | None:
+        """Return one service owned by user, matching name case-insensitively."""
+        if self.local:
+            return self._row(
+                "SELECT * FROM services WHERE user_id=? AND lower(name)=lower(?) LIMIT 1",
+                (user_id, name),
+            )
+        if not self.client:
+            return None
+        result = self._execute(
+            self.client.table("services")
+            .select("*")
+            .eq("user_id", user_id)
+            .ilike("name", name)
+            .limit(1)
+        )
+        return result.data[0] if result and result.data else None
+
+    def update_service(self, service_id: str, updates: dict) -> bool:
+        """Update editable service fields."""
+        allowed = {"name", "url", "check_interval", "is_active", "project_id"}
+        changes = {key: value for key, value in updates.items() if key in allowed}
+        if not changes:
+            return False
+        if self.local:
+            now = self._now()
+            if "name" in changes:
+                self._execute_sql(
+                    "UPDATE services SET name=?, updated_at=? WHERE id=?",
+                    (changes["name"], now, service_id),
+                )
+            if "url" in changes:
+                self._execute_sql(
+                    "UPDATE services SET url=?, updated_at=? WHERE id=?",
+                    (changes["url"], now, service_id),
+                )
+            if "check_interval" in changes:
+                self._execute_sql(
+                    "UPDATE services SET check_interval=?, updated_at=? WHERE id=?",
+                    (changes["check_interval"], now, service_id),
+                )
+            if "is_active" in changes:
+                self._execute_sql(
+                    "UPDATE services SET is_active=?, updated_at=? WHERE id=?",
+                    (changes["is_active"], now, service_id),
+                )
+            if "project_id" in changes:
+                self._execute_sql(
+                    "UPDATE services SET project_id=?, updated_at=? WHERE id=?",
+                    (changes["project_id"], now, service_id),
+                )
+            self._commit()
+            return True
+        if not self.client:
+            return False
+        self._execute(self.client.table("services").update(changes).eq("id", service_id))
+        return True
+
     def update_service_status(self, service_id: str, status: str, response_time_ms: int) -> bool:
         now = self._now()
         if self.local:
-            self._sqlite.execute(
+            self._connection().execute(
                 "UPDATE services SET last_status=?, last_response_time_ms=?, last_checked_at=?, updated_at=? WHERE id=?",
                 (status, response_time_ms, now, now, service_id),
             )
@@ -450,7 +517,7 @@ class SentinelDB:
                 "postmortem": None,
                 "created_at": now,
             }
-            self._sqlite.execute(
+            self._connection().execute(
                 "INSERT INTO incidents VALUES (:id,:user_id,:service_id,:status,:severity,:error_code,:error_message,:detected_at,:resolved_at,:mttr_seconds,:investigation_report,:action_plan,:postmortem,:created_at)",
                 item,
             )
@@ -495,36 +562,36 @@ class SentinelDB:
         if self.local:
             changed = False
             if "status" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET status=? WHERE id=?", (updates["status"], incident_id)
                 )
                 changed = True
             if "resolved_at" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET resolved_at=? WHERE id=?",
                     (updates["resolved_at"], incident_id),
                 )
                 changed = True
             if "mttr_seconds" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET mttr_seconds=? WHERE id=?",
                     (updates["mttr_seconds"], incident_id),
                 )
                 changed = True
             if "investigation_report" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET investigation_report=? WHERE id=?",
                     (updates["investigation_report"], incident_id),
                 )
                 changed = True
             if "action_plan" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET action_plan=? WHERE id=?",
                     (updates["action_plan"], incident_id),
                 )
                 changed = True
             if "postmortem" in updates:
-                self._sqlite.execute(
+                self._connection().execute(
                     "UPDATE incidents SET postmortem=? WHERE id=?",
                     (updates["postmortem"], incident_id),
                 )
@@ -576,7 +643,7 @@ class SentinelDB:
         error: str = "",
     ) -> bool:
         if self.local:
-            self._sqlite.execute(
+            self._connection().execute(
                 "INSERT INTO health_checks VALUES (?,?,?,?,?,?,?)",
                 (
                     str(uuid4()),
@@ -654,7 +721,7 @@ class SentinelDB:
         metadata: dict | None = None,
     ) -> bool:
         if self.local:
-            self._sqlite.execute(
+            self._connection().execute(
                 "INSERT INTO incident_events VALUES (?,?,?,?,?,?,?,?)",
                 (
                     str(uuid4()),
@@ -687,6 +754,47 @@ class SentinelDB:
             return True
         except (AttributeError, RuntimeError, TypeError, ValueError):
             return False
+
+    def list_postmortems(self, user_id: str, limit: int = 50) -> list[dict]:
+        """List incidents with saved postmortems for user."""
+        if self.local:
+            assert self._sqlite is not None
+            items = self._rows(
+                "SELECT i.*, s.name AS service_name, s.url AS service_url FROM incidents i JOIN services s ON s.id=i.service_id WHERE i.user_id=? AND i.postmortem IS NOT NULL ORDER BY i.detected_at DESC LIMIT ?",
+                (user_id, limit),
+            )
+            for item in items:
+                item["services"] = {
+                    "name": item.pop("service_name"),
+                    "url": item.pop("service_url"),
+                }
+            return items
+        if not self.client:
+            return []
+        result = self._execute(
+            self.client.table("incidents")
+            .select("*, services(name, url)")
+            .eq("user_id", user_id)
+            .not_.is_("postmortem", "null")
+            .order("detected_at", desc=True)
+            .limit(limit)
+        )
+        return result.data or []
+
+    def acknowledge_incident(self, incident_id: str, note: str | None = None) -> bool:
+        incident = self.get_incident(incident_id)
+        if not incident or incident.get("status") == "resolved":
+            return False
+        updated = self.update_incident(incident_id, {"status": "investigating"})
+        if updated and incident.get("user_id") and incident.get("service_id"):
+            self.create_incident_event(
+                incident["user_id"],
+                incident_id,
+                incident["service_id"],
+                "acknowledged",
+                note or "Incident acknowledged and investigation started.",
+            )
+        return updated
 
     def save_postmortem(self, incident_id: str, markdown: str) -> bool:
         updated = self.update_incident(incident_id, {"postmortem": markdown})

@@ -117,6 +117,28 @@ async def generate_postmortem(incident_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+def acknowledge_incident(incident_id: str, note: str | None = None) -> dict[str, Any]:
+    """Acknowledge owned incident and start investigation."""
+    service = _incident_service()
+    if isinstance(service, dict):
+        return service
+    if not service.acknowledge(incident_id, note):
+        return _error("not_found", "Incident not found, or already resolved.")
+    return {"incident_id": incident_id, "status": "investigating"}
+
+
+@mcp.tool()
+def resolve_incident(incident_id: str, action_plan: str | None = None) -> dict[str, Any]:
+    """Resolve owned incident and record resolution notes."""
+    service = _incident_service()
+    if isinstance(service, dict):
+        return service
+    if not service.resolve(incident_id, action_plan):
+        return _error("not_found", "Incident not found, or resolution failed.")
+    return {"incident_id": incident_id, "status": "resolved"}
+
+
+@mcp.tool()
 def analyze_anomaly(
     metric_name: str, current_value: float, historical_values: list[float]
 ) -> dict[str, Any]:
