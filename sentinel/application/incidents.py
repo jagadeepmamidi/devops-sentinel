@@ -32,3 +32,15 @@ class IncidentService:
         if self.get(incident_id) is None:
             return None
         return self.db.list_incident_events(incident_id)
+
+    def acknowledge(self, incident_id: str, note: str | None = None) -> bool:
+        """Acknowledge owned incident and begin investigation."""
+        if self.get(incident_id) is None:
+            return False
+        return self.db.acknowledge_incident(incident_id, note)
+
+    def resolve(self, incident_id: str, action_plan: str | None = None) -> bool:
+        """Resolve owned incident and record resolution event."""
+        if self.get(incident_id) is None:
+            return False
+        return self.db.resolve_incident(incident_id, action_plan=action_plan)

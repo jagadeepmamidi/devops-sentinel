@@ -112,16 +112,6 @@ packages = [
   "sentinel.tools",
   "sentinel.mcp",
 ]
-py-modules = [
-  "agents",
-  "api_server",
-  "config",
-  "main",
-  "models",
-  "orchestrator",
-  "server",
-  "tasks",
-]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml"]

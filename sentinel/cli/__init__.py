@@ -1,5 +1,11 @@
-"""DevOps Sentinel CLI Package"""
+"""DevOps Sentinel CLI package."""
 
-from .main import cli
+__all__ = ["cli"]
 
-__all__ = ['cli']
+
+def __getattr__(name):
+    if name == "cli":
+        from .main import cli
+
+        return cli
+    raise AttributeError(name)
