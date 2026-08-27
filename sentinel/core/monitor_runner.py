@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from .health_spec import HealthExpect, evaluate_expect
 from .monitoring_policy import (
     MonitoringState,
     MonitoringThresholds,
@@ -19,6 +20,7 @@ from .monitoring_policy import (
 )
 
 HEALTHY_STATUS_CODES = range(200, 400)
+BODY_LIMIT = 64_000
 
 
 def is_healthy_status(status_code: int) -> bool:
@@ -34,6 +36,8 @@ class HealthCheckResult:
     latency_ms: float | None = None
     error: str | None = None
     timestamp: str = ""
+    ssl_days: int | None = None
+    expect_reasons: list[str] | None = None
 
     def as_dict(self) -> dict:
         result = {
@@ -42,29 +46,48 @@ class HealthCheckResult:
             "status_code": self.status_code,
             "latency_ms": round(self.latency_ms, 2) if self.latency_ms is not None else None,
             "timestamp": self.timestamp,
+            "ssl_days": self.ssl_days,
         }
         if self.error:
             result["error"] = self.error
+        if self.expect_reasons:
+            result["expect"] = self.expect_reasons
         return result
 
 
 async def check_url_once(
-    url: str, timeout: float = 10, client: httpx.AsyncClient | None = None
+    url: str,
+    timeout: float = 10,
+    client: httpx.AsyncClient | None = None,
+    expect: HealthExpect | None = None,
 ) -> HealthCheckResult:
     """Perform one HTTP check without persistence or presentation side effects."""
     owns_client = client is None
     if owns_client:
-        client = httpx.AsyncClient(timeout=timeout)
+        client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
     started = datetime.now(timezone.utc)
+    spec = expect or HealthExpect()
     try:
         response = await client.get(url)
         elapsed = (datetime.now(timezone.utc) - started).total_seconds() * 1000
+        body = response.text[:BODY_LIMIT]
+        evaluation = evaluate_expect(
+            status_code=response.status_code,
+            body=body,
+            url=url,
+            expect=spec,
+            default_status_healthy=is_healthy_status(response.status_code),
+        )
+        error = "; ".join(evaluation.reasons) if evaluation.reasons else None
         return HealthCheckResult(
             url=url,
-            healthy=is_healthy_status(response.status_code),
+            healthy=evaluation.healthy,
             status_code=response.status_code,
             latency_ms=elapsed,
+            error=error,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            ssl_days=evaluation.ssl_days,
+            expect_reasons=evaluation.reasons or None,
         )
     except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError) as error:
         elapsed = (datetime.now(timezone.utc) - started).total_seconds() * 1000
@@ -104,6 +127,7 @@ class MonitorRunner:
         service: dict | None = None,
         failure_threshold: int = 3,
         recovery_threshold: int = 2,
+        expect: HealthExpect | None = None,
     ):
         self.url = url
         self.interval = interval
@@ -111,6 +135,8 @@ class MonitorRunner:
         self.db = db
         self.user_id = user_id
         self.service = service
+        self.expect = expect
+        self.last_severity: str | None = None
         self.thresholds = MonitoringThresholds(failure_threshold, recovery_threshold)
         self.state = MonitoringState()
         self.active_incident_id: str | None = None
@@ -125,7 +151,7 @@ class MonitorRunner:
 
     async def check(self, client: httpx.AsyncClient) -> dict:
         self.check_count += 1
-        result = await check_url_once(self.url, self.timeout, client)
+        result = await check_url_once(self.url, self.timeout, client, expect=self.expect)
         self.state = advance_monitoring_state(self.state, result.healthy)
         opened = False
         resolved = False
@@ -158,6 +184,7 @@ class MonitorRunner:
                 )
             ):
                 severity, detail = classify_incident(result.status_code, result.error or "")
+                self.last_severity = severity
                 incident = self.db.create_incident(
                     self.user_id,
                     service_id,
@@ -178,16 +205,22 @@ class MonitorRunner:
                 "recovery_threshold": self.thresholds.recovery_threshold,
                 "incident_opened": opened,
                 "incident_resolved": resolved,
+                "incident_id": self.active_incident_id,
+                "incident_severity": self.last_severity,
             }
         )
         return payload
 
-    async def run_forever(self, on_result: Callable[[dict], Awaitable[None] | None]) -> None:
-        """Check forever until cancelled, invoking callback after every result."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+    async def run_forever(
+        self, on_result: Callable[[dict], Awaitable[None] | None], once: bool = False
+    ) -> None:
+        """Check until cancelled (or once), invoking callback after every result."""
+        async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             while True:
                 result = await self.check(client)
                 callback_result = on_result(result)
                 if asyncio.iscoroutine(callback_result):
                     await callback_result
+                if once:
+                    return
                 await asyncio.sleep(self.interval)
