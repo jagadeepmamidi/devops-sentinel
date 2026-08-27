@@ -199,10 +199,10 @@ Do not expose remote MCP directly to the public internet without authentication,
 
 ## Web console
 
-Web console uses same terminal language as CLI:
+Web console uses the same terminal language as the CLI:
 
 - black background and shadcn/ui dark theme
-- metallic / glass surfaces (silver primary, frosted cards)
+- green health accent
 - Geist typography with mono for commands
 - keyboard-visible focus states
 - working routes for docs, CLI auth (BYO Supabase), and optional operator UI
@@ -243,5 +243,20 @@ cd web
 npm run lint
 npm run build
 ```
+
+## Publish to PyPI
+
+`0.1.2` is already on PyPI. Bump `version` in `pyproject.toml` and `sentinel/__init__.py` before each upload.
+
+```bash
+python -m pip install -e ".[dev]"
+pytest -q -o addopts=""
+rm -rf dist build *.egg-info
+python -m build
+python -m twine check dist/*
+python -m twine upload dist/*
+```
+
+Use a PyPI API token. Username is `__token__`. Confirm at https://pypi.org/project/devops-sentinel-next/ then `pip install -U devops-sentinel-next`.
 
 MIT License.
