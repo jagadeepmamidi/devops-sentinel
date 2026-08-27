@@ -22,11 +22,10 @@ DevOps Sentinel works locally without Supabase, an account, or an API server. Te
 ```bash
 pip install devops-sentinel-next
 sentinel init
-sentinel status
+sentinel demo
 sentinel health https://api.example.com/health
 sentinel services add production-api https://api.example.com/health
 sentinel services list
-sentinel services check <service-id>
 sentinel incidents list
 ```
 
@@ -45,9 +44,16 @@ sentinel whoami
 sentinel config
 sentinel doctor
 sentinel agents
+sentinel demo
+sentinel up --once
 sentinel monitor https://api.example.com/health --failure-threshold 3
+sentinel health https://api.example.com/health --expect 200 --json-path status --ssl-min-days 14
 sentinel postmortem generate <incident-id> --output postmortem.md
 ```
+
+Commit `sentinel.yaml` (written by `sentinel init`) and run `sentinel up` to register those services and monitor them. Example: `examples/sentinel.yaml`.
+
+Optional richer checks on `health` and `monitor`: `--expect` status codes, `--body` substring, `--json-path` / `--json-equals`, `--ssl-min-days`. When a monitor opens an incident it prints a card with `incidents show`, `ack`, and `postmortem generate`.
 
 Run `sentinel init --mode supabase` only when using **your** Supabase project for auth and persistence. Sentinel does not host customer data.
 
@@ -55,6 +61,7 @@ Run `sentinel init --mode supabase` only when using **your** Supabase project fo
 sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
 sentinel schema --print   # paste into your SQL editor
 sentinel login            # authenticates against YOUR project
+sentinel supabase doctor  # URL, anon key, REST, tables, RLS
 ```
 
 ## Configuration
@@ -105,6 +112,19 @@ MCP support is optional:
 ```bash
 pip install "devops-sentinel-next[mcp]"
 sentinel mcp
+```
+
+Cursor `mcp.json` (also in `examples/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "devops-sentinel": {
+      "command": "sentinel",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
 ## Architecture
@@ -170,8 +190,10 @@ MCP hosts can query read-only operational context:
 Start local MCP stdio mode:
 
 ```bash
-devops-sentinel-mcp
+sentinel mcp
 ```
+
+GitHub Action for a one-shot health probe lives at `.github/actions/sentinel-health`. Copy `examples/github-health.yml` into a consuming repo. Do not add a public-URL health job as a required check on this repository.
 
 Do not expose remote MCP directly to the public internet without authentication, authorization, rate limiting, and audit logging.
 
@@ -180,8 +202,8 @@ Do not expose remote MCP directly to the public internet without authentication,
 Web console uses same terminal language as CLI:
 
 - black background and shadcn/ui dark theme
+- metallic / glass surfaces (silver primary, frosted cards)
 - Geist typography with mono for commands
-- health accent on primary actions
 - keyboard-visible focus states
 - working routes for docs, CLI auth (BYO Supabase), and optional operator UI
 

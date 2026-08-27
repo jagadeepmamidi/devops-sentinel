@@ -10,9 +10,12 @@ import { GITHUB_URL, INSTALL_COMMAND } from '@/lib/site'
 const SECTIONS = [
   { id: 'overview', title: 'Overview' },
   { id: 'quickstart', title: 'Quick start' },
+  { id: 'demo', title: 'Demo' },
+  { id: 'yaml', title: 'sentinel.yaml' },
   { id: 'local', title: 'Local mode' },
   { id: 'supabase', title: 'Your Supabase' },
   { id: 'commands', title: 'CLI reference' },
+  { id: 'github', title: 'GitHub Action' },
   { id: 'agents', title: 'Agents' },
   { id: 'mcp', title: 'MCP' },
   { id: 'operator', title: 'Operator console' },
@@ -125,9 +128,10 @@ export default function Docs() {
                 </CardHeader>
                 <CardContent>
                   <Code>{`sentinel init
-sentinel health https://api.example.com/health
+sentinel demo
+sentinel health https://api.example.com/health --expect 200 --json-path status --json-equals ok
 sentinel services add production-api https://api.example.com/health
-sentinel monitor production-api --failure-threshold 3`}</Code>
+sentinel up --once`}</Code>
                 </CardContent>
               </Card>
               <Card>
@@ -137,7 +141,7 @@ sentinel monitor production-api --failure-threshold 3`}</Code>
                 <CardContent className="grid gap-3">
                   <Code>{`sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
 sentinel login
-sentinel doctor`}</Code>
+sentinel supabase doctor`}</Code>
                   <p className="text-sm text-muted-foreground">
                     The CLI prompts for the anon key if you omit it. Apply{' '}
                     <Inline>supabase/schema.sql</Inline> in the SQL editor, or print it with{' '}
@@ -146,6 +150,46 @@ sentinel doctor`}</Code>
                 </CardContent>
               </Card>
             </div>
+          </section>
+
+          <section id="demo" className="scroll-mt-24">
+            <h2 className="text-2xl font-medium tracking-tight">30-second demo</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              No API key, no third-party fail URL. Sentinel starts a local HTTP server with{' '}
+              <Inline>/ok</Inline> (200) and <Inline>/fail</Inline> (503), registers the failing
+              endpoint, opens an incident, and prints the next commands.
+            </p>
+            <Code>{`pip install devops-sentinel-next
+sentinel demo`}</Code>
+            <p className="mt-3 text-sm text-muted-foreground">
+              After the card appears: <Inline>sentinel incidents list</Inline>, then{' '}
+              <Inline>sentinel postmortem generate &lt;id&gt;</Inline>. Use{' '}
+              <Inline>--keep-going</Inline> to keep polling until Ctrl+C.
+            </p>
+          </section>
+
+          <section id="yaml" className="scroll-mt-24">
+            <h2 className="text-2xl font-medium tracking-tight">sentinel.yaml</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              Commit a project file next to the repo. <Inline>sentinel init</Inline> writes a sample
+              if none exists. <Inline>sentinel up</Inline> registers missing services and starts
+              the monitor.
+            </p>
+            <Code>{`services:
+  - name: api
+    url: https://api.example.com/health
+    interval: 30
+    failure_threshold: 3
+    expect:
+      status: [200]
+      body: '"status": "ok"'
+      json_path: status
+      json_equals: ok
+      ssl_min_days: 14`}</Code>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Also accepted: <Inline>sentinel.yml</Inline>, <Inline>sentinel.json</Inline>. One-shot
+              CI: <Inline>sentinel up --once</Inline>.
+            </p>
           </section>
 
           <section id="local" className="scroll-mt-24">
@@ -183,6 +227,10 @@ SLACK_WEBHOOK_URL=`}</Code>
                 4. <Inline>sentinel init --mode supabase</Inline> then <Inline>sentinel login</Inline>.
                 Browser login talks to <strong className="text-foreground">your</strong> project.
               </li>
+              <li>
+                5. <Inline>sentinel supabase doctor</Inline> checks URL, anon key, REST, tables, and
+                RLS without writing data.
+              </li>
             </ol>
             <Code className="mt-4">{`SENTINEL_MODE=supabase
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
@@ -205,18 +253,21 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                 </thead>
                 <tbody>
                   {[
-                    ['sentinel init [--mode local|supabase]', 'Create .env and local identity or BYO Supabase config'],
+                    ['sentinel init [--mode local|supabase]', 'Create .env, sentinel.yaml, and local identity or BYO Supabase config'],
+                    ['sentinel demo', 'Local 503 loop: open an incident and print the next commands'],
+                    ['sentinel up [--once]', 'Register services from sentinel.yaml and monitor them'],
                     ['sentinel login [--local|--device|--token]', 'Local identity, or auth against your Supabase'],
                     ['sentinel schema [--print]', 'Show or print the SQL your project needs'],
-                    ['sentinel health <url>', 'One check. Exit 1 when unhealthy'],
+                    ['sentinel health <url>', 'One check. --expect, --body, --json-path, --ssl-min-days. Exit 1 when unhealthy'],
                     ['sentinel services add|list|check', 'Register and probe endpoints'],
-                    ['sentinel monitor <name|url> [--all]', 'Continuous checks with failure/recovery thresholds'],
+                    ['sentinel monitor <name|url> [--all] [--once]', 'Continuous checks with failure/recovery thresholds'],
                     ['sentinel watch', 'Alias for monitor'],
                     ['sentinel dashboard', 'Live terminal table of registered services'],
                     ['sentinel incidents list|show|ack|resolve|export', 'Incident memory and timeline'],
                     ['sentinel postmortem generate|view', 'Fallback or AI-assisted write-up'],
                     ['sentinel agents', 'Print the Watcher → Strategist workflow'],
                     ['sentinel doctor', 'Mode-aware diagnostics'],
+                    ['sentinel supabase doctor', 'Probe YOUR Supabase URL, key, tables, and RLS'],
                     ['sentinel config set|list|remove', 'Store provider keys in ~/.sentinel/config.json'],
                     ['sentinel mcp / devops-sentinel-mcp', 'Read-only tools for Cursor and Claude Desktop'],
                     ['sentinel serve', 'Optional local FastAPI for the operator console'],
@@ -230,6 +281,27 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section id="github" className="scroll-mt-24">
+            <h2 className="text-2xl font-medium tracking-tight">GitHub Action</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              Official composite action for a one-shot health probe. Copy{' '}
+              <Inline>examples/github-health.yml</Inline> into your repo. Do not add a flaky
+              public-URL check as a required status on this project.
+            </p>
+            <Code>{`jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jagadeepmamidi/devops-sentinel/.github/actions/sentinel-health@main
+        with:
+          url: https://api.example.com/health
+          expect: "200"
+          json-path: status
+          json-equals: ok
+          ssl-min-days: "14"`}</Code>
           </section>
 
           <section id="agents" className="scroll-mt-24">
@@ -256,7 +328,19 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
               Expose read-only operational context to Cursor, Claude Desktop, and other MCP hosts.
             </p>
             <Code>{`pip install "devops-sentinel-next[mcp]"
-devops-sentinel-mcp`}</Code>
+sentinel mcp`}</Code>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Paste this into Cursor <Inline>.cursor/mcp.json</Inline> (or Claude Desktop MCP
+              settings). Full example: <Inline>examples/mcp.json</Inline>.
+            </p>
+            <Code>{`{
+  "mcpServers": {
+    "devops-sentinel": {
+      "command": "sentinel",
+      "args": ["mcp"]
+    }
+  }
+}`}</Code>
             <p className="mt-3 text-sm text-muted-foreground">
               Tools: health_check, doctor, list_incidents, get_incident, get_incident_events,
               analyze_anomaly, generate_postmortem. Do not expose remote MCP to the public internet

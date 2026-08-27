@@ -1,0 +1,11 @@
+# DevOps Sentinel project file — commit this next to the repo.
+# sentinel up   monitors every service here.
+services:
+  - name: example
+    url: https://example.com
+    interval: 30
+    failure_threshold: 3
+    recovery_threshold: 2
+    expect:
+      status: [200, 301, 302]
+      ssl_min_days: 14
