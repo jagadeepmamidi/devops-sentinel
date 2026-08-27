@@ -24,7 +24,7 @@ export default function Landing() {
         <section className="grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-16">
           <div className="max-w-xl">
             <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest">
-              Terminal-first SRE · v0.1.2
+              Terminal-first SRE · v0.1.3
             </Badge>
             <h1 className="mt-5 text-4xl font-medium tracking-tight text-balance sm:text-5xl lg:text-6xl">
               Watch the endpoint. Keep the incident in your own store.
