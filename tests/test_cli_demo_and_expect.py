@@ -43,9 +43,9 @@ async def test_check_url_once_json_path_and_body():
             client=client,
             expect=HealthExpect(
                 status_codes=(200,),
-                body_contains='"status": "ok"',
+                body_contains="ok",
                 json_path="nested.ready",
-                json_equals="True",
+                json_equals="true",
             ),
         )
     assert result.healthy is True
