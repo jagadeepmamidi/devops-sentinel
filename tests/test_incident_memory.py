@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sentinel.core.incident_memory import IncidentMemory
+from src.core.incident_memory import IncidentMemory
 
 
 class TestIncidentMemory:

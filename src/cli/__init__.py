@@ -1,5 +1,15 @@
-"""DevOps Sentinel CLI Package"""
+"""DevOps Sentinel CLI package.
 
-from .main import cli
+The lazy export avoids importing the Click application while Python is running
+``python -m src.cli.main``.
+"""
 
-__all__ = ['cli']
+__all__ = ["cli"]
+
+
+def __getattr__(name):
+    if name == "cli":
+        from .main import cli
+
+        return cli
+    raise AttributeError(name)

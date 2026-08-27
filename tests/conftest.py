@@ -12,8 +12,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
+# Keep tests pointed at the checkout when an unrelated installed package also
+# exposes a top-level ``src`` module.
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -147,7 +148,6 @@ def sample_deployment():
 # Test markers
 def pytest_configure(config):
     """Register custom markers"""
-    config.addinivalue_line("markers", "asyncio: run test in an event loop")
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )

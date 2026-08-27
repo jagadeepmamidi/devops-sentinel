@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-from sentinel.integrations.slack import SlackIntegration
+from src.integrations.slack import SlackIntegration
 
 
 class TestSlackIntegration:

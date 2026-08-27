@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from sentinel.api.quick_health_check import QuickHealthCheck
+from src.api.quick_health_check import QuickHealthCheck
 
 
 class TestQuickHealthCheck:
@@ -17,10 +17,7 @@ class TestQuickHealthCheck:
     
     @pytest.fixture
     def checker(self):
-        checker = QuickHealthCheck()
-        # Mock _is_safe_hostname to allow tests to run regardless of environment DNS
-        checker._is_safe_hostname = AsyncMock(return_value=True)
-        return checker
+        return QuickHealthCheck()
     
     def test_init(self, checker):
         """Should initialize with default timeout"""
@@ -56,18 +53,17 @@ class TestQuickHealthCheck:
     @pytest.mark.asyncio
     async def test_check_url_healthy_response(self, checker):
         """Should return healthy for 200 response"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
-            with patch.object(checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
-                mock_http.return_value = {
-                    'status_code': 200,
-                    'response_time_ms': 100
-                }
-                mock_ssl.return_value = {'valid': True}
-                
-                result = await checker.check_url("https://example.com")
-                
-                assert result['status'] == 'healthy'
-                assert result['healthy'] is True
+        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
+            mock_http.return_value = {
+                'status_code': 200,
+                'response_time_ms': 100
+            }
+            mock_ssl.return_value = {'valid': True}
+
+            result = await checker.check_url("https://example.com")
+
+            assert result['status'] == 'healthy'
+            assert result['healthy'] is True
     
     @pytest.mark.asyncio
     async def test_check_url_unhealthy_500(self, checker):
@@ -118,9 +114,7 @@ class TestSuggestions:
     
     @pytest.fixture
     def checker(self):
-        checker = QuickHealthCheck()
-        checker._is_safe_hostname = AsyncMock(return_value=True)
-        return checker
+        return QuickHealthCheck()
     
     def test_suggestions_for_server_error(self, checker):
         """Should suggest checking logs for 500"""
@@ -213,9 +207,7 @@ class TestBatchCheck:
     
     @pytest.fixture
     def checker(self):
-        checker = QuickHealthCheck()
-        checker._is_safe_hostname = AsyncMock(return_value=True)
-        return checker
+        return QuickHealthCheck()
     
     @pytest.mark.asyncio
     async def test_check_multiple_urls(self, checker):

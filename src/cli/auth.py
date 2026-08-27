@@ -31,6 +31,57 @@ CONFIG_FILE = CONFIG_DIR / 'config.json'
 CREDENTIALS_FILE = CONFIG_DIR / 'credentials.json'
 
 
+def load_user_config() -> Dict:
+    """Load local CLI settings and provider credentials from the user config file."""
+    if not CONFIG_FILE.exists():
+        return {}
+    try:
+        data = json.loads(CONFIG_FILE.read_text())
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_user_config(**values) -> Dict:
+    """Persist local CLI settings with restrictive file permissions."""
+    ensure_config_dir()
+    config = load_user_config()
+    config.update({key: value for key, value in values.items() if value is not None})
+    CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    if sys.platform != 'win32':
+        CONFIG_FILE.chmod(0o600)
+    return config
+
+
+def load_local_config_into_env() -> None:
+    """Make user-scoped provider settings available without overriding env vars."""
+    config = load_user_config()
+    for key in ('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'DEFAULT_MODEL'):
+        value = config.get(key)
+        if value and not os.getenv(key):
+            os.environ[key] = str(value)
+
+
+def ensure_default_user() -> Dict:
+    """Create or return the stable anonymous local identity."""
+    config = load_user_config()
+    user = config.get('local_user')
+    if not isinstance(user, dict) or not user.get('id'):
+        user = {
+            'id': 'local-default-user',
+            'email': 'local@devops-sentinel',
+            'name': 'Local user',
+            'provider': 'local',
+        }
+        save_user_config(local_user=user)
+    return user
+
+
+def get_active_user() -> Optional[Dict]:
+    """Return the Supabase identity or the local fallback identity."""
+    return get_current_user() or ensure_default_user()
+
+
 def ensure_config_dir():
     """Create config directory if it doesn't exist."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -576,6 +627,7 @@ def login(token: Optional[str], device: bool, supabase_url: Optional[str], web_u
         
         # Save credentials
         save_credentials(access_token, refresh_token, user)
+        save_user_config(mode='supabase')
         
         email = user.get('email', 'Unknown')
         click.echo(f"\n{click.style('OK', fg='green')} Successfully logged in as {email}")
@@ -598,6 +650,7 @@ def logout():
     email = user.get('email', 'Unknown') if user else 'Unknown'
     
     clear_credentials()
+    save_user_config(mode='local')
     click.echo(f"\n{click.style('OK', fg='green')} Logged out from {email}")
     click.echo(f"  Credentials removed from {CONFIG_DIR}")
 
