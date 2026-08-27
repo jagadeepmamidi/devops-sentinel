@@ -1,0 +1,16 @@
+{
+  "name": "DevOps Sentinel",
+  "user": "ubuntu",
+  "install": "python3 -m pip install --break-system-packages --upgrade pip && python3 -m pip install --break-system-packages -r requirements-test.txt && python3 -m pip install --break-system-packages -e \".[dev]\" && (cd web && npm ci) && (cd packages/client && npm install)",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "python3 -m uvicorn \"sentinel.api.app:create_app\" --factory --host 0.0.0.0 --port 8000"
+    },
+    {
+      "name": "web",
+      "command": "cd web && npm run dev -- --host 0.0.0.0 --port 5173"
+    }
+  ],
+  "ports": [8000, 5173]
+}
