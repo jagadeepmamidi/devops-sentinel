@@ -30,7 +30,7 @@ const AGENTS = [
 
 export default function AgentPipeline() {
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-white/10 bg-white/[0.04] backdrop-blur-xl">
       <CardHeader className="gap-2">
         <Badge variant="outline" className="w-fit font-mono text-[10px] uppercase tracking-widest">
           Multi-agent loop
@@ -47,7 +47,7 @@ export default function AgentPipeline() {
         {AGENTS.map((agent) => (
           <article
             key={agent.id}
-            className="rounded-lg border border-border bg-secondary/20 p-4"
+            className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
           >
             <div className="mb-2 flex items-center justify-between gap-3">
               <span className="font-mono text-[11px] text-muted-foreground">{agent.id}</span>

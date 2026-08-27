@@ -22,7 +22,7 @@ export default function CommandInstall({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="flex max-w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 font-mono text-sm"
+        className="flex max-w-full items-center gap-2 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 font-mono text-sm backdrop-blur-xl"
         role="group"
         aria-label="Install command"
       >

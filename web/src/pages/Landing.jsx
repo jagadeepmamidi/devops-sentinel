@@ -43,7 +43,7 @@ export default function Landing() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/docs#agents">See the agent loop</Link>
+                <Link to="/docs#demo">Run sentinel demo</Link>
               </Button>
             </div>
             <div className="mt-6">
@@ -52,13 +52,13 @@ export default function Landing() {
           </div>
 
           <div
-            className="relative min-h-[360px] overflow-hidden rounded-xl border border-border bg-card sm:min-h-[420px]"
-            aria-label="Service mesh visualization"
+            className="relative min-h-[360px] overflow-hidden rounded-xl border border-white/15 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:min-h-[420px]"
+            aria-label="Metallic glass watch visualization"
           >
             <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Local mesh
+                  Glass watch
                 </p>
                 <p className="text-sm font-medium">production-api · SQLite</p>
               </div>
@@ -67,7 +67,7 @@ export default function Landing() {
             <Suspense
               fallback={
                 <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
-                  Loading mesh…
+                  Loading lens…
                 </div>
               }
             >
@@ -97,7 +97,7 @@ export default function Landing() {
               body: 'Agents propose the next move. Anything with side effects waits for a human.',
             },
           ].map((item) => (
-            <Card key={item.title} className="border-border">
+            <Card key={item.title} className="border-white/10">
               <CardHeader>
                 <item.icon className="size-4 text-primary" />
                 <CardTitle className="text-base">{item.title}</CardTitle>

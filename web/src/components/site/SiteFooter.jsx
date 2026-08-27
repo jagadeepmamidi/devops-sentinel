@@ -6,7 +6,7 @@ export default function SiteFooter({
   text = 'Local-first SRE operations. Your data stays on your machine or in your Supabase project.',
 }) {
   return (
-    <footer className="border-t border-border">
+    <footer className="border-t border-white/10 bg-background/40 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="max-w-xl text-xs leading-6 text-muted-foreground">{text}</p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

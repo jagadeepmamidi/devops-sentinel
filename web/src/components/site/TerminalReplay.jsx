@@ -1,9 +1,8 @@
 const LINES = [
-  { tone: 'dim', text: '$ sentinel init' },
-  { tone: 'ok', text: 'OK  Local mode ready. No Supabase or login required.' },
-  { tone: 'dim', text: '$ sentinel services add production-api https://api.example.com/health' },
-  { tone: 'ok', text: 'OK  Registered production-api' },
-  { tone: 'dim', text: '$ sentinel monitor production-api --failure-threshold 3' },
+  { tone: 'dim', text: '$ sentinel demo' },
+  { tone: 'ok', text: 'OK  Local SQLite · in-process /fail 503 · incident opened' },
+  { tone: 'dim', text: '$ sentinel up --once' },
+  { tone: 'ok', text: 'OK  Registered production-api from sentinel.yaml' },
   { tone: 'ok', text: 'production-api HEALTHY | HTTP 200 | 84ms | check #1' },
   { tone: 'warn', text: 'production-api DEGRADED | HTTP 503 | 1120ms | check #4' },
   { tone: 'dim', text: 'Watcher opened incident · First Responder notified · Strategist drafting plan' },
@@ -17,7 +16,7 @@ const TONE_CLASS = {
 
 export default function TerminalReplay() {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-white/12 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-border px-4 py-3 font-mono text-[11px] text-muted-foreground">
         <span className="flex gap-1.5" aria-hidden="true">
           <i className="size-1.5 rounded-full bg-muted-foreground/50" />
