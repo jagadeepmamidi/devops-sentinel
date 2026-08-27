@@ -25,7 +25,7 @@ function NavItem({ item, className = '', onNavigate }) {
   const classes = [
     'text-sm text-muted-foreground transition-colors hover:text-foreground',
     item.className === 'outline'
-      ? 'rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-foreground hover:bg-secondary'
+      ? 'rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-foreground hover:bg-white/[0.1]'
       : '',
     active ? 'text-foreground' : '',
     className,
@@ -61,9 +61,9 @@ function NavItem({ item, className = '', onNavigate }) {
 
 export default function SiteTopNav({ links = PRIMARY_NAV, brandTo = '/' }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-background/55 backdrop-blur-xl">
+    <header className="sticky top-0 z-[40] flex justify-center px-4 pt-4">
       <nav
-        className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+        className="glass-nav flex h-14 w-full max-w-5xl items-center justify-between gap-4 rounded-full border border-white/12 bg-zinc-950/55 px-4 backdrop-blur-xl sm:px-5"
         aria-label="Primary navigation"
       >
         <SiteBrand to={brandTo} />

@@ -1,41 +1,22 @@
-const LINES = [
-  { tone: 'dim', text: '$ sentinel demo' },
-  { tone: 'ok', text: 'OK  Local SQLite · in-process /fail 503 · incident opened' },
-  { tone: 'dim', text: '$ sentinel up --once' },
-  { tone: 'ok', text: 'OK  Registered production-api from sentinel.yaml' },
-  { tone: 'ok', text: 'production-api HEALTHY | HTTP 200 | 84ms | check #1' },
-  { tone: 'warn', text: 'production-api DEGRADED | HTTP 503 | 1120ms | check #4' },
-  { tone: 'dim', text: 'Watcher opened incident · First Responder notified · Strategist drafting plan' },
-]
+const LINES = `DevOps Sentinel demo - local SQLite, no cloud, no API key.
+Polling http://127.0.0.1:37037/fail once (expect 503)
+demo-fail DOWN | 503 | 7ms
 
-const TONE_CLASS = {
-  dim: 'text-muted-foreground',
-  ok: 'text-primary',
-  warn: 'text-amber-300',
-}
+  INCIDENT OPENED
+  id:       6b114ead-40f5-45b3-a95a-b33d35c7085e
+  severity: high
+  service:  demo-fail
+  next:
+    sentinel incidents show 6b114ead-40f5-45b3-a95a-b33d35c7085e
+    sentinel postmortem generate 6b114ead-40f5-45b3-a95a-b33d35c7085e`
 
 export default function TerminalReplay() {
   return (
-    <div className="overflow-hidden rounded-xl border border-white/12 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-border px-4 py-3 font-mono text-[11px] text-muted-foreground">
-        <span className="flex gap-1.5" aria-hidden="true">
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-        </span>
-        <span>sentinel / local</span>
-        <span className="justify-self-end">SQLite</span>
-      </div>
-      <pre
-        className="m-0 overflow-x-auto p-5 font-mono text-[13px] leading-7"
-        aria-label="Sample Sentinel terminal session"
-      >
-        {LINES.map((line) => (
-          <span key={line.text} className={`block ${TONE_CLASS[line.tone]}`}>
-            {line.text}
-          </span>
-        ))}
-      </pre>
-    </div>
+    <pre
+      className="m-0 overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/80 p-5 font-mono text-[13px] leading-7 text-zinc-200"
+      aria-label="Sample sentinel demo session"
+    >
+      {LINES}
+    </pre>
   )
 }

@@ -1,6 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
 const AGENTS = [
   {
     id: '01',
@@ -30,34 +27,37 @@ const AGENTS = [
 
 export default function AgentPipeline() {
   return (
-    <Card className="border-white/10 bg-white/[0.04] backdrop-blur-xl">
-      <CardHeader className="gap-2">
-        <Badge variant="outline" className="w-fit font-mono text-[10px] uppercase tracking-widest">
-          Multi-agent loop
-        </Badge>
-        <CardTitle className="text-xl tracking-tight">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
+      <div className="max-w-[65ch]">
+        <h2 className="text-3xl font-medium tracking-tight text-balance">
           Four roles. One approval boundary.
-        </CardTitle>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Sentinel coordinates agents in the terminal. They recommend; they do not change
+        </h2>
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">
+          Sentinel coordinates agents in the terminal. They recommend. They do not change
           infrastructure unless you approve it.
         </p>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
-        {AGENTS.map((agent) => (
-          <article
+      </div>
+      <ol className="grid gap-0">
+        {AGENTS.map((agent, index) => (
+          <li
             key={agent.id}
-            className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
+            className={`grid grid-cols-[auto_minmax(0,1fr)] gap-4 py-5 ${
+              index === 0 ? '' : 'border-t border-white/10'
+            }`}
           >
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="font-mono text-[11px] text-muted-foreground">{agent.id}</span>
-              <Badge variant="secondary">{agent.role}</Badge>
+            <span className="font-mono text-xs text-muted-foreground">{agent.id}</span>
+            <div>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h3 className="text-base font-medium">{agent.name}</h3>
+                <span className="text-sm text-muted-foreground">{agent.role}</span>
+              </div>
+              <p className="mt-1 max-w-[65ch] text-sm leading-6 text-muted-foreground">
+                {agent.detail}
+              </p>
             </div>
-            <h3 className="text-sm font-medium">{agent.name}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{agent.detail}</p>
-          </article>
+          </li>
         ))}
-      </CardContent>
-    </Card>
+      </ol>
+    </div>
   )
 }

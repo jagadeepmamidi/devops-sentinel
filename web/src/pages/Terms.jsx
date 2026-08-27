@@ -31,7 +31,7 @@ export default function Terms() {
           <ul className="mt-3 grid gap-2 text-sm leading-7 text-muted-foreground">
             <li>Do not use Sentinel to attack, scan, or overwhelm systems you do not operate.</li>
             <li>Do not submit secrets in public GitHub issues or website forms.</li>
-            <li>Do not represent Sentinel-hosted storage as a product feature — we do not host your data.</li>
+            <li>Do not represent Sentinel-hosted storage as a product feature - we do not host your data.</li>
           </ul>
         </section>
         <section>

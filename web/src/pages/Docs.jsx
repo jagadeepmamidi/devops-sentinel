@@ -87,7 +87,7 @@ export default function Docs() {
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
               Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, runs a
               staged agent workflow, and writes evidence to SQLite or to a Supabase project you
-              control. The website is documentation and a browser helper for your own auth — not a
+              control. The website is documentation and a browser helper for your own auth - not a
               hosted control plane.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -215,7 +215,7 @@ SLACK_WEBHOOK_URL=`}</Code>
               Postgres, you create the project, you keep the keys, you own the rows.
             </p>
             <ol className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
-              <li>1. Create a project at supabase.com — this is yours, not ours.</li>
+              <li>1. Create a project at supabase.com - this is yours, not ours.</li>
               <li>
                 2. Run the schema: <Inline>sentinel schema --print</Inline> or copy{' '}
                 <Inline>supabase/schema.sql</Inline> into the SQL editor.

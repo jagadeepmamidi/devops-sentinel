@@ -6,7 +6,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.75rem;
+  /* Shape lock: pills for interactive, 16px for surfaces, 8px for inputs. */
+  --radius: 1rem;
+  --z-nav: 40;
+  --z-overlay: 50;
+  --z-grain: 60;
   --background: oklch(0.13 0.008 260);
   --foreground: oklch(0.97 0.004 90);
   --card: oklch(0.2 0.01 260 / 0.42);
@@ -101,7 +105,7 @@
   }
 
   #root {
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   a:focus-visible,
@@ -136,5 +140,23 @@
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 14%),
       0 24px 60px oklch(0 0 0 / 38%);
+  }
+
+  .site-grain {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-grain);
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-panel,
+    .glass-nav {
+      backdrop-filter: none;
+      background: oklch(0.16 0.01 260);
+    }
   }
 }

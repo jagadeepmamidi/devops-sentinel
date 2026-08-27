@@ -38,7 +38,7 @@ export default function About() {
             </p>
             <p>
               <strong className="text-foreground">Trust model:</strong> local SQLite is enough.
-              Supabase is compatibility for teams that already run it — bring-your-own, never
+              Supabase is compatibility for teams that already run it - bring-your-own, never
               ours.
             </p>
             <p>
