@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import CommandInstall from '../components/site/CommandInstall'
 import SiteLayout from '../components/site/SiteLayout'
@@ -37,21 +37,18 @@ function Inline({ children }) {
 
 export default function Docs() {
   const location = useLocation()
-  const [active, setActive] = useState('overview')
-
   const hashId = useMemo(
     () => (location.hash || '#overview').replace('#', ''),
     [location.hash],
   )
+  const active = SECTIONS.some((section) => section.id === hashId) ? hashId : 'overview'
 
   useEffect(() => {
-    const next = SECTIONS.some((section) => section.id === hashId) ? hashId : 'overview'
-    setActive(next)
-    const node = document.getElementById(next)
+    const node = document.getElementById(active)
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }, [hashId])
+  }, [active])
 
   return (
     <SiteLayout>

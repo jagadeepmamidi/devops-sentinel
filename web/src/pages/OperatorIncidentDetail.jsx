@@ -18,13 +18,17 @@ export default function OperatorIncidentDetail() {
 
   useEffect(() => {
     if (!token || !incidentId) {
-      setIncident(null)
       return undefined
     }
     let cancelled = false
-    setLoading(true)
-    setError('')
-    operatorFetch(`/api/incidents/${incidentId}`, token)
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) {
+          setLoading(true)
+          setError('')
+        }
+        return operatorFetch(`/api/incidents/${incidentId}`, token)
+      })
       .then((payload) => {
         if (!cancelled) setIncident(payload)
       })

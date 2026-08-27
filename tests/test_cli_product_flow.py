@@ -10,10 +10,9 @@ from sentinel.cli.main import cli
 
 def test_init_local_creates_env_without_login(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("SENTINEL_MODE", raising=False)
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["init", "--mode", "local"])
-        env_text = Path(".env").read_text(encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, ["init", "--mode", "local"])
+    env_text = Path(".env").read_text(encoding="utf-8")
 
     assert result.exit_code == 0
     assert "Local mode ready" in result.output
@@ -25,9 +24,8 @@ def test_init_supabase_requires_project_credentials(tmp_path: Path, monkeypatch)
     monkeypatch.delenv("SENTINEL_MODE", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["init", "--mode", "supabase"])
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, ["init", "--mode", "supabase"])
 
     assert result.exit_code != 0
     assert "--url" in result.output
@@ -35,15 +33,13 @@ def test_init_supabase_requires_project_credentials(tmp_path: Path, monkeypatch)
 
 def test_init_supabase_writes_byo_project(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("SENTINEL_MODE", raising=False)
+    project = tmp_path / "proj"
+    project.mkdir()
+    monkeypatch.chdir(project)
     config_dir = tmp_path / "cfg"
     config_file = config_dir / "config.json"
-    runner = CliRunner()
-    with (
-        runner.isolated_filesystem(temp_dir=tmp_path / "proj"),
-        patch.object(auth, "CONFIG_DIR", config_dir),
-        patch.object(auth, "CONFIG_FILE", config_file),
-    ):
-        result = runner.invoke(
+    with patch.object(auth, "CONFIG_DIR", config_dir), patch.object(auth, "CONFIG_FILE", config_file):
+        result = CliRunner().invoke(
             cli,
             [
                 "init",
@@ -67,10 +63,9 @@ def test_init_supabase_writes_byo_project(tmp_path: Path, monkeypatch):
 
 def test_login_local_flag_switches_mode(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("SENTINEL_MODE", raising=False)
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["login", "--local"])
-        env_text = Path(".env").read_text(encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, ["login", "--local"])
+    env_text = Path(".env").read_text(encoding="utf-8")
 
     assert result.exit_code == 0
     assert "Local mode enabled" in result.output

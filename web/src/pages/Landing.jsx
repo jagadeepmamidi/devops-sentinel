@@ -1,13 +1,15 @@
+import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Database, Shield, Terminal } from 'lucide-react'
 import AgentPipeline from '../components/site/AgentPipeline'
 import CommandInstall from '../components/site/CommandInstall'
-import OrbitalScene from '../components/site/OrbitalScene'
 import SiteLayout from '../components/site/SiteLayout'
 import TerminalReplay from '../components/site/TerminalReplay'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+const OrbitalScene = lazy(() => import('../components/site/OrbitalScene'))
 
 const healthRows = [
   { name: 'api-gateway', url: '/health', latency: '84 ms', status: 'Healthy' },
@@ -62,7 +64,15 @@ export default function Landing() {
               </div>
               <Badge variant="secondary">Live demo</Badge>
             </div>
-            <OrbitalScene />
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+                  Loading mesh…
+                </div>
+              }
+            >
+              <OrbitalScene />
+            </Suspense>
             <p className="absolute inset-x-4 bottom-4 z-10 font-mono text-xs text-muted-foreground">
               Watcher · First Responder · Investigator · Strategist
             </p>
