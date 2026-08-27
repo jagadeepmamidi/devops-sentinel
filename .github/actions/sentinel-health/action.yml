@@ -1,0 +1,65 @@
+name: Sentinel health check
+description: Run one HTTP health check with DevOps Sentinel (status, body, JSON path, TLS days).
+inputs:
+  url:
+    description: URL to probe
+    required: true
+  expect:
+    description: Expected HTTP status codes, comma-separated (e.g. 200,301,302)
+    required: false
+    default: ""
+  body:
+    description: Substring that must appear in the response body
+    required: false
+    default: ""
+  json-path:
+    description: Dotted JSON path that must exist
+    required: false
+    default: ""
+  json-equals:
+    description: Expected value at json-path
+    required: false
+    default: ""
+  ssl-min-days:
+    description: Fail when remaining TLS days are below this
+    required: false
+    default: ""
+  timeout:
+    description: Request timeout in seconds
+    required: false
+    default: "10"
+  package:
+    description: Pip package to install (override to a wheel path or git URL)
+    required: false
+    default: devops-sentinel-next
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install Sentinel
+      shell: bash
+      run: python -m pip install --upgrade pip && python -m pip install "${{ inputs.package }}"
+    - name: Health check
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmd=(sentinel health "${{ inputs.url }}" --timeout "${{ inputs.timeout }}")
+        if [ -n "${{ inputs.expect }}" ]; then
+          cmd+=(--expect "${{ inputs.expect }}")
+        fi
+        if [ -n "${{ inputs.body }}" ]; then
+          cmd+=(--body "${{ inputs.body }}")
+        fi
+        if [ -n "${{ inputs.json-path }}" ]; then
+          cmd+=(--json-path "${{ inputs.json-path }}")
+        fi
+        if [ -n "${{ inputs.json-equals }}" ]; then
+          cmd+=(--json-equals "${{ inputs.json-equals }}")
+        fi
+        if [ -n "${{ inputs.ssl-min-days }}" ]; then
+          cmd+=(--ssl-min-days "${{ inputs.ssl-min-days }}")
+        fi
+        "${cmd[@]}"

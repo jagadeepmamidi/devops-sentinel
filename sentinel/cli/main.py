@@ -71,6 +71,35 @@ def console():
     return _render("console")
 
 
+def _parse_expect(status, body, json_path, json_equals, ssl_min_days):
+    from ..core.health_spec import HealthExpect
+
+    return HealthExpect.from_mapping(
+        {
+            "status": status,
+            "body": body,
+            "json_path": json_path,
+            "json_equals": json_equals,
+            "ssl_min_days": ssl_min_days,
+        }
+    )
+
+
+def print_incident_card(result: dict) -> None:
+    incident_id = result.get("incident_id")
+    click.echo()
+    click.echo(click.style("  INCIDENT OPENED", fg="red", bold=True))
+    click.echo(f"  id:       {incident_id}")
+    click.echo(f"  severity: {result.get('incident_severity') or 'unknown'}")
+    click.echo(f"  service:  {result.get('service')}")
+    click.echo(f"  detail:   {result.get('error') or 'threshold exceeded'}")
+    click.echo("  next:")
+    click.echo(f"    sentinel incidents show {incident_id}")
+    click.echo(f"    sentinel incidents ack {incident_id}")
+    click.echo(f"    sentinel postmortem generate {incident_id}")
+    click.echo()
+
+
 def incidents_table(items):
     return _render("incidents_table", items)
 
@@ -108,6 +137,7 @@ def print_banner():
         click.echo("    sentinel init --mode supabase # your Supabase project")
     elif mode == "local":
         click.echo("  Local SQLite identity is active. Login is not required.")
+        click.echo("    sentinel demo")
         click.echo("    sentinel health https://example.com")
         click.echo("    sentinel services add api https://example.com/health")
     else:
@@ -136,6 +166,7 @@ def cli(ctx, output_json):
 
     Quick start:
       sentinel init
+      sentinel demo
       sentinel health https://api.example.com/health
       sentinel services add api https://api.example.com/health
       sentinel monitor api
@@ -154,23 +185,60 @@ def cli(ctx, output_json):
 @click.option("--notify", is_flag=True, help="Reserved for notification integrations")
 @click.option("--failure-threshold", default=3, type=click.IntRange(1, 20), show_default=True)
 @click.option("--recovery-threshold", default=2, type=click.IntRange(1, 20), show_default=True)
+@click.option("--expect", "expect_status", help="Expected status codes, comma-separated")
+@click.option("--body", help="Substring that must appear in the response body")
+@click.option("--json-path", help="Dotted JSON path that must exist, e.g. status or data.ok")
+@click.option("--json-equals", help="Expected value at --json-path")
+@click.option("--ssl-min-days", type=int, help="Fail when TLS remaining days are below this")
+@click.option("--once", is_flag=True, help="Run one check per target then exit.")
 @click.pass_context
 def monitor(
-    ctx, target, monitor_all, interval, timeout, notify, failure_threshold, recovery_threshold
+    ctx,
+    target,
+    monitor_all,
+    interval,
+    timeout,
+    notify,
+    failure_threshold,
+    recovery_threshold,
+    expect_status,
+    body,
+    json_path,
+    json_equals,
+    ssl_min_days,
+    once,
 ):
-    """Monitor registered service by name or URL."""
+    """Monitor registered service by name, URL, or sentinel.yaml (--all)."""
     del notify
+    from ..core.project_file import expect_for_url, load_project_config
+
     MonitorRunner = _monitor_components()[0]
     output_json = ctx.obj.get("json", False)
     db = get_db()
     user = get_current_user() if is_logged_in() else None
     registered = db.list_services(user["id"]) if user and db.connected else []
+    project = load_project_config()
+    cli_expect = _parse_expect(expect_status, body, json_path, json_equals, ssl_min_days)
     if monitor_all:
         if target:
             raise click.UsageError("TARGET cannot be used with --all")
         targets = [svc for svc in registered if svc.get("is_active", True)]
         if not targets:
-            raise click.ClickException("No active registered services found.")
+            targets = [
+                {
+                    "name": item["name"],
+                    "url": item["url"],
+                    "check_interval": item["interval"],
+                    "failure_threshold": item["failure_threshold"],
+                    "recovery_threshold": item["recovery_threshold"],
+                    "expect": item["expect"],
+                }
+                for item in project.get("services") or []
+            ]
+        if not targets:
+            raise click.ClickException(
+                "No active services. Add one or put them in sentinel.yaml, then `sentinel up`."
+            )
     elif not target:
         raise click.UsageError("Provide a service name, URL, or --all")
     else:
@@ -184,9 +252,26 @@ def monitor(
         elif target.startswith(("http://", "https://")):
             targets = [{"name": target, "url": target, "check_interval": interval or 30}]
         else:
-            raise click.ClickException(f"Registered service not found: {target}")
+            yaml_match = next(
+                (item for item in project.get("services") or [] if item["name"] == target),
+                None,
+            )
+            if not yaml_match:
+                raise click.ClickException(f"Registered service not found: {target}")
+            targets = [
+                {
+                    "name": yaml_match["name"],
+                    "url": yaml_match["url"],
+                    "check_interval": yaml_match["interval"],
+                    "expect": yaml_match["expect"],
+                }
+            ]
 
     async def run_target(service):
+        yaml_expect = service.get("expect") or expect_for_url(
+            project, service["url"], service.get("name")
+        )
+        expect = cli_expect if any([expect_status, body, json_path, json_equals, ssl_min_days]) else yaml_expect
         try:
             runner = MonitorRunner(
                 service["url"],
@@ -197,8 +282,9 @@ def monitor(
                 db=db if service.get("id") else None,
                 user_id=user["id"] if user and service.get("id") else None,
                 service=service if service.get("id") else None,
-                failure_threshold=failure_threshold,
-                recovery_threshold=recovery_threshold,
+                failure_threshold=int(service.get("failure_threshold") or failure_threshold),
+                recovery_threshold=int(service.get("recovery_threshold") or recovery_threshold),
+                expect=expect,
             )
         except (TypeError, ValueError) as error:
             raise click.ClickException(f"Invalid monitor configuration: {error}") from error
@@ -216,8 +302,10 @@ def monitor(
             click.echo(
                 f"{result['service']} {click.style(state, fg='green' if result['healthy'] else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | check #{result['check']}"
             )
+            if result.get("incident_opened"):
+                print_incident_card(result)
 
-        await runner.run_forever(render)
+        await runner.run_forever(render, once=once)
 
     async def run_all():
         await asyncio.gather(*(run_target(service) for service in targets))
@@ -232,20 +320,27 @@ def monitor(
 @cli.command()
 @click.argument("url")
 @click.option("--timeout", "-t", default=10, show_default=True)
+@click.option("--expect", "expect_status", help="Expected status codes, comma-separated")
+@click.option("--body", help="Substring that must appear in the response body")
+@click.option("--json-path", help="Dotted JSON path that must exist")
+@click.option("--json-equals", help="Expected value at --json-path")
+@click.option("--ssl-min-days", type=int, help="Fail when TLS remaining days are below this")
 @click.pass_context
-def health(ctx, url, timeout):
+def health(ctx, url, timeout, expect_status, body, json_path, json_equals, ssl_min_days):
     """Run one health check. Exit 1 when unhealthy or unreachable."""
     check_url_once = _monitor_components()[1]
-    result = asyncio.run(check_url_once(url, timeout)).as_dict()
+    expect = _parse_expect(expect_status, body, json_path, json_equals, ssl_min_days)
+    result = asyncio.run(check_url_once(url, timeout, expect=expect)).as_dict()
     if ctx.obj.get("json"):
         click.echo(json.dumps(result, indent=2, default=str))
     elif result["healthy"]:
+        extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
         click.echo(
-            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms"
+            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms{extra}"
         )
     elif result.get("status_code"):
         click.echo(
-            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms"
+            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms | {result.get('error', '')}"
         )
     else:
         click.echo(f"{click.style('X', fg='red')} {url} | UNREACHABLE | {result.get('error', '')}")
@@ -678,11 +773,21 @@ def init(mode, supabase_url, anon_key):
     else:
         click.echo(f"  {click.style('*', fg='yellow')} Updated existing .env")
 
+    from ..core.project_file import find_project_file, write_sample_project_file
+
+    if find_project_file() is None:
+        yaml_path = write_sample_project_file()
+        click.echo(f"  {click.style('OK', fg='green')} Wrote {yaml_path.name}")
+    else:
+        click.echo(f"  {click.style('*', fg='yellow')} Existing sentinel.yaml left unchanged")
+
     if mode == "local":
         click.echo(
             f"\n{click.style('Done!', fg='green')} Local mode ready. No Supabase or login required."
         )
+        click.echo("  sentinel demo")
         click.echo("  sentinel health https://example.com")
+        click.echo("  sentinel up --once")
         click.echo("  sentinel services add api https://example.com/health")
     else:
         from ..setup.schema_files import schema_sql_path
@@ -735,6 +840,148 @@ def doctor(ctx, strict):
             )
         else:
             click.echo(click.style("Warnings treated as failures in strict mode.", fg="red"))
+        raise SystemExit(1)
+
+
+@cli.command("up")
+@click.option("--interval", "-i", type=float, default=None, help="Override poll interval from sentinel.yaml.")
+@click.option("--once", is_flag=True, help="Run one pass then exit.")
+@click.option("--timeout", "-t", type=float, default=10, show_default=True)
+@click.pass_context
+def up(ctx, interval, once, timeout):
+    """Register services from sentinel.yaml and start the monitor."""
+    from ..core.project_file import load_project_config
+    from .db import reset_db
+
+    project = load_project_config()
+    services_cfg = project.get("services") or []
+    if not project.get("path") or not services_cfg:
+        raise click.ClickException(
+            "No sentinel.yaml with services found. Run `sentinel init` or copy examples/sentinel.yaml."
+        )
+    if get_storage_mode() == "none":
+        ctx.invoke(init, mode="local", supabase_url=None, anon_key=None)
+        reset_db()
+    user = get_current_user() if is_logged_in() else None
+    db = get_db()
+    if not user or not db.connected:
+        raise click.ClickException("Storage or identity unavailable. Run `sentinel init --mode local`.")
+    existing = {(row.get("url") or "").rstrip("/") for row in db.list_services(user["id"])}
+    for item in services_cfg:
+        url = str(item["url"]).rstrip("/")
+        name = item["name"]
+        if url and url not in existing:
+            added = db.add_service(user["id"], name, url, check_interval=int(item["interval"]))
+            if added:
+                click.echo(f"Registered {name} ({url})")
+            existing.add(url)
+    poll = interval if interval is not None else float(services_cfg[0].get("interval") or 30)
+    ctx.invoke(
+        monitor,
+        target=None,
+        monitor_all=True,
+        interval=poll,
+        timeout=timeout,
+        notify=False,
+        failure_threshold=3,
+        recovery_threshold=2,
+        expect_status=None,
+        body=None,
+        json_path=None,
+        json_equals=None,
+        ssl_min_days=None,
+        once=once,
+    )
+
+
+@cli.command("demo")
+@click.option("--keep-going", is_flag=True, help="Keep polling the failing endpoint until Ctrl+C.")
+@click.pass_context
+def demo(ctx, keep_going):
+    """Thirty-second loop: local store, fake 503, incident card. No API key."""
+    from ..core.demo_server import DemoServer
+    from .db import reset_db
+
+    MonitorRunner, check_once = _monitor_components()
+    click.echo("DevOps Sentinel demo — local SQLite, no cloud, no API key.")
+    click.echo("Starting an in-process HTTP server with /ok (200) and /fail (503)…")
+    with DemoServer() as server:
+        ctx.invoke(init, mode="local", supabase_url=None, anon_key=None)
+        reset_db()
+        db = get_db()
+        user = get_current_user()
+        if not user or not db.connected:
+            raise click.ClickException("Local identity failed. Re-run `sentinel init --mode local`.")
+        service = db.add_service(user["id"], "demo-fail", server.fail_url, check_interval=1)
+        if not service:
+            raise click.ClickException("Could not register demo service.")
+        click.echo("")
+        click.echo(f"Polling {server.fail_url} once (expect 503 → incident)…")
+        runner = MonitorRunner(
+            server.fail_url,
+            interval=1,
+            timeout=5,
+            db=db,
+            user_id=user["id"],
+            service=service,
+            failure_threshold=1,
+            recovery_threshold=1,
+        )
+
+        def render(result):
+            result["service"] = service.get("name", "demo-fail")
+            state = "DOWN" if not result.get("healthy") else "HEALTHY"
+            click.echo(
+                f"{result['service']} {click.style(state, fg='green' if result.get('healthy') else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms"
+            )
+            if result.get("incident_opened"):
+                print_incident_card(result)
+
+        asyncio.run(runner.run_forever(render, once=True))
+        click.echo("Healthy contrast check:")
+        ok_result = asyncio.run(check_once(server.ok_url, 5)).as_dict()
+        click.echo(
+            f"{click.style('OK', fg='green')} {server.ok_url} | HTTP {ok_result.get('status_code')} | {ok_result.get('latency_ms') or 0:.0f}ms"
+        )
+        if keep_going:
+            click.echo("keep-going: Ctrl+C to stop.")
+            try:
+                asyncio.run(runner.run_forever(render, once=False))
+            except KeyboardInterrupt:
+                click.echo("Demo stopped.")
+    click.echo("")
+    click.echo("Done. `sentinel incidents list` shows the demo incident.")
+    click.echo("       `sentinel postmortem generate <id>` drafts from it.")
+
+
+@cli.group("supabase")
+def supabase_group():
+    """Bring-your-own Supabase helpers."""
+
+
+@supabase_group.command("doctor")
+@click.option("--url", "project_url", default=None, help="Override saved project URL.")
+@click.option("--anon-key", "anon_key", default=None, help="Override saved anon key.")
+@click.pass_context
+def supabase_doctor_cmd(ctx, project_url, anon_key):
+    """Check URL, anon key, REST, tables, and RLS on *your* project."""
+    from ..core.supabase_doctor import run_supabase_doctor
+
+    report = run_supabase_doctor(project_url, anon_key)
+    if ctx.obj.get("json"):
+        click.echo(json.dumps(report, indent=2))
+        raise SystemExit(0 if report.get("passed") else 1)
+
+    icons = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}
+    colors = {"ok": "green", "warn": "yellow", "fail": "red"}
+    click.echo(f"\n{click.style('Supabase doctor', bold=True)} (your project, not hosted by Sentinel)")
+    click.echo("-" * 40)
+    for item in report.get("checks") or []:
+        marker = click.style(icons.get(item["status"], item["status"]), fg=colors.get(item["status"], "white"))
+        click.echo(f"  {marker}  {item['name']}: {item['detail']}")
+    click.echo()
+    if not report.get("passed"):
+        click.echo("Run `sentinel schema --print` and apply the SQL in your project.")
         raise SystemExit(1)
 
 

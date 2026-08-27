@@ -1,0 +1,19 @@
+# Example workflow — copy into .github/workflows/sentinel-health.yml
+# This is not a required check in the Sentinel repo itself.
+name: Sentinel health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jagadeepmamidi/devops-sentinel/.github/actions/sentinel-health@main
+        with:
+          url: https://example.com
+          expect: "200,301,302"
+          timeout: "15"

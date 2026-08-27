@@ -18,6 +18,7 @@ def test_init_local_creates_env_without_login(tmp_path: Path, monkeypatch):
     assert "Local mode ready" in result.output
     assert "SENTINEL_MODE=local" in env_text
     assert "No Supabase or login required" in result.output
+    assert Path("sentinel.yaml").exists()
 
 
 def test_init_supabase_requires_project_credentials(tmp_path: Path, monkeypatch):
