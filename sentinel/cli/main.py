@@ -38,6 +38,7 @@ def _monitor_components():
 # Auth module
 from .auth import (
     SUPPORTED_CONFIG_KEYS,
+    enable_local_mode,
     get_current_user,
     get_storage_mode,
     is_logged_in,
@@ -47,6 +48,7 @@ from .auth import (
     mask_secret,
     remove_user_config,
     set_user_config,
+    upsert_project_env,
     user_config_values,
     whoami,
 )
@@ -94,19 +96,31 @@ def print_banner():
 +--------------------------------------------+
 |        WELCOME TO DEVOPS SENTINEL          |
 |                                            |
-|                SSSSSSS                    |
-|               SS                         |
-|               SS                         |
-|                SSSSS                     |
-|                    SS                    |
-|                    SS                    |
-|               SSSSSSS                    |
-|                                            |
-|  Observe services - Investigate incidents |
-|  Coordinate agents - Ship safer           |
+|  Observe services - Investigate incidents  |
+|  Coordinate agents - Ship safer            |
 +--------------------------------------------+
 """
     click.echo(click.style(banner, fg="cyan"))
+    mode = get_storage_mode()
+    if mode == "none":
+        click.echo("  Not initialized. Next:")
+        click.echo("    sentinel init                 # local SQLite, no account")
+        click.echo("    sentinel init --mode supabase # your Supabase project")
+    elif mode == "local":
+        click.echo("  Local SQLite identity is active. Login is not required.")
+        click.echo("    sentinel health https://example.com")
+        click.echo("    sentinel services add api https://example.com/health")
+    else:
+        click.echo("  Supabase compatibility mode uses YOUR project, not a Sentinel-hosted DB.")
+        if is_logged_in():
+            click.echo("    sentinel services list")
+            click.echo("    sentinel monitor --all")
+        else:
+            click.echo("    sentinel login")
+            click.echo("    sentinel schema --print")
+    click.echo("    sentinel doctor")
+    click.echo("    sentinel --help")
+    click.echo()
 
 
 @click.group(invoke_without_command=True)
@@ -115,14 +129,16 @@ def print_banner():
 @click.pass_context
 def cli(ctx, output_json):
     """
-    DevOps Sentinel - Autonomous SRE Agent
+    DevOps Sentinel - local-first SRE CLI.
 
-    Monitor services, detect anomalies, and generate AI-powered postmortems.
+    Health checks, incident memory, multi-agent response, and postmortems.
+    Default store is SQLite. Optional login talks to YOUR Supabase project.
 
     Quick start:
-    sentinel monitor https://api.example.com/health
-    sentinel incidents list
-    sentinel postmortem generate <incident-id>
+      sentinel init
+      sentinel health https://api.example.com/health
+      sentinel services add api https://api.example.com/health
+      sentinel monitor api
     """
     ctx.ensure_object(dict)
     ctx.obj["json"] = output_json
@@ -510,8 +526,15 @@ def status(ctx):
     def status_icon(ok):
         return click.style("OK", fg="green") if ok else click.style("X", fg="red")
 
-    click.echo(f"  {status_icon(api_ok)} API Server: {'Connected' if api_ok else 'Not running'}")
-    storage_label = "SQLite (local)" if storage_mode == "local" else "Supabase"
+    if storage_mode == "local":
+        click.echo(
+            f"  {status_icon(True)} API Server: optional (`sentinel serve` for the operator UI)"
+        )
+    else:
+        click.echo(
+            f"  {status_icon(api_ok)} API Server: {'Connected' if api_ok else 'Not running'}"
+        )
+    storage_label = "SQLite (local)" if storage_mode == "local" else "Supabase (your project)"
     click.echo(
         f"  {status_icon(storage_configured)} Storage [{storage_label}]: {'Ready' if storage_configured else 'Not configured'}"
     )
@@ -603,51 +626,57 @@ def config_remove(key):
     show_default=True,
     help="Storage mode for this project",
 )
-def init(mode):
-    """Initialize DevOps Sentinel in current directory."""
+@click.option("--url", "supabase_url", help="Your Supabase project URL")
+@click.option("--anon-key", "anon_key", help="Your Supabase anon key")
+def init(mode, supabase_url, anon_key):
+    """Initialize local SQLite or connect YOUR Supabase project."""
     click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Initializing DevOps Sentinel...")
 
     env_path = Path(".env")
-    env_content = """# DevOps Sentinel Configuration
-# Local mode needs no hosted database or account.
-SENTINEL_MODE=local
-SENTINEL_DATA_DIR=.sentinel
+    created = not env_path.exists()
+    if mode == "local":
+        enable_local_mode(env_path)
+    else:
+        supabase_url = (supabase_url or os.getenv("SUPABASE_URL") or "").strip()
+        anon_key = (
+            anon_key or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY") or ""
+        ).strip()
+        if not supabase_url:
+            if sys.stdin.isatty():
+                supabase_url = click.prompt("  Your Supabase URL", default="").strip()
+            else:
+                raise click.UsageError(
+                    "Provide --url https://YOUR-PROJECT.supabase.co for supabase mode."
+                )
+        if not anon_key:
+            if sys.stdin.isatty():
+                anon_key = click.prompt(
+                    "  Your Supabase anon key", hide_input=True, default=""
+                ).strip()
+            else:
+                raise click.UsageError("Provide --anon-key for supabase mode.")
+        if not supabase_url or not anon_key:
+            raise click.UsageError(
+                "Supabase mode needs both --url and --anon-key from YOUR project."
+            )
+        upsert_project_env(
+            {
+                "SENTINEL_MODE": "supabase",
+                "SUPABASE_URL": supabase_url,
+                "SUPABASE_ANON_KEY": anon_key,
+            },
+            env_path,
+        )
+        os.environ["SENTINEL_MODE"] = "supabase"
+        os.environ["SUPABASE_URL"] = supabase_url
+        os.environ["SUPABASE_ANON_KEY"] = anon_key
+        set_user_config("supabase_url", supabase_url)
+        set_user_config("supabase_anon_key", anon_key)
 
-# Supabase compatibility mode (use `sentinel init --mode supabase`)
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-
-# Hosted web app used by server-mode browser auth
-SENTINEL_WEB_URL=
-
-# AI Provider (optional)
-OPENROUTER_API_KEY=
-# OPENAI_API_KEY=
-
-# Slack Integration (optional)
-SLACK_WEBHOOK_URL=
-"""
-    if not env_path.exists():
-        env_path.write_text(env_content)
+    if created:
         click.echo(f"  {click.style('OK', fg='green')} Created .env file")
     else:
-        existing = env_path.read_text(encoding="utf-8")
-        lines = existing.splitlines()
-        mode_line_found = False
-        for index, line in enumerate(lines):
-            if line.startswith("SENTINEL_MODE="):
-                lines[index] = f"SENTINEL_MODE={mode}"
-                mode_line_found = True
-                break
-        if not mode_line_found:
-            lines.append(f"SENTINEL_MODE={mode}")
-        if mode == "local" and not any(line.startswith("SENTINEL_DATA_DIR=") for line in lines):
-            lines.append("SENTINEL_DATA_DIR=.sentinel")
-        env_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-        click.echo(f"  {click.style('*', fg='yellow')} .env already exists")
-    os.environ["SENTINEL_MODE"] = mode
-    if mode == "local":
-        os.environ.setdefault("SENTINEL_DATA_DIR", ".sentinel")
+        click.echo(f"  {click.style('*', fg='yellow')} Updated existing .env")
 
     if mode == "local":
         click.echo(
@@ -656,10 +685,15 @@ SLACK_WEBHOOK_URL=
         click.echo("  sentinel health https://example.com")
         click.echo("  sentinel services add api https://example.com/health")
     else:
+        from ..setup.supabase_setup import schema_sql_path
+
         click.echo(
-            f"\n{click.style('Done!', fg='green')} Configure SUPABASE_URL and SUPABASE_ANON_KEY, then run:"
+            f"\n{click.style('Done!', fg='green')} Using YOUR Supabase project. Sentinel does not store this data."
         )
-        click.echo("  sentinel login")
+        click.echo(f"  Schema SQL: {schema_sql_path()}")
+        click.echo("  1. Paste that SQL into your Supabase SQL editor (or: sentinel schema --print)")
+        click.echo("  2. sentinel login")
+        click.echo("  3. sentinel doctor")
     click.echo("  sentinel status")
     click.echo()
 
@@ -741,6 +775,7 @@ def setup(ctx):
             device=False,
             supabase_url=os.getenv("SUPABASE_URL"),
             web_url=os.getenv("SENTINEL_WEB_URL"),
+            force_local=False,
         )
 
     service_name = click.prompt("  Service name", default="my-api")
@@ -831,6 +866,53 @@ def serve(host, port, reload):
 cli.add_command(login)
 cli.add_command(logout)
 cli.add_command(whoami)
+cli.add_command(monitor, name="watch")
+
+
+@cli.command("schema")
+@click.option("--print", "print_sql", is_flag=True, help="Print the SQL to stdout")
+@click.option("--output", "-o", type=click.Path(), help="Write schema SQL to a file")
+def schema_cmd(print_sql, output):
+    """Show the SQL to apply in YOUR Supabase SQL editor."""
+    from ..setup.supabase_setup import schema_sql_path
+
+    path = schema_sql_path()
+    if not path.exists():
+        raise click.ClickException("Schema file is missing from this install.")
+    if print_sql or output:
+        sql = path.read_text(encoding="utf-8")
+        if output:
+            Path(output).write_text(sql, encoding="utf-8")
+            click.echo(f"Wrote schema to {output}")
+            return
+        click.echo(sql)
+        return
+    click.echo("\n[SENTINEL] Bring-your-own Supabase schema")
+    click.echo(f"  File: {path}")
+    click.echo("  1. Open your project SQL editor: https://supabase.com/dashboard")
+    click.echo("  2. Run `sentinel schema --print` and paste the SQL")
+    click.echo("  3. sentinel init --mode supabase --url <project-url>")
+    click.echo("  Sentinel does not host this database.")
+
+
+@cli.command()
+def agents():
+    """Show the multi-agent incident response workflow."""
+    click.echo(
+        """
+Sentinel agent loop (non-destructive by default)
+------------------------------------------------
+  Watcher           Detect failure, latency, SSL, or anomaly
+  First Responder   Open incident context and notify responders
+  Investigator      Correlate checks, events, deployments, dependencies
+  Strategist        Action plan, runbook suggestion, postmortem
+  Human approval    Required before remediation with side effects
+
+Start:
+  sentinel monitor https://api.example.com/health --failure-threshold 3
+"""
+    )
+
 
 # Register data commands
 cli.add_command(projects)

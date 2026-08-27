@@ -137,5 +137,5 @@ export default function OrbitalScene() {
     }
   }, [])
 
-  return <div ref={mountRef} className="orbital-scene" aria-hidden="true" />
+  return <div ref={mountRef} className="absolute inset-0 h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full" aria-hidden="true" />
 }

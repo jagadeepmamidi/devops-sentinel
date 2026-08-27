@@ -1,17 +1,20 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom'
 
-export default function SiteBrand({ to = "/", onNavigate }) {
+export default function SiteBrand({ to = '/', onNavigate }) {
   return (
     <Link
       to={to}
-      className="site-brand"
+      className="inline-flex items-center gap-2.5 text-foreground no-underline"
       aria-label="DevOps Sentinel home"
       onClick={onNavigate}
     >
-      <span className="site-brand-mark" aria-hidden="true">
+      <span
+        className="grid size-7 place-items-center rounded-md bg-primary font-mono text-xs font-semibold text-primary-foreground"
+        aria-hidden="true"
+      >
         S
       </span>
-      <span className="site-brand-text">DevOps Sentinel</span>
+      <span className="text-sm font-semibold tracking-tight">DevOps Sentinel</span>
     </Link>
-  );
+  )
 }

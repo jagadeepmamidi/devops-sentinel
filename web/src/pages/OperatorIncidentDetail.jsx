@@ -1,212 +1,137 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import SiteFooter from "../components/site/SiteFooter";
-import SiteTopNav from "../components/site/SiteTopNav";
-import {
-  loadOperatorToken,
-  operatorFetch,
-  saveOperatorToken,
-} from "../lib/operatorApi";
-import "./Operator.css";
-
-const NAV_LINKS = [
-  { to: "/operator/services", label: "Services" },
-  { to: "/operator/incidents", label: "Incidents" },
-  { to: "/docs", label: "Docs" },
-];
-
-const FOOTER_LINKS = [
-  { to: "/privacy", label: "Privacy" },
-  { to: "/terms", label: "Terms" },
-];
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import OperatorShell from '../components/site/OperatorShell'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { loadOperatorToken, operatorFetch } from '@/lib/operatorApi'
 
 export default function OperatorIncidentDetail() {
-  const { incidentId } = useParams();
-  const [tokenInput, setTokenInput] = useState(() => loadOperatorToken());
-  const [incident, setIncident] = useState(null);
-  const [resolutionNotes, setResolutionNotes] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-
-  const token = loadOperatorToken();
+  const { incidentId } = useParams()
+  const [tokenInput, setTokenInput] = useState(() => loadOperatorToken())
+  const [incident, setIncident] = useState(null)
+  const [resolutionNotes, setResolutionNotes] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const token = loadOperatorToken()
 
   useEffect(() => {
     if (!token || !incidentId) {
-      setIncident(null);
-      return;
+      setIncident(null)
+      return undefined
     }
-
-    let cancelled = false;
-    setLoading(true);
-    setError("");
-
+    let cancelled = false
+    setLoading(true)
+    setError('')
     operatorFetch(`/api/incidents/${incidentId}`, token)
       .then((payload) => {
-        if (!cancelled) {
-          setIncident(payload);
-        }
+        if (!cancelled) setIncident(payload)
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err.message);
-          setIncident(null);
+          setError(err.message)
+          setIncident(null)
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
+        if (!cancelled) setLoading(false)
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [incidentId, token]);
+      cancelled = true
+    }
+  }, [incidentId, token])
 
   async function handleGenerate(event) {
-    event.preventDefault();
-    if (!token || !incidentId) {
-      return;
-    }
-
-    setGenerating(true);
-    setError("");
+    event.preventDefault()
+    if (!token || !incidentId) return
+    setGenerating(true)
+    setError('')
     try {
-      const payload = await operatorFetch("/api/postmortems/generate", token, {
-        method: "POST",
+      const payload = await operatorFetch('/api/postmortems/generate', token, {
+        method: 'POST',
         body: JSON.stringify({
           incident_id: incidentId,
           resolution_notes: resolutionNotes,
         }),
-      });
+      })
       setIncident((previous) =>
         previous ? { ...previous, postmortem: payload.postmortem } : previous,
-      );
+      )
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setGenerating(false);
+      setGenerating(false)
     }
   }
 
-  function handleSaveToken(event) {
-    event.preventDefault();
-    saveOperatorToken(tokenInput.trim());
-    setError("");
-  }
-
   return (
-    <div className="site-page">
-      <a className="site-skip-link" href="#operator-main">
-        Skip to content
-      </a>
-      <SiteTopNav links={NAV_LINKS} brandTo="/" />
-
-      <main
-        id="operator-main"
-        className="site-main site-container operator-main"
-      >
-        <div className="operator-stack">
-          <section className="site-card operator-panel">
-            <p className="site-label">Operator Console</p>
-            <h1 className="site-title">Incident Detail</h1>
-            <p className="site-text">
-              Inspect a single incident and generate a postmortem directly from
-              the API.
-            </p>
-
-            <form className="operator-token-form" onSubmit={handleSaveToken}>
-              <input
-                type="password"
-                value={tokenInput}
-                onChange={(event) => setTokenInput(event.target.value)}
-                placeholder="Paste bearer token…"
-                aria-label="Bearer token"
-                name="token"
-                autoComplete="off"
-              />
-              <button className="site-btn primary" type="submit">
-                Save token
-              </button>
-              <Link className="site-btn secondary" to="/operator/incidents">
-                Back to incidents
-              </Link>
-            </form>
-            {error ? (
-              <p className="operator-error" role="alert" aria-live="polite">
-                {error}
+    <OperatorShell
+      title="Incident detail"
+      description="Inspect one incident from your local or self-hosted API and generate a postmortem."
+      tokenInput={tokenInput}
+      setTokenInput={setTokenInput}
+      error={error}
+      extraActions={
+        <Link className="text-sm text-foreground underline" to="/operator/incidents">
+          Back to incidents
+        </Link>
+      }
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>{incident?.service_name || incident?.service_id || 'Incident'}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {loading ? <p className="text-sm text-muted-foreground">Loading incident…</p> : null}
+          {!loading && !token ? (
+            <p className="text-sm text-muted-foreground">Save a token to load incident data.</p>
+          ) : null}
+          {!loading && token && !incident && !error ? (
+            <p className="text-sm text-muted-foreground">Incident not found.</p>
+          ) : null}
+          {incident ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {incident.error_message || 'No error summary recorded.'}
               </p>
-            ) : null}
-          </section>
-
-          <section className="site-card operator-panel">
-            {loading ? <p className="site-text">Loading incident…</p> : null}
-            {!loading && !token ? (
-              <p className="operator-empty">
-                Save a token to load incident data.
-              </p>
-            ) : null}
-            {!loading && incident ? (
-              <>
-                <h2>{incident.service_name || incident.service_id}</h2>
-                <p className="site-text">
-                  {incident.error_message || "No error summary recorded."}
-                </p>
-
-                <div className="operator-detail-grid">
-                  <article className="site-card soft operator-detail-card">
-                    <span>Status</span>
-                    <strong>{incident.status}</strong>
-                  </article>
-                  <article className="site-card soft operator-detail-card">
-                    <span>Severity</span>
-                    <strong>{incident.severity}</strong>
-                  </article>
-                  <article className="site-card soft operator-detail-card">
-                    <span>Detected</span>
-                    <strong>{incident.detected_at || "Unknown"}</strong>
-                  </article>
-                  <article className="site-card soft operator-detail-card">
-                    <span>Resolved</span>
-                    <strong>{incident.resolved_at || "Still open"}</strong>
-                  </article>
-                </div>
-
-                <form
-                  className="operator-generate-form"
-                  onSubmit={handleGenerate}
-                >
-                  <label htmlFor="resolutionNotes">Resolution notes</label>
-                  <textarea
-                    id="resolutionNotes"
-                    rows="4"
-                    value={resolutionNotes}
-                    onChange={(event) => setResolutionNotes(event.target.value)}
-                    placeholder="Optional context for generated postmortem…"
-                  />
-                  <button
-                    className="site-btn primary"
-                    type="submit"
-                    disabled={generating}
-                  >
-                    {generating ? "Generating…" : "Generate postmortem"}
-                  </button>
-                </form>
-
-                <div className="site-card soft operator-panel">
-                  <h3>Postmortem</h3>
-                  <div className="operator-markdown">
-                    {incident.postmortem || "No postmortem generated yet."}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ['Status', incident.status],
+                  ['Severity', incident.severity],
+                  ['Detected', incident.detected_at || 'Unknown'],
+                  ['Resolved', incident.resolved_at || 'Still open'],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <p className="mt-1 text-sm font-medium">{value}</p>
                   </div>
-                </div>
-              </>
-            ) : null}
-          </section>
-        </div>
-      </main>
-
-      <SiteFooter links={FOOTER_LINKS} text="DevOps Sentinel incident detail" />
-    </div>
-  );
+                ))}
+              </div>
+              <form className="grid gap-2" onSubmit={handleGenerate}>
+                <Label htmlFor="resolutionNotes">Resolution notes</Label>
+                <textarea
+                  id="resolutionNotes"
+                  rows="4"
+                  value={resolutionNotes}
+                  onChange={(event) => setResolutionNotes(event.target.value)}
+                  placeholder="Optional context for generated postmortem…"
+                  className="min-h-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                />
+                <Button type="submit" disabled={generating} className="w-fit">
+                  {generating ? 'Generating…' : 'Generate postmortem'}
+                </Button>
+              </form>
+              <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                <h3 className="text-sm font-medium">Postmortem</h3>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-6">
+                  {incident.postmortem || 'No postmortem generated yet.'}
+                </pre>
+              </div>
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+    </OperatorShell>
+  )
 }

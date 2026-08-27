@@ -44,11 +44,18 @@ Useful local commands:
 sentinel whoami
 sentinel config
 sentinel doctor
+sentinel agents
 sentinel monitor https://api.example.com/health --failure-threshold 3
 sentinel postmortem generate <incident-id> --output postmortem.md
 ```
 
-Run `sentinel init --mode supabase` only when using existing Supabase auth and persistence.
+Run `sentinel init --mode supabase` only when using **your** Supabase project for auth and persistence. Sentinel does not host customer data.
+
+```bash
+sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
+sentinel schema --print   # paste into your SQL editor
+sentinel login            # authenticates against YOUR project
+```
 
 ## Configuration
 
@@ -172,12 +179,11 @@ Do not expose remote MCP directly to the public internet without authentication,
 
 Web console uses same terminal language as CLI:
 
-- black background
-- IBM Plex Mono typography
-- restrained borders and green health accent
+- black background and shadcn/ui dark theme
+- Geist typography with mono for commands
+- health accent on primary actions
 - keyboard-visible focus states
-- accessible tables and empty states
-- no glassmorphism or decorative gradients in operator surfaces
+- working routes for docs, CLI auth (BYO Supabase), and optional operator UI
 
 Run it during development:
 

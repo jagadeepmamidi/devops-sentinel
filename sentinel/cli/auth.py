@@ -71,6 +71,40 @@ def _write_user_config(values: dict[str, str]) -> None:
         CONFIG_FILE.chmod(0o600)
 
 
+def upsert_project_env(updates: dict[str, str], env_path: Path | None = None) -> Path:
+    """Create or update a project .env without dropping unrelated keys."""
+    path = env_path or Path(".env")
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    remaining = dict(updates)
+    written: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.split("=", 1)[0].strip()
+            if key in remaining:
+                written.append(f"{key}={remaining.pop(key)}")
+                continue
+        written.append(line)
+    if remaining:
+        if written and written[-1] != "":
+            written.append("")
+        for key, value in remaining.items():
+            written.append(f"{key}={value}")
+    path.write_text("\n".join(written).rstrip() + "\n", encoding="utf-8")
+    return path
+
+
+def enable_local_mode(env_path: Path | None = None) -> Path:
+    """Switch the current project to local SQLite identity."""
+    path = upsert_project_env(
+        {"SENTINEL_MODE": "local", "SENTINEL_DATA_DIR": ".sentinel"},
+        env_path=env_path,
+    )
+    os.environ["SENTINEL_MODE"] = "local"
+    os.environ.setdefault("SENTINEL_DATA_DIR", ".sentinel")
+    return path
+
+
 def set_user_config(key: str, value: str) -> str:
     """Persist one supported setting and return its environment variable name."""
     env_name = SUPPORTED_CONFIG_KEYS.get(key.lower().replace("-", "_"))
@@ -459,6 +493,9 @@ def build_browser_auth_url(
             "redirect_uri": redirect_uri,
             "source": source,
         }
+        anon_key = resolve_supabase_key()
+        if anon_key:
+            payload["supabase_anon_key"] = anon_key
         if state:
             payload["state"] = state
         query = urlencode(payload)
@@ -620,28 +657,49 @@ def require_auth(func):
     envvar="SENTINEL_WEB_URL",
     help="Website URL for Supabase compatibility-mode browser auth.",
 )
-def login(token: str | None, device: bool, supabase_url: str | None, web_url: str | None):
+@click.option(
+    "--local",
+    "force_local",
+    is_flag=True,
+    help="Switch this project to local SQLite mode. No hosted account.",
+)
+def login(
+    token: str | None,
+    device: bool,
+    supabase_url: str | None,
+    web_url: str | None,
+    force_local: bool,
+):
     """
-    Authenticate with DevOps Sentinel.
+    Authenticate with your own Supabase project, or stay local.
 
-    Opens browser for secure login. Use --token for CI/CD environments.
+    Local mode needs no login. Supabase mode uses the project you configured
+    with `sentinel init --mode supabase` — Sentinel does not host accounts.
 
     Examples:
 
+        sentinel login --local
         sentinel login
-
         sentinel login --token YOUR_API_TOKEN
         sentinel login --device
     """
+    if force_local:
+        env_path = enable_local_mode()
+        click.echo("\n[SENTINEL] Local mode enabled; login is not required.")
+        click.echo(f"  Wrote {env_path} with SENTINEL_MODE=local.")
+        click.echo("  Data is stored in SQLite. Next: sentinel health https://example.com")
+        return
+
     storage_mode = get_storage_mode()
     if storage_mode == "local":
         click.echo("\n[SENTINEL] Local mode enabled; login is not required.")
         click.echo("  Data is stored in SQLite. Use `sentinel config` to see its path.")
+        click.echo("  Team auth: sentinel init --mode supabase, then sentinel login.")
         return
     if storage_mode == "none":
         click.echo(click.style("\nError: Sentinel is not initialized.", fg="red"))
         click.echo(
-            "  Run `sentinel init` for local mode, or `sentinel init --mode supabase` for team auth."
+            "  Run `sentinel init` for local SQLite, or `sentinel init --mode supabase` to use YOUR project."
         )
         return
 

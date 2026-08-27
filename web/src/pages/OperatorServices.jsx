@@ -1,193 +1,112 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import SiteFooter from "../components/site/SiteFooter";
-import SiteTopNav from "../components/site/SiteTopNav";
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import OperatorShell from '../components/site/OperatorShell'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-	loadOperatorToken,
-	operatorFetch,
-	saveOperatorToken,
-} from "../lib/operatorApi";
-import "./Operator.css";
-
-const NAV_LINKS = [
-	{ to: "/operator/services", label: "Services" },
-	{ to: "/operator/incidents", label: "Incidents" },
-	{ to: "/docs", label: "Docs" },
-];
-
-const FOOTER_LINKS = [
-	{ to: "/privacy", label: "Privacy" },
-	{ to: "/terms", label: "Terms" },
-];
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { loadOperatorToken, operatorFetch } from '@/lib/operatorApi'
 
 export default function OperatorServices() {
-	const [tokenInput, setTokenInput] = useState(() => loadOperatorToken());
-	const [services, setServices] = useState([]);
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(false);
+  const [tokenInput, setTokenInput] = useState(() => loadOperatorToken())
+  const [services, setServices] = useState([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const token = loadOperatorToken()
 
-	const token = loadOperatorToken();
+  useEffect(() => {
+    if (!token) {
+      setServices([])
+      return undefined
+    }
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    operatorFetch('/api/services', token)
+      .then((payload) => {
+        if (!cancelled) setServices(payload.services || [])
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message)
+          setServices([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
-	useEffect(() => {
-		if (!token) {
-			return;
-		}
-
-		let cancelled = false;
-
-		Promise.resolve()
-			.then(() => {
-				if (!cancelled) {
-					setLoading(true);
-					setError("");
-				}
-				return operatorFetch("/api/services", token);
-			})
-			.then((payload) => {
-				if (!cancelled) {
-					setServices(payload.services || []);
-				}
-			})
-			.catch((err) => {
-				if (!cancelled) {
-					setError(err.message);
-					setServices([]);
-				}
-			})
-			.finally(() => {
-				if (!cancelled) {
-					setLoading(false);
-				}
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [token]);
-
-	function handleSaveToken(event) {
-		event.preventDefault();
-		saveOperatorToken(tokenInput.trim());
-		setError("");
-	}
-
-	return (
-		<div className="site-page">
-			<a className="site-skip-link" href="#operator-main">
-				Skip to content
-			</a>
-			<SiteTopNav links={NAV_LINKS} brandTo="/" />
-
-			<main id="operator-main" className="site-main site-container operator-main">
-				<div className="operator-stack">
-					<section className="site-card operator-panel">
-						<p className="site-label">Operator Console</p>
-						<h1 className="site-title">Services</h1>
-						<p className="site-text">
-							Paste a bearer token from your authenticated API session to inspect
-							monitored services.
-						</p>
-
-						<form className="operator-token-form" onSubmit={handleSaveToken}>
-							<input
-								type="password"
-								value={tokenInput}
-								onChange={(event) => setTokenInput(event.target.value)}
-								placeholder="Paste bearer token…"
-								aria-label="Bearer token"
-								name="token"
-								autoComplete="off"
-							/>
-							<button className="site-btn primary" type="submit">
-								Save token
-							</button>
-							<button
-								className="site-btn secondary"
-								type="button"
-								onClick={() => {
-									saveOperatorToken("");
-									setTokenInput("");
-									setServices([]);
-								}}
-							>
-								Clear
-							</button>
-						</form>
-						<p className="operator-note site-text">
-							Use the same token you use for authenticated `/api/*` requests.
-						</p>
-						{error ? (
-							<p className="operator-error" role="alert" aria-live="polite">
-								{error}
-							</p>
-						) : null}
-					</section>
-
-					<section className="site-card operator-panel">
-						<h2>Registered Services</h2>
-						{loading ? <p className="site-text">Loading services…</p> : null}
-						{!loading && !token ? (
-							<p className="operator-empty">Save a token to load services.</p>
-						) : null}
-						{!loading && token && services.length === 0 && !error ? (
-							<p className="operator-empty">No services found for this account.</p>
-						) : null}
-						{services.length > 0 ? (
-							<table className="operator-table">
-								<thead>
-									<tr>
-										<th>Name</th>
-										<th>Status</th>
-										<th>Check Interval</th>
-										<th>Last Check</th>
-									</tr>
-								</thead>
-								<tbody>
-									{services.map((service) => (
-										<tr key={service.id}>
-											<td>
-												<strong>{service.name}</strong>
-												<div>
-													<a
-														className="operator-link"
-														href={service.url}
-														target="_blank"
-														rel="noreferrer"
-													>
-														{service.url}
-													</a>
-												</div>
-											</td>
-											<td>
-												<span
-													className={`operator-status ${service.last_status || "unknown"}`}
-												>
-													{service.last_status || "unknown"}
-												</span>
-											</td>
-											<td>{service.check_interval}s</td>
-											<td>{service.last_checked_at || "Never"}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						) : null}
-					</section>
-
-					<section className="site-card soft operator-panel">
-						<h3>Next step</h3>
-						<p className="site-text">
-							Review active and historical incidents in the{" "}
-							<Link className="operator-link" to="/operator/incidents">
-								incidents console
-							</Link>
-							.
-						</p>
-					</section>
-				</div>
-			</main>
-
-			<SiteFooter links={FOOTER_LINKS} text="DevOps Sentinel operator console" />
-		</div>
-	);
+  return (
+    <OperatorShell
+      title="Services"
+      description="Inspect services registered in the API you are running. Paste a bearer token from that API session."
+      tokenInput={tokenInput}
+      setTokenInput={setTokenInput}
+      error={error}
+      extraActions={
+        <Link className="text-sm text-foreground underline" to="/operator/incidents">
+          View incidents
+        </Link>
+      }
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>Registered services</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? <p className="text-sm text-muted-foreground">Loading services…</p> : null}
+          {!loading && !token ? (
+            <p className="text-sm text-muted-foreground">Save a token to load services.</p>
+          ) : null}
+          {!loading && token && services.length === 0 && !error ? (
+            <p className="text-sm text-muted-foreground">No services found for this account.</p>
+          ) : null}
+          {services.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Interval</TableHead>
+                  <TableHead>Last check</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {services.map((service) => (
+                  <TableRow key={service.id}>
+                    <TableCell>
+                      <p className="font-medium">{service.name}</p>
+                      <a
+                        className="break-all text-xs text-muted-foreground underline"
+                        href={service.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {service.url}
+                      </a>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{service.last_status || 'unknown'}</Badge>
+                    </TableCell>
+                    <TableCell>{service.check_interval}s</TableCell>
+                    <TableCell>{service.last_checked_at || 'Never'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : null}
+        </CardContent>
+      </Card>
+    </OperatorShell>
+  )
 }
