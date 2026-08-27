@@ -1,296 +1,200 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import SiteTopNav from "../components/site/SiteTopNav";
-import SiteFooter from "../components/site/SiteFooter";
-import { supabase } from "../lib/supabase";
-import "./CliAuth.css";
-
-const NAV_LINKS = [
-  { to: "/docs", label: "Docs" },
-  { to: "/", label: "Home" },
-];
-
-const FOOTER_LINKS = [
-  { to: "/terms", label: "Terms" },
-  { to: "/privacy", label: "Privacy" },
-];
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import SiteLayout from '../components/site/SiteLayout'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { createSupabaseClient } from '@/lib/supabase'
 
 export default function CliAuth() {
-  const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [provider, setProvider] = useState("openrouter");
-  const [session, setSession] = useState(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [showKeyNudge, setShowKeyNudge] = useState(false);
-  const [savingKey, setSavingKey] = useState(false);
-  const [keySaved, setKeySaved] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [searchParams] = useSearchParams()
+  const [email, setEmail] = useState('')
+  const [session, setSession] = useState(null)
+  const [emailSent, setEmailSent] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const redirectUri =
-    searchParams.get("redirect_uri") || `${window.location.origin}/cli-auth`;
-  const state = searchParams.get("state") || "";
-  const apiBase = import.meta.env.VITE_API_URL || "";
-  const hasConfig = Boolean(supabase);
+    searchParams.get('redirect_uri') || `${window.location.origin}/cli-auth`
+  const state = searchParams.get('state') || ''
+  const supabaseUrl = searchParams.get('supabase_url') || ''
+  const supabaseAnonKey =
+    searchParams.get('supabase_anon_key') || searchParams.get('supabase_key') || ''
+
+  const client = useMemo(
+    () => createSupabaseClient(supabaseUrl, supabaseAnonKey),
+    [supabaseUrl, supabaseAnonKey],
+  )
+  const hasProject = Boolean(client)
 
   useEffect(() => {
-    if (!supabase) return undefined;
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) {
-        setSession(data.session);
-        setShowKeyNudge(true);
-      }
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-        if (nextSession) setShowKeyNudge(true);
-      },
-    );
+    if (!client) return undefined
+    let active = true
+    client.auth.getSession().then(({ data }) => {
+      if (active && data.session) setSession(data.session)
+    })
+    const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+    })
     return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  async function signInWithProvider(nextProvider) {
-    setError("");
-    if (!supabase) {
-      setError(
-        "Auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
-      );
-      return;
+      active = false
+      listener.subscription.unsubscribe()
     }
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: nextProvider,
+  }, [client])
+
+  async function signInWithProvider(provider) {
+    setError('')
+    if (!client) {
+      setError('This page authenticates against YOUR Supabase project. Run sentinel login from a project initialized with --mode supabase.')
+      return
+    }
+    const { error: authError } = await client.auth.signInWithOAuth({
+      provider,
       options: {
         redirectTo: redirectUri,
         queryParams: state ? { state } : undefined,
       },
-    });
-    if (authError) setError(authError.message);
+    })
+    if (authError) setError(authError.message)
   }
 
   async function sendMagicLink(event) {
-    event.preventDefault();
-    setError("");
-    if (!supabase) {
-      setError(
-        "Auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
-      );
-      return;
+    event.preventDefault()
+    setError('')
+    if (!client) {
+      setError('Missing supabase_url and supabase_anon_key from the CLI callback.')
+      return
     }
-    const { error: authError } = await supabase.auth.signInWithOtp({
+    const { error: authError } = await client.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectUri },
-    });
-    if (authError) setError(authError.message);
-    else setEmailSent(true);
-  }
-
-  async function saveApiKey(event) {
-    event.preventDefault();
-    if (!session?.access_token || !apiKey.trim()) return;
-    setSavingKey(true);
-    setError("");
-    try {
-      const response = await fetch(`${apiBase}/api/setup/ai/key`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ provider, api_key: apiKey.trim() }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(payload.detail || "Could not save API key.");
-      setApiKey("");
-      setKeySaved(true);
-      setShowKeyNudge(false);
-    } catch (saveError) {
-      setError(saveError.message);
-    } finally {
-      setSavingKey(false);
-    }
+    })
+    if (authError) setError(authError.message)
+    else setEmailSent(true)
   }
 
   async function copyDeviceCommand() {
     try {
-      await navigator.clipboard.writeText("sentinel login --device");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      await navigator.clipboard.writeText('sentinel login --device')
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
     } catch {
-      setCopied(false);
+      setCopied(false)
     }
   }
 
   return (
-    <div className="site-page cli-auth-page">
-      <a className="site-skip-link" href="#auth-main">
-        Skip to content
-      </a>
-      <SiteTopNav links={NAV_LINKS} />
-      <main id="auth-main" className="site-main site-container cli-auth-main">
-        <section className="site-card cli-auth-panel">
-          <p className="site-label">Secure access / OAuth 2.0</p>
-          <h1 className="site-title">Sign in to continue in terminal</h1>
-          <p className="site-text">
-            Browser authentication returns a bearer access token to Sentinel.
-            Session refresh and storage stay with Supabase Auth.
-          </p>
+    <SiteLayout>
+      <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <Card>
+          <CardHeader>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              CLI auth helper
+            </p>
+            <CardTitle className="text-3xl tracking-tight">
+              Sign in to your Supabase, not ours
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Sentinel does not host accounts. This page is opened by{' '}
+              <code className="font-mono text-foreground">sentinel login</code> and uses the
+              project URL and anon key from your CLI config.
+            </p>
 
-          <div className="site-btn-row cli-auth-provider-row">
-            <button
-              className="site-btn primary"
-              type="button"
-              onClick={() => signInWithProvider("google")}
-              disabled={!hasConfig}
-            >
-              Continue with Google
-            </button>
-            <button
-              className="site-btn secondary"
-              type="button"
-              onClick={() => signInWithProvider("github")}
-              disabled={!hasConfig}
-            >
-              Continue with GitHub
-            </button>
-          </div>
+            {!hasProject && (
+              <Alert>
+                <AlertTitle>No project in this URL</AlertTitle>
+                <AlertDescription>
+                  Use local mode with <code className="font-mono">sentinel init</code>, or
+                  initialize Supabase mode and run <code className="font-mono">sentinel login</code>{' '}
+                  so this page receives your project parameters.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          <form className="cli-auth-email-form" onSubmit={sendMagicLink}>
-            <label htmlFor="auth-email">Email magic link</label>
-            <div className="cli-auth-email-row">
-              <input
-                id="auth-email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@company.com"
-              />
-              <button
-                className="site-btn secondary"
-                type="submit"
-                disabled={!hasConfig}
+            {hasProject && (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                Project: {supabaseUrl}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" onClick={() => signInWithProvider('google')} disabled={!hasProject}>
+                Continue with Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => signInWithProvider('github')}
+                disabled={!hasProject}
               >
-                Send link
-              </button>
+                Continue with GitHub
+              </Button>
             </div>
-          </form>
-          {emailSent && (
-            <p className="cli-auth-success" role="status">
-              Check email for secure sign-in link.
-            </p>
-          )}
-          {error && (
-            <p className="cli-auth-error" role="alert">
-              {error}
-            </p>
-          )}
-          {keySaved && (
-            <p className="cli-auth-success" role="status">
-              AI provider key saved securely.
-            </p>
-          )}
-          {!hasConfig && (
-            <div className="cli-auth-warning">
-              Set <code className="site-inline-code">VITE_SUPABASE_URL</code>{" "}
-              and{" "}
-              <code className="site-inline-code">VITE_SUPABASE_ANON_KEY</code>{" "}
-              before enabling auth.
-            </div>
-          )}
 
-          {session && (
-            <div className="cli-auth-session">
-              <span className="cli-auth-dot" /> Signed in as{" "}
-              {session.user.email}
-            </div>
-          )}
-        </section>
-
-        <aside className="site-card soft cli-auth-terminal">
-          <h2>Terminal fallback</h2>
-          <pre className="site-code-block">{`$ sentinel login
-$ sentinel services add my-api https://api.example.com/health
-$ sentinel monitor https://api.example.com/health`}</pre>
-          <p className="site-text">
-            If browser callback is blocked, use device flow:
-          </p>
-          <button
-            className="site-btn secondary cli-auth-copy-btn"
-            onClick={copyDeviceCommand}
-            type="button"
-          >
-            {copied ? "Copied" : "Copy: sentinel login --device"}
-          </button>
-          <span className="sr-only" aria-live="polite">
-            {copied ? "Device login command copied." : ""}
-          </span>
-        </aside>
-      </main>
-
-      {showKeyNudge && session && (
-        <div className="cli-auth-modal-backdrop" role="presentation">
-          <section
-            className="site-card cli-auth-key-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="api-key-title"
-          >
-            <p className="site-label">One last setup step</p>
-            <h2 id="api-key-title">Connect an AI provider?</h2>
-            <p className="site-text">
-              Sentinel agents use your provider key for explanations and
-              postmortems. Key is encrypted server-side and never returned to
-              browser.
-            </p>
-            <form onSubmit={saveApiKey}>
-              <label htmlFor="provider">Provider</label>
-              <select
-                id="provider"
-                value={provider}
-                onChange={(event) => setProvider(event.target.value)}
-              >
-                <option value="openrouter">OpenRouter</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
-              <label htmlFor="api-key">API key</label>
-              <input
-                id="api-key"
-                type="password"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="sk-..."
-                autoComplete="off"
-                required
-              />
-              <div className="site-btn-row">
-                <button
-                  className="site-btn primary"
-                  type="submit"
-                  disabled={savingKey}
-                >
-                  {savingKey ? "Saving..." : "Save key"}
-                </button>
-                <button
-                  className="site-btn secondary"
-                  type="button"
-                  onClick={() => setShowKeyNudge(false)}
-                >
-                  Skip for now
-                </button>
+            <form className="grid gap-2" onSubmit={sendMagicLink}>
+              <Label htmlFor="auth-email">Email magic link</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="auth-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@company.com"
+                  disabled={!hasProject}
+                />
+                <Button type="submit" variant="secondary" disabled={!hasProject}>
+                  Send link
+                </Button>
               </div>
             </form>
-          </section>
-        </div>
-      )}
-      <SiteFooter links={FOOTER_LINKS} text="DevOps Sentinel auth" />
-    </div>
-  );
+
+            {emailSent ? (
+              <p className="text-sm text-primary" role="status">
+                Check email for the sign-in link from your Supabase project.
+              </p>
+            ) : null}
+            {error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {session ? (
+              <p className="text-sm text-primary">
+                Signed in as {session.user.email}. You can return to the terminal.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Prefer local?</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <pre className="overflow-x-auto rounded-lg border border-border bg-secondary/40 p-4 font-mono text-[13px] leading-6">{`$ sentinel init
+$ sentinel login --local
+$ sentinel services add my-api https://api.example.com/health
+$ sentinel monitor my-api`}</pre>
+            <p className="text-sm text-muted-foreground">
+              SSH / no browser callback: device flow still uses your Supabase project.
+            </p>
+            <Button type="button" variant="outline" onClick={copyDeviceCommand}>
+              {copied ? 'Copied' : 'Copy: sentinel login --device'}
+            </Button>
+            <Button asChild variant="ghost">
+              <Link to="/docs#supabase">Read BYO Supabase docs</Link>
+            </Button>
+            <span className="sr-only" aria-live="polite">
+              {copied ? 'Device login command copied.' : ''}
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+    </SiteLayout>
+  )
 }

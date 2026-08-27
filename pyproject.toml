@@ -115,6 +115,7 @@ packages = [
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml"]
+"sentinel.setup" = ["*.sql"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["__pycache__/*", "*.py[cod]"]

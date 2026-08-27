@@ -1,76 +1,107 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import SiteBrand from "./SiteBrand";
+import { Link, useLocation } from 'react-router-dom'
+import { Menu } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { PRIMARY_NAV } from '@/lib/site'
+import SiteBrand from './SiteBrand'
 
-export default function SiteTopNav({ links = [], brandTo = "/" }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const location = useLocation();
-  const menuId = "site-primary-navigation";
+function NavItem({ item, className = '', onNavigate }) {
+  const location = useLocation()
+  const path = item.to?.split('#')[0]
+  const active = Boolean(
+    path &&
+      (location.pathname === path ||
+        (path !== '/' && location.pathname.startsWith(`${path}/`))),
+  )
 
-  const closeMenu = () => setMenuOpen(false);
-  const isActive = (item) =>
-    Boolean(
-      item.to &&
-        (location.pathname === item.to ||
-          location.pathname.startsWith(`${item.to}/`)),
-    );
+  const classes = [
+    'text-sm text-muted-foreground transition-colors hover:text-foreground',
+    item.className === 'outline'
+      ? 'rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-foreground hover:bg-secondary'
+      : '',
+    active ? 'text-foreground' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  if (item.href) {
+    return (
+      <a
+        className={classes}
+        href={item.href}
+        target={item.external ? '_blank' : undefined}
+        rel={item.external ? 'noopener noreferrer' : undefined}
+        onClick={onNavigate}
+      >
+        {item.label}
+      </a>
+    )
+  }
 
   return (
-    <nav className="site-nav site-container" aria-label="Primary navigation">
-      <span className="site-nav-prompt" aria-hidden="true">
-        sentinel@console:~$
-      </span>
-      <SiteBrand to={brandTo} onNavigate={closeMenu} />
-      {links.length > 0 && (
-        <button
-          className="site-nav-toggle"
-          type="button"
-          aria-expanded={menuOpen}
-          aria-controls={menuId}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span aria-hidden="true">{menuOpen ? "×" : "☰"}</span>
-          <span>{menuOpen ? "Close" : "Menu"}</span>
-        </button>
-      )}
-      <div
-        id={menuId}
-        className={`site-nav-links ${menuOpen ? "is-open" : ""}`.trim()}
+    <Link
+      className={classes}
+      to={item.to || '/'}
+      aria-current={active ? 'page' : undefined}
+      onClick={onNavigate}
+    >
+      {item.label}
+    </Link>
+  )
+}
+
+export default function SiteTopNav({ links = PRIMARY_NAV, brandTo = '/' }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur">
+      <nav
+        className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+        aria-label="Primary navigation"
       >
-        {links.map((item) => {
-          const active = isActive(item);
-          const className = `site-nav-link ${item.className || ""} ${
-            active ? "active" : ""
-          }`.trim();
+        <SiteBrand to={brandTo} />
 
-          if (item.href) {
-            return (
-              <a
-                key={item.key || item.label}
-                className={className}
-                href={item.href}
-                target={item.external ? "_blank" : undefined}
-                rel={item.external ? "noopener noreferrer" : undefined}
-                onClick={closeMenu}
-              >
-                {item.label}
-              </a>
-            );
-          }
+        <div className="hidden items-center gap-5 md:flex">
+          {links.map((item) => (
+            <NavItem key={item.key || item.label} item={item} />
+          ))}
+        </div>
 
-          return (
-            <Link
-              key={item.key || item.label}
-              className={className}
-              to={item.to || "/"}
-              aria-current={active ? "page" : undefined}
-              onClick={closeMenu}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="md:hidden"
+              aria-label="Open menu"
             >
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
+              <Menu className="size-4" />
+              Menu
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-72">
+            <SheetHeader>
+              <SheetTitle>Sentinel</SheetTitle>
+            </SheetHeader>
+            <Separator />
+            <div className="flex flex-col gap-4 px-4">
+              {links.map((item) => (
+                <SheetClose asChild key={item.key || item.label}>
+                  <NavItem item={item} className="text-base" />
+                </SheetClose>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </nav>
+    </header>
+  )
 }

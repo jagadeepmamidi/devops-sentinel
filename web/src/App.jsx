@@ -9,7 +9,7 @@ import CliAuth from './pages/CliAuth'
 import OperatorServices from './pages/OperatorServices'
 import OperatorIncidents from './pages/OperatorIncidents'
 import OperatorIncidentDetail from './pages/OperatorIncidentDetail'
-import './App.css'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -25,6 +25,7 @@ function App() {
         <Route path="/operator/services" element={<OperatorServices />} />
         <Route path="/operator/incidents" element={<OperatorIncidents />} />
         <Route path="/operator/incidents/:incidentId" element={<OperatorIncidentDetail />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )

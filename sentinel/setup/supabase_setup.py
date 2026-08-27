@@ -5,16 +5,16 @@ Supabase setup helpers aligned to the MVP schema.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from sentinel.auth.auth_service import get_current_user
+from sentinel.setup.schema_files import schema_sql_path
 
 SUPABASE_ACCESS_TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
-SCHEMA_PATH = Path(__file__).resolve().parents[2] / "supabase" / "schema.sql"
+SCHEMA_PATH = schema_sql_path()
 
 
 class SupabaseSetupRequest(BaseModel):

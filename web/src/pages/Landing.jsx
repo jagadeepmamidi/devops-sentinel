@@ -1,172 +1,194 @@
-import { useState } from 'react'
+import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
-import OrbitalScene from '../components/site/OrbitalScene'
-import SiteTopNav from '../components/site/SiteTopNav'
-import SiteFooter from '../components/site/SiteFooter'
-import './Landing.css'
+import { ArrowRight, Database, Shield, Terminal } from 'lucide-react'
+import AgentPipeline from '../components/site/AgentPipeline'
+import CommandInstall from '../components/site/CommandInstall'
+import SiteLayout from '../components/site/SiteLayout'
+import TerminalReplay from '../components/site/TerminalReplay'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-const NAV_LINKS = [
-  { to: '/about', label: 'Why Sentinel' },
-  { to: '/docs', label: 'Docs' },
-  {
-    href: 'https://github.com/jagadeepmamidi/devops-sentinel',
-    label: 'GitHub',
-    external: true,
-  },
-  { to: '/cli-auth', label: 'Open Console', className: 'outline' },
-]
-
-const FOOTER_LINKS = [
-  { to: '/about', label: 'About' },
-  { to: '/docs', label: 'Docs' },
-  { to: '/terms', label: 'Terms' },
-  { to: '/privacy', label: 'Privacy' },
-]
+const OrbitalScene = lazy(() => import('../components/site/OrbitalScene'))
 
 const healthRows = [
-  { name: 'api-gateway', url: '/health', latency: '84 ms', status: 'Nominal', width: '88%' },
-  { name: 'checkout-worker', url: '/ready', latency: '112 ms', status: 'Nominal', width: '72%' },
-  { name: 'edge-cache', url: '/ping', latency: '96 ms', status: 'Watching', width: '80%' },
+  { name: 'api-gateway', url: '/health', latency: '84 ms', status: 'Healthy' },
+  { name: 'checkout-worker', url: '/ready', latency: '112 ms', status: 'Healthy' },
+  { name: 'edge-cache', url: '/ping', latency: '96 ms', status: 'Watching' },
 ]
 
 export default function Landing() {
-  const [copied, setCopied] = useState(false)
-
-  const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText('pip install devops-sentinel')
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch {
-      setCopied(false)
-    }
-  }
-
   return (
-    <div className="site-page landing-page">
-      <a className="site-skip-link" href="#landing-main">Skip to content</a>
-      <SiteTopNav links={NAV_LINKS} />
-
-      <main id="landing-main" className="site-main site-container">
-        <section className="landing-hero-grid">
-          <div className="landing-hero-copy">
-            <div className="landing-eyebrow">
-              <span className="landing-eyebrow-dot" />
-              Autonomous SRE intelligence / v0.2
-            </div>
-            <h1 className="landing-headline">
-              See every signal <span>before</span> it becomes an incident.
+    <SiteLayout>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
+        <section className="grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-16">
+          <div className="max-w-xl">
+            <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest">
+              Terminal-first SRE · v0.1.2
+            </Badge>
+            <h1 className="mt-5 text-4xl font-medium tracking-tight text-balance sm:text-5xl lg:text-6xl">
+              Watch the endpoint. Keep the incident in your own store.
             </h1>
-            <p className="landing-lede">
-              DevOps Sentinel watches the systems that matter, turns noisy telemetry into a clear
-              operational picture, and gives your team the next move from the terminal.
+            <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
+              DevOps Sentinel is a local-first CLI for health checks, multi-agent incident
+              response, and postmortems. SQLite by default. Optional login against{' '}
+              <strong className="font-medium text-foreground">your</strong> Supabase project.
+              We do not host or store your operational data.
             </p>
-
-            <div className="site-btn-row landing-hero-actions">
-              <Link to="/cli-auth" className="site-btn primary">Start monitoring <span>↗</span></Link>
-              <Link to="/docs" className="site-btn secondary">Explore the workflow</Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild>
+                <Link to="/docs#quickstart">
+                  Get started
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/docs#agents">See the agent loop</Link>
+              </Button>
             </div>
-
-            <div className="landing-install-row">
-              <div className="landing-install-pill" role="group" aria-label="Install command">
-                <span className="landing-command-prompt">$</span>
-                <code>pip install devops-sentinel</code>
-                <button className="landing-copy-btn" onClick={copyCommand} type="button">
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <span className="landing-install-note">Python · open source · local-first</span>
+            <div className="mt-6">
+              <CommandInstall />
             </div>
-            <span className="sr-only" aria-live="polite">
-              {copied ? 'Install command copied.' : ''}
-            </span>
           </div>
 
-          <div className="landing-hero-visual site-card" aria-label="Live monitoring visualization">
-            <div className="landing-visual-header">
+          <div
+            className="relative min-h-[360px] overflow-hidden rounded-xl border border-border bg-card sm:min-h-[420px]"
+            aria-label="Service mesh visualization"
+          >
+            <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
               <div>
-                <span className="landing-overline">Sentinel mesh</span>
-                <strong>Production / all systems</strong>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Local mesh
+                </p>
+                <p className="text-sm font-medium">production-api · SQLite</p>
               </div>
-              <span className="landing-live-pill"><span /> Live</span>
+              <Badge variant="secondary">Live demo</Badge>
             </div>
-            <OrbitalScene />
-            <div className="landing-visual-readout landing-visual-readout-top">
-              <span>Signal integrity</span><strong>99.98%</strong>
-            </div>
-            <div className="landing-visual-readout landing-visual-readout-bottom">
-              <span>Last pulse</span><strong>00:00:04</strong>
-            </div>
-            <div className="landing-orbit-caption"><span>◉</span> 12 services · 3 regions · 0 open incidents</div>
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+                  Loading mesh…
+                </div>
+              }
+            >
+              <OrbitalScene />
+            </Suspense>
+            <p className="absolute inset-x-4 bottom-4 z-10 font-mono text-xs text-muted-foreground">
+              Watcher · First Responder · Investigator · Strategist
+            </p>
           </div>
         </section>
 
-        <section className="landing-signal-bar" aria-label="Current system signal">
-          <div className="landing-signal-main">
-            <span className="landing-signal-icon">↗</span>
-            <div><span className="landing-overline">Current signal</span><strong>All monitored surfaces are nominal</strong></div>
-          </div>
-          <div className="landing-signal-meta"><span>Last scan</span><strong>4 sec ago</strong><i /><span>Next scan</span><strong>26 sec</strong></div>
+        <section className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              icon: Terminal,
+              title: 'CLI first',
+              body: 'Install, init, monitor, and generate postmortems without a hosted account.',
+            },
+            {
+              icon: Database,
+              title: 'Your store',
+              body: 'Local SQLite, or connect the Supabase project you already own. Sentinel never keeps a copy.',
+            },
+            {
+              icon: Shield,
+              title: 'Safe agents',
+              body: 'Agents propose the next move. Anything with side effects waits for a human.',
+            },
+          ].map((item) => (
+            <Card key={item.title} className="border-border">
+              <CardHeader>
+                <item.icon className="size-4 text-primary" />
+                <CardTitle className="text-base">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-6 text-muted-foreground">{item.body}</p>
+              </CardContent>
+            </Card>
+          ))}
         </section>
 
-        <section className="landing-section-heading">
-          <div>
-            <span className="landing-overline">From noise to signal</span>
-            <h2>An operational cockpit that stays out of the way.</h2>
-          </div>
-          <p>One clean loop for the moments that matter: observe, understand, respond, learn.</p>
-        </section>
-
-        <section className="landing-system-grid">
-          <article className="site-card landing-health-card">
-            <div className="landing-card-heading">
-              <div><span className="landing-overline">Live surface map</span><h3>Service health</h3></div>
-              <span className="landing-card-count">03 / 03</span>
-            </div>
-            <div className="landing-health-list">
+        <section className="mt-16 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <Card>
+            <CardHeader>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Health surface
+              </p>
+              <CardTitle>Continuous checks, not a dashboard you babysit</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
               {healthRows.map((row) => (
-                <div className="landing-health-row" key={row.name}>
-                  <div className="landing-health-name"><span className="landing-health-dot" /><strong>{row.name}</strong><code>{row.url}</code></div>
-                  <div className="landing-health-bar"><span style={{ width: row.width }} /></div>
-                  <span className={`landing-health-status ${row.status === 'Watching' ? 'watching' : ''}`}>{row.status}</span>
-                  <span className="landing-health-latency">{row.latency}</span>
+                <div
+                  key={row.name}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border pt-3 sm:grid-cols-[minmax(0,1.4fr)_auto_auto]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-sm">{row.name}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{row.url}</p>
+                  </div>
+                  <Badge variant={row.status === 'Watching' ? 'outline' : 'secondary'}>
+                    {row.status}
+                  </Badge>
+                  <span className="hidden font-mono text-xs text-muted-foreground sm:inline">
+                    {row.latency}
+                  </span>
                 </div>
               ))}
+              <Button asChild variant="link" className="h-auto justify-start px-0">
+                <Link to="/docs#commands">CLI reference →</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <AgentPipeline />
+        </section>
+
+        <section className="mt-16 grid items-center gap-8 lg:grid-cols-2">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Two ways to persist
+            </p>
+            <h2 className="mt-3 text-3xl font-medium tracking-tight">
+              Local by default. Supabase only if you bring it.
+            </h2>
+            <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
+              `sentinel init` writes SQLite under `.sentinel/`. Team mode is{' '}
+              `sentinel init --mode supabase` against your project URL and anon key. Auth,
+              incidents, and postmortems stay in that project.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button asChild variant="outline">
+                <Link to="/docs#local">Local mode</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/docs#supabase">Bring your Supabase</Link>
+              </Button>
             </div>
-            <div className="landing-health-footer"><span><i /> Response time / last 24h</span><Link to="/docs">View runbook →</Link></div>
-          </article>
+          </div>
+          <TerminalReplay />
+        </section>
 
-          <aside className="site-card landing-loop-card">
-            <span className="landing-overline">The Sentinel loop</span>
-            <h3>Move from alert to action with context intact.</h3>
-            <div className="landing-loop-list">
-              <div className="landing-loop-item"><span>01</span><div><strong>Observe</strong><p>Continuous checks across every endpoint.</p></div></div>
-              <div className="landing-loop-item"><span>02</span><div><strong>Understand</strong><p>Anomalies become concise incident context.</p></div></div>
-              <div className="landing-loop-item"><span>03</span><div><strong>Respond</strong><p>Runbooks and next steps at your fingertips.</p></div></div>
+        <Card className="mt-16">
+          <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Next
+              </p>
+              <h2 className="mt-2 text-2xl font-medium tracking-tight">
+                Install once. Monitor from the terminal you already use.
+              </h2>
             </div>
-          </aside>
-        </section>
-
-        <section className="landing-terminal-section">
-          <div className="landing-terminal-copy">
-            <span className="landing-overline">Terminal-native by design</span>
-            <h2>Your best interface is already open.</h2>
-            <p>Install once, authenticate in your browser, then keep your operational loop in the terminal you trust.</p>
-            <Link to="/docs" className="landing-text-link">Read the quick start <span>→</span></Link>
-          </div>
-          <div className="landing-terminal-window">
-            <div className="landing-terminal-topbar"><span className="landing-terminal-dots"><i /><i /><i /></span><span>sentinel / production</span><span className="landing-terminal-lock">⌘</span></div>
-            <pre aria-label="Sample Sentinel terminal output"><span className="term-dim">$ sentinel setup</span>{'\n'}<span className="term-green">OK</span> local identity ready{ '\n' }<span className="term-green">OK</span> OpenRouter key stored securely{ '\n' }<span className="term-green">OK</span> monitoring <span className="term-blue">example.com</span>{'\n\n'}<span className="term-dim">$ sentinel status</span>{'\n'}<span className="term-green">●</span> all systems operational{ '\n' }<span className="term-dim">↳ next scan in 26s</span></pre>
-          </div>
-        </section>
-
-        <section className="landing-cta site-card">
-          <div><span className="landing-overline">Ready when you are</span><h2>Give your on-call a better signal.</h2></div>
-          <div className="site-btn-row"><Link to="/cli-auth" className="site-btn primary">Open the console <span>↗</span></Link><Link to="/about" className="site-btn secondary">Meet the project</Link></div>
-        </section>
-      </main>
-
-      <SiteFooter links={FOOTER_LINKS} text="DevOps Sentinel · Built for calm on-call" />
-    </div>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild>
+                <Link to="/docs#quickstart">Open the quick start</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/about">Why this exists</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </SiteLayout>
   )
 }
