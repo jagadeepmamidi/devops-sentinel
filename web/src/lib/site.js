@@ -6,7 +6,7 @@ export const SCHEMA_PATH = 'supabase/schema.sql'
 
 export const PRIMARY_NAV = [
   { to: '/docs', label: 'Docs' },
-  { to: '/docs#quickstart', label: 'CLI' },
+  { to: '/docs#commands', label: 'CLI' },
   { to: '/about', label: 'About' },
   { href: GITHUB_URL, label: 'GitHub', external: true },
   { to: '/docs#quickstart', label: 'Install', className: 'outline' },

@@ -685,7 +685,7 @@ def init(mode, supabase_url, anon_key):
         click.echo("  sentinel health https://example.com")
         click.echo("  sentinel services add api https://example.com/health")
     else:
-        from ..setup.supabase_setup import schema_sql_path
+        from ..setup.schema_files import schema_sql_path
 
         click.echo(
             f"\n{click.style('Done!', fg='green')} Using YOUR Supabase project. Sentinel does not store this data."
@@ -874,7 +874,7 @@ cli.add_command(monitor, name="watch")
 @click.option("--output", "-o", type=click.Path(), help="Write schema SQL to a file")
 def schema_cmd(print_sql, output):
     """Show the SQL to apply in YOUR Supabase SQL editor."""
-    from ..setup.supabase_setup import schema_sql_path
+    from ..setup.schema_files import schema_sql_path
 
     path = schema_sql_path()
     if not path.exists():
