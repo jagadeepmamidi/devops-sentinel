@@ -71,7 +71,7 @@ def console():
     return _render("console")
 
 
-def _parse_expect(status, body, json_path, json_equals, ssl_min_days) -> "HealthExpect":
+def _parse_expect(status, body, json_path, json_equals, ssl_min_days):
     from ..core.health_spec import HealthExpect
 
     return HealthExpect.from_mapping(
