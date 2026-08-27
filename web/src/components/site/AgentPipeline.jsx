@@ -1,20 +1,27 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+
 const AGENTS = [
   {
+    id: '01',
     name: 'Watcher',
     role: 'Detect',
     detail: 'Health, latency, SSL, and retries until a failure threshold is crossed.',
   },
   {
+    id: '02',
     name: 'First Responder',
     role: 'Alert',
     detail: 'Open an incident, keep evidence, and notify Slack or your on-call channel.',
   },
   {
+    id: '03',
     name: 'Investigator',
     role: 'Correlate',
     detail: 'Timeline, deployments, dependencies, and prior incidents stay attached.',
   },
   {
+    id: '04',
     name: 'Strategist',
     role: 'Plan',
     detail: 'Response plan and postmortem. Destructive actions wait for human approval.',
@@ -23,40 +30,34 @@ const AGENTS = [
 
 export default function AgentPipeline() {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-end lg:gap-16">
-      <div className="max-w-[65ch]">
-        <h2 className="text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+    <Card className="border-border bg-card">
+      <CardHeader className="gap-2">
+        <Badge variant="outline" className="w-fit font-mono text-[10px] uppercase tracking-widest">
+          Multi-agent loop
+        </Badge>
+        <CardTitle className="text-xl tracking-tight">
           Four roles. One approval boundary.
-        </h2>
-        <p className="mt-4 max-w-[42ch] text-sm leading-7 text-muted-foreground">
-          Sentinel coordinates agents in the terminal. They recommend. They do not change
+        </CardTitle>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Sentinel coordinates agents in the terminal. They recommend; they do not change
           infrastructure unless you approve it.
         </p>
-      </div>
-      <ol className="relative">
-        <span
-          className="absolute bottom-4 left-[7px] top-4 w-px bg-gradient-to-b from-white/25 via-white/10 to-transparent"
-          aria-hidden="true"
-        />
-        {AGENTS.map((agent, index) => (
-          <li
-            key={agent.name}
-            className="relative grid grid-cols-[16px_minmax(0,1fr)] gap-4 py-4"
-            style={{ paddingRight: `${Math.max(0, 3 - index) * 5}%` }}
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2">
+        {AGENTS.map((agent) => (
+          <article
+            key={agent.id}
+            className="rounded-lg border border-border bg-secondary/20 p-4"
           >
-            <span className="relative z-10 mt-1.5 size-2 rounded-full border border-white/40 bg-zinc-950 shadow-[0_0_0_4px_rgba(12,12,14,0.95)]" />
-            <div>
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="text-base font-medium">{agent.name}</h3>
-                <span className="text-sm text-muted-foreground">{agent.role}</span>
-              </div>
-              <p className="mt-1 max-w-[65ch] text-sm leading-6 text-muted-foreground">
-                {agent.detail}
-              </p>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="font-mono text-[11px] text-muted-foreground">{agent.id}</span>
+              <Badge variant="secondary">{agent.role}</Badge>
             </div>
-          </li>
+            <h3 className="text-sm font-medium">{agent.name}</h3>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{agent.detail}</p>
+          </article>
         ))}
-      </ol>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

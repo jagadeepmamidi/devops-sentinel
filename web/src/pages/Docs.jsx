@@ -2,7 +2,9 @@ import { useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import CommandInstall from '../components/site/CommandInstall'
 import SiteLayout from '../components/site/SiteLayout'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GITHUB_URL, INSTALL_COMMAND } from '@/lib/site'
 
 const SECTIONS = [
@@ -54,7 +56,10 @@ export default function Docs() {
   return (
     <SiteLayout>
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-20 lg:self-start">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Documentation
+          </p>
           <nav className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible" aria-label="Docs sections">
             {SECTIONS.map((section) => (
               <a
@@ -75,27 +80,32 @@ export default function Docs() {
 
         <article className="grid gap-10">
           <section id="overview" className="scroll-mt-24">
-            <h1 className="text-4xl font-medium tracking-tight text-balance">
+            <Badge variant="outline">Operator guide</Badge>
+            <h1 className="mt-4 text-4xl font-medium tracking-tight">
               CLI-first incident response, without giving us your data
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
               Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, runs a
               staged agent workflow, and writes evidence to SQLite or to a Supabase project you
-              control. The website is documentation and a browser helper for your own auth - not a
+              control. The website is documentation and a browser helper for your own auth — not a
               hosted control plane.
             </p>
-            <dl className="mt-8 grid gap-6 sm:grid-cols-2">
-              <div className="border-l border-white/12 pl-4">
-                <dt className="text-sm font-medium">Install</dt>
-                <dd className="mt-1 text-sm text-muted-foreground">PyPI package. No signup wall.</dd>
-              </div>
-              <div className="border-l border-white/12 pl-4">
-                <dt className="text-sm font-medium">Store</dt>
-                <dd className="mt-1 text-sm text-muted-foreground">
-                  Local SQLite or bring-your-own Supabase. Agents propose. Humans approve.
-                </dd>
-              </div>
-            </dl>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                ['Install', 'PyPI package. No signup wall.'],
+                ['Store', 'Local SQLite or bring-your-own Supabase.'],
+                ['Respond', 'Agents propose. Humans approve.'],
+              ].map(([title, body]) => (
+                <Card key={title}>
+                  <CardHeader>
+                    <CardTitle className="text-base">{title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{body}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </section>
 
           <section id="quickstart" className="scroll-mt-24">
@@ -103,32 +113,42 @@ export default function Docs() {
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Local mode is the default. Login is only required if you connect your own Supabase.
             </p>
-            <div className="mt-6 grid gap-8">
-              <div className="border-l border-white/12 pl-5">
-                <h3 className="text-base font-medium">Install</h3>
-                <div className="mt-3">
+            <div className="mt-4 grid gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">1. Install</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <CommandInstall note="Package name is devops-sentinel-next." />
-                </div>
-              </div>
-              <div className="border-l border-white/12 pl-5">
-                <h3 className="text-base font-medium">Initialize locally</h3>
-                <Code className="mt-3">{`sentinel init
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">2. Initialize locally</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Code>{`sentinel init
 sentinel demo
 sentinel health https://api.example.com/health --expect 200 --json-path status --json-equals ok
 sentinel services add production-api https://api.example.com/health
 sentinel up --once`}</Code>
-              </div>
-              <div className="border-l border-white/12 pl-5">
-                <h3 className="text-base font-medium">Optional: your Supabase</h3>
-                <Code className="mt-3">{`sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">3. Optional: your Supabase</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3">
+                  <Code>{`sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
 sentinel login
 sentinel supabase doctor`}</Code>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  The CLI prompts for the anon key if you omit it. Apply{' '}
-                  <Inline>supabase/schema.sql</Inline> in the SQL editor, or print it with{' '}
-                  <Inline>sentinel schema</Inline>.
-                </p>
-              </div>
+                  <p className="text-sm text-muted-foreground">
+                    The CLI prompts for the anon key if you omit it. Apply{' '}
+                    <Inline>supabase/schema.sql</Inline> in the SQL editor, or print it with{' '}
+                    <Inline>sentinel schema</Inline>.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </section>
 
@@ -195,7 +215,7 @@ SLACK_WEBHOOK_URL=`}</Code>
               Postgres, you create the project, you keep the keys, you own the rows.
             </p>
             <ol className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
-              <li>1. Create a project at supabase.com - this is yours, not ours.</li>
+              <li>1. Create a project at supabase.com — this is yours, not ours.</li>
               <li>
                 2. Run the schema: <Inline>sentinel schema --print</Inline> or copy{' '}
                 <Inline>supabase/schema.sql</Inline> into the SQL editor.
@@ -349,35 +369,47 @@ sentinel mcp`}</Code>
 
           <section id="faq" className="scroll-mt-24">
             <h2 className="text-2xl font-medium tracking-tight">FAQ</h2>
-            <dl className="mt-6 divide-y divide-white/8 border-y border-white/8">
-              <div className="py-4">
-                <dt className="text-sm font-medium">Do I have to log in?</dt>
-                <dd className="mt-2 text-sm text-muted-foreground">
-                  No. Local mode works offline. Login is for your Supabase project, CI tokens, or
-                  device flow.
-                </dd>
-              </div>
-              <div className="py-4">
-                <dt className="text-sm font-medium">Where does data go?</dt>
-                <dd className="mt-2 text-sm text-muted-foreground">
-                  SQLite on disk, or tables in your Supabase. See the{' '}
-                  <Link className="text-foreground underline" to="/privacy">
-                    privacy policy
-                  </Link>
-                  .
-                </dd>
-              </div>
-              <div className="py-4">
-                <dt className="text-sm font-medium">What is the install package name?</dt>
-                <dd className="mt-2 text-sm text-muted-foreground">
-                  <Inline>{INSTALL_COMMAND}</Inline>. Source:{' '}
-                  <a className="text-foreground underline" href={GITHUB_URL}>
-                    GitHub
-                  </a>
-                  .
-                </dd>
-              </div>
-            </dl>
+            <div className="mt-4 grid gap-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Do I have to log in?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    No. Local mode works offline. Login is for your Supabase project, CI tokens, or
+                    device flow.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Where does data go?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    SQLite on disk, or tables in your Supabase. See the{' '}
+                    <Link className="text-foreground underline" to="/privacy">
+                      privacy policy
+                    </Link>
+                    .
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">What is the install package name?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    <Inline>{INSTALL_COMMAND}</Inline>. Source:{' '}
+                    <a className="text-foreground underline" href={GITHUB_URL}>
+                      GitHub
+                    </a>
+                    .
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </section>
         </article>
       </div>

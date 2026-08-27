@@ -7,7 +7,10 @@ export default function Privacy() {
     <SiteLayout>
       <article className="mx-auto grid w-full max-w-3xl gap-6 px-4 py-12 sm:px-6">
         <div>
-          <h1 className="text-4xl font-medium tracking-tight">Privacy policy</h1>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Privacy
+          </p>
+          <h1 className="mt-3 text-4xl font-medium tracking-tight">Privacy policy</h1>
           <p className="mt-2 text-sm text-muted-foreground">Last updated: August 27, 2026</p>
         </div>
         <p className="text-base leading-7 text-muted-foreground">

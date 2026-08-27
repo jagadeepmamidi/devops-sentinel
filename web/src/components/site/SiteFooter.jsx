@@ -6,16 +6,16 @@ export default function SiteFooter({
   text = 'Local-first SRE operations. Your data stays on your machine or in your Supabase project.',
 }) {
   return (
-    <footer className="mt-8">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-16 sm:flex-row sm:items-end sm:justify-between sm:px-6">
-        <p className="max-w-md text-sm leading-6 text-muted-foreground">{text}</p>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+    <footer className="border-t border-border">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p className="max-w-xl text-xs leading-6 text-muted-foreground">{text}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {links.map((item) =>
             item.href ? (
               <a
                 key={item.key || item.label}
                 href={item.href}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground hover:text-foreground"
                 target={item.external ? '_blank' : undefined}
                 rel={item.external ? 'noopener noreferrer' : undefined}
               >
@@ -25,7 +25,7 @@ export default function SiteFooter({
               <Link
                 key={item.key || item.label}
                 to={item.to}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 {item.label}
               </Link>
