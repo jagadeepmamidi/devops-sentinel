@@ -21,13 +21,14 @@ function NavItem({ item, className = '', onNavigate }) {
       (location.pathname === path ||
         (path !== '/' && location.pathname.startsWith(`${path}/`))),
   )
+  const isCta = item.className === 'outline'
 
   const classes = [
-    'text-sm text-muted-foreground transition-colors hover:text-foreground',
-    item.className === 'outline'
-      ? 'rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-foreground hover:bg-white/[0.1]'
-      : '',
-    active ? 'text-foreground' : '',
+    'rounded-full px-2.5 py-1.5 text-[13px] font-medium transition-colors',
+    isCta
+      ? 'bg-primary px-3.5 text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] hover:bg-primary/90'
+      : 'text-muted-foreground hover:bg-white/6 hover:text-foreground',
+    !isCta && active ? 'bg-white/10 text-foreground' : '',
     className,
   ]
     .filter(Boolean)
@@ -61,14 +62,14 @@ function NavItem({ item, className = '', onNavigate }) {
 
 export default function SiteTopNav({ links = PRIMARY_NAV, brandTo = '/' }) {
   return (
-    <header className="sticky top-0 z-[40] flex justify-center px-4 pt-4">
+    <header className="sticky top-0 z-[40] flex justify-center px-3 pt-3">
       <nav
-        className="glass-nav flex h-14 w-full max-w-5xl items-center justify-between gap-4 rounded-full border border-white/12 bg-zinc-950/55 px-4 backdrop-blur-xl sm:px-5"
+        className="glass-nav flex h-12 w-max max-w-[calc(100%-1.5rem)] flex-nowrap items-center gap-1 rounded-full border border-white/12 px-1.5 pl-2.5"
         aria-label="Primary navigation"
       >
         <SiteBrand to={brandTo} />
 
-        <div className="hidden items-center gap-5 md:flex">
+        <div className="hidden items-center gap-0.5 lg:flex">
           {links.map((item) => (
             <NavItem key={item.key || item.label} item={item} />
           ))}
@@ -80,7 +81,7 @@ export default function SiteTopNav({ links = PRIMARY_NAV, brandTo = '/' }) {
               type="button"
               variant="outline"
               size="sm"
-              className="md:hidden"
+              className="lg:hidden"
               aria-label="Open menu"
             >
               <Menu className="size-4" />
@@ -92,7 +93,7 @@ export default function SiteTopNav({ links = PRIMARY_NAV, brandTo = '/' }) {
               <SheetTitle>Sentinel</SheetTitle>
             </SheetHeader>
             <Separator />
-            <div className="flex flex-col gap-4 px-4">
+            <div className="flex flex-col gap-3 px-4">
               {links.map((item) => (
                 <SheetClose asChild key={item.key || item.label}>
                   <NavItem item={item} className="text-base" />
