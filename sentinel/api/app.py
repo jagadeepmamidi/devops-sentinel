@@ -19,14 +19,15 @@ from sentinel.auth.auth_service import router as auth_router
 from sentinel.setup.ai_setup import router as ai_setup_router
 from sentinel.setup.supabase_setup import router as supabase_setup_router
 
+from sentinel import __version__ as APP_VERSION
+
 APP_NAME = "DevOps Sentinel API"
-APP_VERSION = "0.3.0"
 WEB_DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"[{APP_NAME}] Starting on port {os.environ.get('PORT', 8000)}")
+    print(f"[{APP_NAME}] Starting on port {os.environ.get('PORT', '8000')}")
     yield
     print(f"[{APP_NAME}] Shutting down")
 

@@ -85,6 +85,24 @@ def _parse_expect(status, body, json_path, json_equals, ssl_min_days):
     )
 
 
+def notify_slack_incident(result: dict) -> None:
+    webhook = (os.getenv("SLACK_WEBHOOK_URL") or "").strip()
+    if not webhook:
+        click.echo("  Slack notify skipped: SLACK_WEBHOOK_URL is not set.", err=True)
+        return
+    text = (
+        f"Sentinel incident {result.get('incident_id')} "
+        f"({result.get('incident_severity') or 'unknown'}) on {result.get('service')}: "
+        f"{result.get('error') or 'threshold exceeded'}"
+    )
+    try:
+        response = httpx.post(webhook, json={"text": text}, timeout=8)
+        if response.status_code >= 400:
+            click.echo(f"  Slack notify failed: HTTP {response.status_code}", err=True)
+    except HTTPError as error:
+        click.echo(f"  Slack notify failed: {error}", err=True)
+
+
 def print_incident_card(result: dict) -> None:
     incident_id = result.get("incident_id")
     click.echo()
@@ -182,7 +200,7 @@ def cli(ctx, output_json):
 @click.option("--all", "monitor_all", is_flag=True, help="Monitor all registered active services")
 @click.option("--interval", "-i", type=float, default=None, help="Check interval in seconds")
 @click.option("--timeout", "-t", type=float, default=10, show_default=True)
-@click.option("--notify", is_flag=True, help="Reserved for notification integrations")
+@click.option("--notify", is_flag=True, help="POST SLACK_WEBHOOK_URL when an incident opens")
 @click.option("--failure-threshold", default=3, type=click.IntRange(1, 20), show_default=True)
 @click.option("--recovery-threshold", default=2, type=click.IntRange(1, 20), show_default=True)
 @click.option("--expect", "expect_status", help="Expected status codes, comma-separated")
@@ -209,7 +227,8 @@ def monitor(
     once,
 ):
     """Monitor registered service by name, URL, or sentinel.yaml (--all)."""
-    del notify
+    from urllib.parse import urlparse
+
     from ..core.project_file import expect_for_url, load_project_config
 
     MonitorRunner = _monitor_components()[0]
@@ -250,7 +269,23 @@ def monitor(
         if service:
             targets = [service]
         elif target.startswith(("http://", "https://")):
-            targets = [{"name": target, "url": target, "check_interval": interval or 30}]
+            if user and db.connected:
+                existing = db.get_service_by_url(user["id"], target)
+                if existing:
+                    targets = [existing]
+                else:
+                    host = urlparse(target).hostname or "remote"
+                    name = host.replace(".", "-")[:48]
+                    registered_service = db.add_service(
+                        user["id"], name, target, check_interval=int(interval or 30)
+                    )
+                    if not registered_service:
+                        raise click.ClickException("Could not register service for URL.")
+                    if not output_json:
+                        click.echo(f"Registered {registered_service.get('name')} ({target})")
+                    targets = [registered_service]
+            else:
+                targets = [{"name": target, "url": target, "check_interval": interval or 30}]
         else:
             yaml_match = next(
                 (item for item in project.get("services") or [] if item["name"] == target),
@@ -293,6 +328,8 @@ def monitor(
             result["service"] = service.get("name", service["url"])
             if output_json:
                 click.echo(json.dumps(result, default=str))
+                if notify and result.get("incident_opened"):
+                    notify_slack_incident(result)
                 return
             state = (
                 "HEALTHY"
@@ -304,6 +341,8 @@ def monitor(
             )
             if result.get("incident_opened"):
                 print_incident_card(result)
+                if notify:
+                    notify_slack_incident(result)
 
         await runner.run_forever(render, once=once)
 
@@ -485,6 +524,21 @@ def postmortem_generate(ctx, incident_id, output):
         raise click.ClickException("Failed to save postmortem.")
     if output:
         Path(output).write_text(markdown, encoding="utf-8")
+    if generated.get("source") == "fallback":
+        reason = generated.get("fallback_reason")
+        if reason:
+            click.echo(
+                click.style(
+                    f"Fell back to template postmortem ({reason[:180]})",
+                    fg="yellow",
+                ),
+                err=True,
+            )
+        else:
+            click.echo(
+                click.style("Template postmortem (no LLM key configured).", fg="yellow"),
+                err=True,
+            )
     if ctx.obj.get("json"):
         click.echo(
             json.dumps({"incident_id": incident_id, **generated, "output": output}, default=str)
@@ -524,8 +578,10 @@ def postmortem_view(ctx, incident_id):
 
 @cli.command()
 @click.option("--interval", type=float, default=5, show_default=True)
+@click.option("--once", is_flag=True, help="Render one table then exit.")
+@click.option("--timeout", "-t", type=float, default=10, show_default=True)
 @click.pass_context
-def dashboard(ctx, interval):
+def dashboard(ctx, interval, once, timeout):
     """Live status dashboard for registered services."""
     if ctx.obj.get("json"):
         raise click.UsageError("dashboard does not support --json")
@@ -535,38 +591,43 @@ def dashboard(ctx, interval):
         raise click.ClickException(
             "Storage or identity unavailable. Run `sentinel init --mode local`."
         )
+    from rich.console import Console
     from rich.live import Live
     from rich.table import Table
 
+    async def build_table():
+        data = db.list_services(user["id"])
+
+        async def check(service):
+            result = (await _monitor_components()[1](service["url"], timeout)).as_dict()
+            result["name"] = service.get("name", service["url"])
+            return result
+
+        results = await asyncio.gather(*(check(service) for service in data))
+        table = Table(title="Sentinel Dashboard")
+        table.add_column("Service", style="bold")
+        table.add_column("URL")
+        table.add_column("Status")
+        table.add_column("Latency")
+        for result in results:
+            healthy = result["healthy"]
+            style = "green" if healthy else ("yellow" if result.get("status_code") else "red")
+            state = "healthy" if healthy else "down"
+            table.add_row(
+                result["name"],
+                result["url"],
+                f"[{style}]{state}[/{style}]",
+                f"{result.get('latency_ms') or 0:.0f}ms",
+            )
+        return table
+
     async def run_dashboard():
+        if once or not sys.stdout.isatty():
+            Console().print(await build_table())
+            return
         with Live("Loading...", refresh_per_second=4) as live:
             while True:
-                data = db.list_services(user["id"])
-
-                async def check(service):
-                    result = (await _monitor_components()[1](service["url"])).as_dict()
-                    result["name"] = service.get("name", service["url"])
-                    return result
-
-                results = await asyncio.gather(*(check(service) for service in data))
-                table = Table(title="Sentinel Dashboard")
-                table.add_column("Service", style="bold")
-                table.add_column("URL")
-                table.add_column("Status")
-                table.add_column("Latency")
-                for result in results:
-                    healthy = result["healthy"]
-                    style = (
-                        "green" if healthy else ("yellow" if result.get("status_code") else "red")
-                    )
-                    state = "healthy" if healthy else "down"
-                    table.add_row(
-                        result["name"],
-                        result["url"],
-                        f"[{style}]{state}[/{style}]",
-                        f"{result.get('latency_ms') or 0:.0f}ms",
-                    )
-                live.update(table)
+                live.update(await build_table())
                 await asyncio.sleep(interval)
 
     try:
@@ -621,18 +682,24 @@ def status(ctx):
     def status_icon(ok):
         return click.style("OK", fg="green") if ok else click.style("X", fg="red")
 
-    if storage_mode == "local":
+    if storage_mode == "none":
+        click.echo(f"  {status_icon(False)} Initialized: no. Run `sentinel init`.")
+        click.echo(f"  {status_icon(False)} Storage: not configured")
+    elif storage_mode == "local":
         click.echo(
             f"  {status_icon(True)} API Server: optional (`sentinel serve` for the operator UI)"
+        )
+        click.echo(
+            f"  {status_icon(True)} Storage [SQLite (local)]: Ready"
         )
     else:
         click.echo(
             f"  {status_icon(api_ok)} API Server: {'Connected' if api_ok else 'Not running'}"
         )
-    storage_label = "SQLite (local)" if storage_mode == "local" else "Supabase (your project)"
-    click.echo(
-        f"  {status_icon(storage_configured)} Storage [{storage_label}]: {'Ready' if storage_configured else 'Not configured'}"
-    )
+        click.echo(
+            f"  {status_icon(storage_configured)} Storage [Supabase (your project)]: "
+            f"{'Ready' if storage_configured else 'Not configured'}"
+        )
     click.echo(
         f"  {status_icon(llm_configured)} LLM Provider: {'Configured' if llm_configured else 'Not configured'}"
     )
@@ -1083,16 +1150,28 @@ def setup(ctx):
     click.echo()
 
 
+def _default_serve_port() -> int:
+    try:
+        return int(os.getenv("PORT", "8000"))
+    except (TypeError, ValueError):
+        return 8000
+
+
 @cli.command()
 @click.option(
     "--host", default=lambda: os.getenv("API_HOST", "0.0.0.0"), show_default=True, help="API host"
 )
 @click.option(
-    "--port", default=8000, type=click.IntRange(1, 65535), show_default=True, help="API port"
+    "--port",
+    default=_default_serve_port,
+    type=click.IntRange(1, 65535),
+    show_default=True,
+    help="API port (PORT env overrides the 8000 default)",
 )
 @click.option("--reload", is_flag=True, help="Enable auto-reload for local development")
 def serve(host, port, reload):
     """Start the FastAPI server."""
+    os.environ["PORT"] = str(port)
     cmd = [
         sys.executable,
         "-m",

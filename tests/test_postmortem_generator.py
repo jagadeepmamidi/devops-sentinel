@@ -4,7 +4,9 @@ from sentinel.core.postmortem_generator import PostmortemGenerator
 
 
 @pytest.mark.asyncio
-async def test_postmortem_generator_creates_markdown_without_ai():
+async def test_postmortem_generator_creates_markdown_without_ai(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     generator = PostmortemGenerator()
 
     result = await generator.generate(

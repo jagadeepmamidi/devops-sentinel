@@ -77,6 +77,12 @@ sentinel config remove openrouter_api_key
 
 `config set` prompts with hidden input and stores values in `~/.sentinel/config.json` with restrictive permissions. Existing process variables and project `.env` values take precedence. `sentinel config` always masks secrets. Local mode needs no login; `sentinel login` is only for Supabase compatibility mode.
 
+`sentinel postmortem generate` calls OpenRouter (or OpenAI) when a key is present. Default model is `openai/gpt-4o-mini` with `SENTINEL_LLM_MAX_TOKENS=1024`. If the model call fails, the CLI writes the local template and says so.
+
+`sentinel monitor https://…` auto-registers the URL so failure thresholds persist incidents. `--notify` posts `SLACK_WEBHOOK_URL` when an incident opens.
+
+`sentinel serve` in local mode exposes `/api/services` and `/api/incidents` without a bearer token. Bind `0.0.0.0:$PORT` on Render.
+
 Local-first example:
 
 ```env
@@ -110,7 +116,7 @@ HTTP 2xx and 3xx responses count as reachable/healthy. Redirects still appear wi
 MCP support is optional:
 
 ```bash
-pip install "devops-sentinel-next[mcp]"
+pip install "devops-sentinel-next[mcp]"   # pins mcp 1.x (FastMCP)
 sentinel mcp
 ```
 

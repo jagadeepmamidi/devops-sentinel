@@ -21,10 +21,6 @@ export default function OperatorServices() {
   const token = loadOperatorToken()
 
   useEffect(() => {
-    if (!token) {
-      return undefined
-    }
-
     let cancelled = false
     Promise.resolve()
       .then(() => {
@@ -54,7 +50,7 @@ export default function OperatorServices() {
   return (
     <OperatorShell
       title="Services"
-      description="Inspect services registered in the API you are running. Paste a bearer token from that API session."
+      description="Inspect services registered in the API you are running. Local mode needs no token; paste a bearer token only for Supabase."
       tokenInput={tokenInput}
       setTokenInput={setTokenInput}
       error={error}
@@ -70,10 +66,7 @@ export default function OperatorServices() {
         </CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Loading services…</p> : null}
-          {!loading && !token ? (
-            <p className="text-sm text-muted-foreground">Save a token to load services.</p>
-          ) : null}
-          {!loading && token && services.length === 0 && !error ? (
+          {!loading && services.length === 0 && !error ? (
             <p className="text-sm text-muted-foreground">No services found for this account.</p>
           ) : null}
           {services.length > 0 ? (

@@ -143,25 +143,29 @@ def services_check(ctx, service_id, timeout):
         raise click.ClickException("Service URL is missing.")
 
     async def run():
-        start = datetime.now(timezone.utc)
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.get(url)
-            elapsed = (datetime.now(timezone.utc) - start).total_seconds() * 1000
-            healthy = response.status_code in range(200, 400)
-            db.log_health_check(service_id, response.status_code, int(elapsed), healthy)
-            db.update_service_status(service_id, "healthy" if healthy else "degraded", int(elapsed))
-            return {
-                "service_id": service_id,
-                "url": url,
-                "status_code": response.status_code,
-                "latency_ms": round(elapsed, 2),
-                "healthy": healthy,
-            }
-        except (httpx.HTTPError, RuntimeError, ValueError, TypeError, OSError) as error:
-            db.log_health_check(service_id, 0, 0, False, str(error))
-            db.update_service_status(service_id, "down", 0)
-            return {"service_id": service_id, "url": url, "healthy": False, "error": str(error)}
+        from sentinel.core.monitor_runner import check_url_once
+
+        result = (await check_url_once(url, timeout)).as_dict()
+        status_code = result.get("status_code") or 0
+        latency = result.get("latency_ms") or 0
+        healthy = bool(result.get("healthy"))
+        error = result.get("error") or ""
+        db.log_health_check(service_id, status_code, int(latency), healthy, error)
+        db.update_service_status(
+            service_id,
+            "healthy" if healthy else ("degraded" if status_code else "down"),
+            int(latency),
+        )
+        payload = {
+            "service_id": service_id,
+            "url": url,
+            "status_code": result.get("status_code"),
+            "latency_ms": result.get("latency_ms"),
+            "healthy": healthy,
+        }
+        if error:
+            payload["error"] = error
+        return payload
 
     result = asyncio.run(run())
     click.echo(

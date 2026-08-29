@@ -335,6 +335,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = security_
             return {"user": user}
     """
     if not credentials:
+        from sentinel.cli.auth import get_current_user as cli_user
+        from sentinel.cli.auth import get_storage_mode
+
+        if get_storage_mode() == "local":
+            user = cli_user()
+            if user and user.get("id"):
+                return user
         raise HTTPException(401, "Not authenticated")
 
     auth_service = AuthService()

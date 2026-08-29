@@ -12,12 +12,15 @@ Uses NetworkX for graph operations.
 """
 
 
+import sys
+
 try:
     import networkx as nx
     NETWORKX_AVAILABLE = True
 except ImportError:
     NETWORKX_AVAILABLE = False
-    print("Warning: networkx not installed. Run: pip install networkx")
+    nx = None
+    print("Warning: networkx not installed. Run: pip install networkx", file=sys.stderr)
 
 
 class DependencyType:

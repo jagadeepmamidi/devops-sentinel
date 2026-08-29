@@ -6,6 +6,10 @@ Generate structured postmortems from incident data using AI
 """
 
 from datetime import datetime, timezone
+import json
+import os
+
+import httpx
 
 
 class PostmortemGenerator:
@@ -88,9 +92,22 @@ class PostmortemGenerator:
         Returns:
             Generated postmortem with sections
         """
-        # Extract key information
-        title = incident.get("title", "Untitled Incident")
+        title = (
+            incident.get("title")
+            or incident.get("error_message")
+            or (incident.get("services") or {}).get("name")
+            or incident.get("service_name")
+            or "Untitled Incident"
+        )
         severity = incident.get("severity", "P2")
+        incident = {
+            **incident,
+            "title": title,
+            "service_name": incident.get("service_name")
+            or (incident.get("services") or {}).get("name")
+            or "the service",
+            "description": incident.get("description") or incident.get("error_message") or "",
+        }
 
         # Calculate duration
         start = incident.get("detected_at")
@@ -100,9 +117,15 @@ class PostmortemGenerator:
         # Build timeline
         timeline = self._format_timeline(events)
 
-        # Generate AI sections (or use templates if no AI)
-        if self.ai_client:
-            sections = await self._generate_with_ai(incident, events, resolution)
+        source = "fallback"
+        fallback_reason = None
+        if self.ai_client or os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"):
+            try:
+                sections = await self._generate_with_ai(incident, events, resolution)
+                source = "ai"
+            except Exception as error:  # noqa: BLE001 — fall back for any provider failure
+                fallback_reason = str(error)
+                sections = self._generate_template_sections(incident, events, resolution)
         else:
             sections = self._generate_template_sections(incident, events, resolution)
 
@@ -130,15 +153,86 @@ class PostmortemGenerator:
             "incident_id": incident.get("id"),
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "status": "draft",
+            "source": source,
+            "fallback_reason": fallback_reason,
         }
 
     async def _generate_with_ai(
         self, incident: dict, events: list[dict], resolution: str | None
     ) -> dict:
-        """Generate sections using AI"""
-        # Would call OpenAI/Claude here
-        # For now, use intelligent templates
-        return self._generate_template_sections(incident, events, resolution)
+        """Generate sections using OpenRouter or OpenAI. Raises on provider failure."""
+        if self.ai_client and hasattr(self.ai_client, "generate_sections"):
+            return await self.ai_client.generate_sections(incident, events, resolution)
+
+        openrouter_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+        openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+        if not openrouter_key and not openai_key:
+            raise RuntimeError("No LLM API key configured")
+
+        if openrouter_key:
+            base_url = "https://openrouter.ai/api/v1/chat/completions"
+            api_key = openrouter_key
+            model = os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini")
+        else:
+            base_url = "https://api.openai.com/v1/chat/completions"
+            api_key = openai_key
+            model = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
+
+        try:
+            max_tokens = int(os.getenv("SENTINEL_LLM_MAX_TOKENS", "1024"))
+        except ValueError:
+            max_tokens = 1024
+
+        timeline = self._format_timeline(events)
+        prompt = (
+            "You are an SRE writing a blameless postmortem. Return ONLY a JSON object with keys: "
+            "summary, impact, root_cause, contributing_factors, what_went_well, "
+            "improvements, action_items, lessons. Values are markdown strings. No markdown fences.\n"
+            f"Service: {incident.get('service_name')}\n"
+            f"Severity: {incident.get('severity')}\n"
+            f"Error: {incident.get('error_message') or incident.get('description')}\n"
+            f"Resolution: {resolution or 'n/a'}\n"
+            f"Timeline:\n{timeline}\n"
+        )
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        if openrouter_key:
+            headers["HTTP-Referer"] = "https://github.com/jagadeepmamidi/devops-sentinel"
+            headers["X-Title"] = "DevOps Sentinel"
+        payload = {
+            "model": model,
+            "temperature": 0,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        with httpx.Client(timeout=45) as client:
+            response = client.post(base_url, headers=headers, json=payload)
+        if response.status_code >= 400:
+            raise RuntimeError(f"LLM HTTP {response.status_code}: {response.text[:300]}")
+        body = response.json()
+        content = body["choices"][0]["message"]["content"]
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError("LLM response was empty")
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[-1]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+        start = content.find("{")
+        end = content.rfind("}")
+        if start == -1 or end == -1:
+            raise RuntimeError("LLM response was not JSON")
+        parsed = json.loads(content[start : end + 1])
+        template = self._generate_template_sections(incident, events, resolution)
+        for key in template:
+            value = parsed.get(key)
+            if isinstance(value, str) and value.strip():
+                template[key] = value.strip()
+        return template
 
     def _generate_template_sections(
         self, incident: dict, events: list[dict], resolution: str | None
@@ -236,7 +330,7 @@ class PostmortemGenerator:
         lines = ["| Time | Event |", "|------|-------|"]
 
         for event in events:
-            time = event.get("timestamp", "Unknown")
+            time = event.get("timestamp") or event.get("created_at") or "Unknown"
             if isinstance(time, str) and "T" in time:
                 time = time.split("T")[1][:8]  # Extract time portion
 

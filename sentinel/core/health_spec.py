@@ -133,15 +133,17 @@ def evaluate_expect(
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as error:
             reasons.append(f"json path {expect.json_path}: {error}")
 
-    if expect.ssl_min_days is not None:
+    if str(url).startswith("https://"):
         try:
             ssl_days = check_tls_days(url)
+        except (OSError, ssl.SSLError, socket.timeout, ValueError) as error:
+            if expect.ssl_min_days is not None:
+                reasons.append(f"TLS check failed: {error}")
+        if expect.ssl_min_days is not None:
             if ssl_days is None:
                 reasons.append("TLS certificate could not be read")
             elif ssl_days < expect.ssl_min_days:
                 reasons.append(f"TLS expires in {ssl_days}d (min {expect.ssl_min_days}d)")
-        except (OSError, ssl.SSLError, socket.timeout, ValueError) as error:
-            reasons.append(f"TLS check failed: {error}")
 
     return ExpectEvaluation(
         healthy=not reasons, reasons=reasons, json_value=json_value, ssl_days=ssl_days

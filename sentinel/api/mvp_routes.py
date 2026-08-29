@@ -32,6 +32,10 @@ class PostmortemGenerateRequest(BaseModel):
 def get_request_db(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> SentinelDB:
+    from sentinel.cli.auth import get_storage_mode
+
+    if get_storage_mode() == "local":
+        return SentinelDB()
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return SentinelDB(access_token=credentials.credentials)
