@@ -22,13 +22,13 @@ async def _check_api_health(api_url: str) -> bool:
 
 
 def _check_agent_runtime() -> tuple[str, str]:
-    """Confirm optional CrewAI factory and tool bridge are importable."""
+    """Confirm optional CrewAI factory is importable when the extra is installed."""
     try:
         from agents import SentinelAgents  # noqa: F401
 
         return "ok", "CrewAI agent factory and tool bridge importable"
     except (ImportError, RuntimeError, TypeError, ValueError) as error:
-        return "warn", f"Agent factory unavailable: {error}"
+        return "warn", f"Optional [ai] extra unavailable: {error}"
 
 
 def run_doctor(strict: bool = False) -> dict[str, Any]:
@@ -42,7 +42,15 @@ def run_doctor(strict: bool = False) -> dict[str, Any]:
     user = get_current_user() if auth_ok else None
     user_email = user.get("email", "unknown") if isinstance(user, dict) else "unknown"
 
-    if mode == "local":
+    if mode == "none":
+        storage_checks = [
+            {
+                "name": "Initialized",
+                "status": "fail",
+                "detail": "Run `sentinel init` for local SQLite (or `--mode supabase` for your project)",
+            }
+        ]
+    elif mode == "local":
         local_db = get_db()
         storage_checks = [
             {

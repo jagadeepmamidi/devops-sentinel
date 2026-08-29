@@ -250,13 +250,13 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                     ['sentinel up [--once]', 'Register services from sentinel.yaml and monitor them'],
                     ['sentinel login [--local|--device|--token]', 'Local identity, or auth against your Supabase'],
                     ['sentinel schema [--print]', 'Show or print the SQL your project needs'],
-                    ['sentinel health <url>', 'One check. --expect, --body, --json-path, --ssl-min-days. Exit 1 when unhealthy'],
+                    ['sentinel health <url>', 'One check. Always reports TLS days on HTTPS. --ssl-min-days fails when remaining days are low. Exit 1 when unhealthy'],
+                    ['sentinel monitor <name|url> [--all] [--once] [--notify]', 'Continuous checks. A raw URL is auto-registered. --notify posts SLACK_WEBHOOK_URL'],
                     ['sentinel services add|list|check', 'Register and probe endpoints'],
-                    ['sentinel monitor <name|url> [--all] [--once]', 'Continuous checks with failure/recovery thresholds'],
                     ['sentinel watch', 'Alias for monitor'],
-                    ['sentinel dashboard', 'Live terminal table of registered services'],
+                    ['sentinel dashboard [--once]', 'Live terminal table of registered services'],
                     ['sentinel incidents list|show|ack|resolve|export', 'Incident memory and timeline'],
-                    ['sentinel postmortem generate|view', 'Fallback or AI-assisted write-up'],
+                    ['sentinel postmortem generate|view', 'OpenRouter/OpenAI write-up when a key is set; otherwise a local template'],
                     ['sentinel agents', 'Print the Watcher → Strategist workflow'],
                     ['sentinel doctor', 'Mode-aware diagnostics'],
                     ['sentinel supabase doctor', 'Probe YOUR Supabase URL, key, tables, and RLS'],
@@ -309,8 +309,9 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
   → Strategist        action plan + postmortem
   → Human approval    required before destructive remediation`}</Code>
             <p className="mt-3 text-sm text-muted-foreground">
-              Optional AI keys: <Inline>sentinel config set openrouter_api_key</Inline>. Without a
-              key, postmortems still generate from collected evidence.
+              Optional AI keys: <Inline>sentinel config set openrouter_api_key</Inline>. Default
+              model is <Inline>openai/gpt-4o-mini</Inline>. Without a key, or if the model call
+              fails, postmortems still generate from collected evidence.
             </p>
           </section>
 
@@ -319,9 +320,10 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Expose read-only operational context to Cursor, Claude Desktop, and other MCP hosts.
             </p>
-            <Code>{`pip install "devops-sentinel-next[mcp]"
+            <Code>{`pip install "devops-sentinel-next[mcp]"   # mcp 1.x FastMCP
 sentinel mcp`}</Code>
             <p className="mt-3 text-sm text-muted-foreground">
+              The extra pins mcp 1.x so FastMCP tool registration works.
               Paste this into Cursor <Inline>.cursor/mcp.json</Inline> (or Claude Desktop MCP
               settings). Full example: <Inline>examples/mcp.json</Inline>.
             </p>
@@ -344,11 +346,12 @@ sentinel mcp`}</Code>
             <h2 className="text-2xl font-semibold tracking-tight">Optional operator console</h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               The pages under <Inline>/operator</Inline> talk to a FastAPI process you run. They
-              are not a hosted SaaS dashboard. Start the API, then paste a bearer token from your
-              session.
+              are not a hosted SaaS dashboard. In local mode they read the same SQLite store as the
+              CLI — no bearer token. Paste a token only when the API is in Supabase mode.
             </p>
             <Code>{`sentinel serve
-# then open /operator/services and paste a token`}</Code>
+# local mode: open /operator/services — no token
+# supabase mode: paste a bearer token from your session`}</Code>
             <div className="mt-4 flex flex-wrap gap-3">
               <Button asChild variant="outline">
                 <Link to="/operator/services">Open operator services</Link>

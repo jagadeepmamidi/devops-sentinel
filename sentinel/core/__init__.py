@@ -12,7 +12,6 @@ Core modules for intelligent incident management:
 
 from .baseline_monitor import BaselineMonitor, DegradationAlert
 from .classifier import FailureClassifier, FailureType
-from .dependency_analyzer import DependencyAnalyzer, DependencyType
 from .incident_memory import IncidentMemory
 from .runbook_matcher import RunbookMatcher
 
@@ -26,5 +25,13 @@ __all__ = [
     'IncidentMemory',
     'RunbookMatcher',
 ]
+
+
+def __getattr__(name):
+    if name in {"DependencyAnalyzer", "DependencyType"}:
+        from .dependency_analyzer import DependencyAnalyzer, DependencyType
+
+        return DependencyAnalyzer if name == "DependencyAnalyzer" else DependencyType
+    raise AttributeError(name)
 
 __version__ = '1.0.0-phase1'

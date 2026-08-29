@@ -17,7 +17,7 @@ export default function OperatorIncidentDetail() {
   const token = loadOperatorToken()
 
   useEffect(() => {
-    if (!token || !incidentId) {
+    if (!incidentId) {
       return undefined
     }
     let cancelled = false
@@ -48,7 +48,7 @@ export default function OperatorIncidentDetail() {
 
   async function handleGenerate(event) {
     event.preventDefault()
-    if (!token || !incidentId) return
+    if (!incidentId) return
     setGenerating(true)
     setError('')
     try {
@@ -88,10 +88,7 @@ export default function OperatorIncidentDetail() {
         </CardHeader>
         <CardContent className="grid gap-4">
           {loading ? <p className="text-sm text-muted-foreground">Loading incident…</p> : null}
-          {!loading && !token ? (
-            <p className="text-sm text-muted-foreground">Save a token to load incident data.</p>
-          ) : null}
-          {!loading && token && !incident && !error ? (
+          {!loading && !incident && !error ? (
             <p className="text-sm text-muted-foreground">Incident not found.</p>
           ) : null}
           {incident ? (

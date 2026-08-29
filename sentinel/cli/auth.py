@@ -63,7 +63,16 @@ def load_user_config_into_env() -> None:
 
 def _write_user_config(values: dict[str, str]) -> None:
     ensure_config_dir()
-    payload = {"version": 1, "env": values}
+    payload: dict = {}
+    if CONFIG_FILE.exists():
+        try:
+            loaded = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                payload = loaded
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+    payload["version"] = 1
+    payload["env"] = values
     temporary = CONFIG_FILE.with_suffix(".tmp")
     temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     temporary.replace(CONFIG_FILE)
@@ -770,6 +779,13 @@ def login(
 @click.command()
 def logout():
     """Log out and clear saved credentials."""
+    if get_storage_mode() == "local":
+        click.echo("\n[SENTINEL] Local mode does not use login credentials.")
+        click.echo("  Nothing to log out. Data stays in the local SQLite store.")
+        return
+    if get_storage_mode() == "none":
+        click.echo("\n[SENTINEL] Not initialized. Run `sentinel init`.")
+        return
     if not is_logged_in():
         click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Not currently logged in.")
         return
@@ -785,6 +801,10 @@ def logout():
 @click.command()
 def whoami():
     """Show current logged-in user or local identity."""
+    if get_storage_mode() == "none":
+        click.echo("\n[SENTINEL] Not initialized.")
+        click.echo("  Run `sentinel init` for local SQLite, or `sentinel init --mode supabase`.")
+        return
     if get_storage_mode() == "local":
         click.echo("\n[SENTINEL] Local mode")
         click.echo("  User: local@localhost")

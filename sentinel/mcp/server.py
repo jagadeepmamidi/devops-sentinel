@@ -19,7 +19,7 @@ load_dotenv(dotenv_path=Path.cwd() / ".env")
 mcp = FastMCP("devops-sentinel")
 
 
-def _error(code: str, message: str) -> dict[str, Any]:
+def _error(code: str, message: str) -> dict:
     return {"error": {"code": code, "message": message}}
 
 
@@ -47,13 +47,13 @@ def _incident_service() -> IncidentService | dict[str, Any]:
 
 
 @mcp.tool()
-async def health_check(url: str, timeout: int = 10) -> dict[str, Any]:
+async def health_check(url: str, timeout: int = 10) -> dict:
     """Check one URL for HTTP health, latency, and SSL status."""
     return await QuickHealthCheck().check_url(url, timeout)
 
 
 @mcp.tool()
-async def health_check_batch(urls: list[str], timeout: int = 10) -> dict[str, Any]:
+async def health_check_batch(urls: list, timeout: int = 10) -> dict:
     """Check up to 10 URLs in parallel."""
     if not urls or len(urls) > 10:
         return _error("invalid_input", "Provide between 1 and 10 URLs.")
@@ -62,25 +62,23 @@ async def health_check_batch(urls: list[str], timeout: int = 10) -> dict[str, An
 
 
 @mcp.tool()
-def doctor(strict: bool = False) -> dict[str, Any]:
+def doctor(strict: bool = False) -> dict:
     """Run environment and connectivity diagnostics."""
     return run_doctor(strict=strict)
 
 
 @mcp.tool()
-def list_incidents(
-    limit: int = 10, severity: str | None = None, status: str | None = None
-) -> dict[str, Any]:
+def list_incidents(limit: int = 10, severity: str = "", status: str = "") -> dict:
     """List recent incidents belonging to current authenticated user."""
     service = _incident_service()
     if isinstance(service, dict):
         return service
-    incidents = service.list(limit, severity, status)
+    incidents = service.list(limit, severity or None, status or None)
     return {"incidents": incidents, "count": len(incidents)}
 
 
 @mcp.tool()
-def get_incident(incident_id: str) -> dict[str, Any]:
+def get_incident(incident_id: str) -> dict:
     """Get one incident only when current user owns it."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -90,7 +88,7 @@ def get_incident(incident_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_incident_events(incident_id: str) -> dict[str, Any]:
+def get_incident_events(incident_id: str) -> dict:
     """Get auditable timeline events for an owned incident."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -104,7 +102,7 @@ def get_incident_events(incident_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def generate_postmortem(incident_id: str) -> dict[str, Any]:
+async def generate_postmortem(incident_id: str) -> dict:
     """Generate a postmortem for an owned incident."""
     service = _incident_service()
     if isinstance(service, dict):
@@ -117,31 +115,29 @@ async def generate_postmortem(incident_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def acknowledge_incident(incident_id: str, note: str | None = None) -> dict[str, Any]:
+def acknowledge_incident(incident_id: str, note: str = "") -> dict:
     """Acknowledge owned incident and start investigation."""
     service = _incident_service()
     if isinstance(service, dict):
         return service
-    if not service.acknowledge(incident_id, note):
+    if not service.acknowledge(incident_id, note or None):
         return _error("not_found", "Incident not found, or already resolved.")
     return {"incident_id": incident_id, "status": "investigating"}
 
 
 @mcp.tool()
-def resolve_incident(incident_id: str, action_plan: str | None = None) -> dict[str, Any]:
+def resolve_incident(incident_id: str, action_plan: str = "") -> dict:
     """Resolve owned incident and record resolution notes."""
     service = _incident_service()
     if isinstance(service, dict):
         return service
-    if not service.resolve(incident_id, action_plan):
+    if not service.resolve(incident_id, action_plan or None):
         return _error("not_found", "Incident not found, or resolution failed.")
     return {"incident_id": incident_id, "status": "resolved"}
 
 
 @mcp.tool()
-def analyze_anomaly(
-    metric_name: str, current_value: float, historical_values: list[float]
-) -> dict[str, Any]:
+def analyze_anomaly(metric_name: str, current_value: float, historical_values: list) -> dict:
     """Detect statistical anomalies against historical baseline values."""
     if len(historical_values) < 3:
         return _error("invalid_input", "Provide at least 3 historical values.")

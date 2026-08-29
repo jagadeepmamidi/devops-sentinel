@@ -21,10 +21,6 @@ export default function OperatorIncidents() {
   const token = loadOperatorToken()
 
   useEffect(() => {
-    if (!token) {
-      return undefined
-    }
-
     let cancelled = false
     Promise.resolve()
       .then(() => {
@@ -54,7 +50,7 @@ export default function OperatorIncidents() {
   return (
     <OperatorShell
       title="Incidents"
-      description="Browse incidents stored by the API you are running."
+      description="Browse incidents stored by the API you are running. Local mode needs no token."
       tokenInput={tokenInput}
       setTokenInput={setTokenInput}
       error={error}
@@ -70,10 +66,7 @@ export default function OperatorIncidents() {
         </CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Loading incidents…</p> : null}
-          {!loading && !token ? (
-            <p className="text-sm text-muted-foreground">Save a token to load incidents.</p>
-          ) : null}
-          {!loading && token && incidents.length === 0 && !error ? (
+          {!loading && incidents.length === 0 && !error ? (
             <p className="text-sm text-muted-foreground">No incidents found.</p>
           ) : null}
           {incidents.length > 0 ? (

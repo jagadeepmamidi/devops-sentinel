@@ -120,7 +120,10 @@ def test_list_services_contract():
     assert payload["services"][0]["last_status"] == "healthy"
 
 
-def test_generate_postmortem_persists_markdown():
+def test_generate_postmortem_persists_markdown(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("SENTINEL_LLM_API_KEY", raising=False)
     client, fake_db = build_client()
 
     response = client.post(
@@ -144,3 +147,15 @@ def test_list_incident_events_returns_stored_timeline():
     payload = response.json()
     assert payload["total"] == 2
     assert payload["events"][0]["event_type"] == "detected"
+
+
+def test_local_mode_services_require_no_bearer(tmp_path, monkeypatch):
+    monkeypatch.setenv("SENTINEL_MODE", "local")
+    monkeypatch.setenv("SENTINEL_DATA_DIR", str(tmp_path / ".sentinel"))
+    from sentinel.cli.db import reset_db
+
+    reset_db()
+    client = TestClient(create_app())
+    response = client.get("/api/services")
+    assert response.status_code == 200
+    assert "services" in response.json()

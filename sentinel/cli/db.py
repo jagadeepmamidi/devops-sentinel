@@ -93,7 +93,7 @@ class SentinelDB:
         if client is None and self.client is None and get_storage_mode() == "local":
             self.path = Path(db_path).expanduser() if db_path else get_local_db_path()
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self._sqlite = sqlite3.connect(str(self.path))
+            self._sqlite = sqlite3.connect(str(self.path), check_same_thread=False)
             self._sqlite.row_factory = sqlite3.Row
             self._initialize_sqlite()
 
@@ -316,9 +316,9 @@ class SentinelDB:
 
     def delete_service(self, service_id: str) -> bool:
         if self.local:
-            self._connection().execute("DELETE FROM services WHERE id=?", (service_id,))
+            cursor = self._connection().execute("DELETE FROM services WHERE id=?", (service_id,))
             self._commit()
-            return True
+            return cursor.rowcount > 0
         if not self.client:
             return False
         self._execute(self.client.table("services").delete().eq("id", service_id))

@@ -40,7 +40,7 @@ export default function OperatorShell({
             <Alert>
               <AlertDescription>
                 This UI calls an API you run with <code className="font-mono">sentinel serve</code>.
-                It is not a hosted Sentinel backend.
+                Local SQLite mode needs no bearer token. Paste a token only for Supabase.
               </AlertDescription>
             </Alert>
             <form className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]" onSubmit={handleSaveToken}>
@@ -51,7 +51,7 @@ export default function OperatorShell({
                   type="password"
                   value={tokenInput}
                   onChange={(event) => setTokenInput(event.target.value)}
-                  placeholder="Paste bearer token from your API session"
+                  placeholder="Optional. Local mode leaves this blank."
                   autoComplete="off"
                   name="token"
                 />
