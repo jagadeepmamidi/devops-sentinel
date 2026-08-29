@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from click.testing import CliRunner
 
 from sentinel.cli.db import reset_db, SentinelDB
@@ -115,16 +116,15 @@ def test_postmortem_falls_back_when_provider_errors(monkeypatch):
 
 
 def test_mcp_server_module_registers_tools():
-    from sentinel.mcp import server as mcp_server
+    pytest.importorskip("mcp")
+    from sentinel.mcp.server import health_check, list_incidents, mcp
 
-    assert callable(mcp_server.health_check)
-    assert callable(mcp_server.list_incidents)
-    tools = getattr(mcp_server.mcp, "_tool_manager", None)
-    names = set()
-    if tools is not None:
-        listing = getattr(tools, "_tools", None) or getattr(tools, "tools", None) or {}
-        names = set(listing)
-    assert "health_check" in names or callable(mcp_server.health_check)
+    assert callable(health_check)
+    assert callable(list_incidents)
+    tools = getattr(getattr(mcp, "_tool_manager", None), "_tools", {}) or {}
+    assert "health_check" in tools
+    assert "list_incidents" in tools
+    assert "doctor" in tools
 
 
 def test_json_doctor_uninitialized_is_object(tmp_path, monkeypatch):

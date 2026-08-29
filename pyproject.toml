@@ -59,6 +59,7 @@ dev = [
   "bandit>=1.7.7",
   "build>=1.0",
   "twine>=5.0",
+  "mcp>=1.2,<2",
 ]
 ai = [
   "openai>=1.0",
