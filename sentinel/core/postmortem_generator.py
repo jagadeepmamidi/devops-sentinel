@@ -185,9 +185,9 @@ class PostmortemGenerator:
 
         timeline = self._format_timeline(events)
         prompt = (
-            "You are an SRE writing a blameless postmortem. Return JSON with keys: "
+            "You are an SRE writing a blameless postmortem. Return ONLY a JSON object with keys: "
             "summary, impact, root_cause, contributing_factors, what_went_well, "
-            "improvements, action_items, lessons. Values are markdown strings.\n"
+            "improvements, action_items, lessons. Values are markdown strings. No markdown fences.\n"
             f"Service: {incident.get('service_name')}\n"
             f"Severity: {incident.get('severity')}\n"
             f"Error: {incident.get('error_message') or incident.get('description')}\n"
@@ -205,6 +205,7 @@ class PostmortemGenerator:
             "model": model,
             "temperature": 0,
             "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
             "messages": [{"role": "user", "content": prompt}],
         }
         with httpx.Client(timeout=45) as client:
@@ -213,6 +214,14 @@ class PostmortemGenerator:
             raise RuntimeError(f"LLM HTTP {response.status_code}: {response.text[:300]}")
         body = response.json()
         content = body["choices"][0]["message"]["content"]
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError("LLM response was empty")
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[-1]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
         start = content.find("{")
         end = content.rfind("}")
         if start == -1 or end == -1:
