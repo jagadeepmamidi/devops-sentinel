@@ -24,7 +24,7 @@ const SECTIONS = [
 
 function Code({ children, className = '' }) {
   return (
-    <pre className={`overflow-x-auto rounded-lg border border-border bg-secondary/40 p-4 font-mono text-[13px] leading-6 ${className}`.trim()}>
+    <pre className={`overflow-x-auto border border-border bg-black/20 p-4 font-mono text-[12px] leading-6 tracking-normal normal-case ${className}`.trim()}>
       {children}
     </pre>
   )
@@ -32,7 +32,7 @@ function Code({ children, className = '' }) {
 
 function Inline({ children }) {
   return (
-    <code className="rounded-md border border-border bg-secondary/50 px-1.5 py-0.5 font-mono text-[12px]">
+    <code className="border border-border bg-black/20 px-1.5 py-0.5 font-mono text-[12px] tracking-normal normal-case">
       {children}
     </code>
   )
@@ -55,20 +55,18 @@ export default function Docs() {
 
   return (
     <SiteLayout>
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Documentation
-          </p>
+      <div className="site-grid gap-8 py-10 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="col-span-full lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
+          <p className="section-kicker mb-3">Documentation</p>
           <nav className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible" aria-label="Docs sections">
             {SECTIONS.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm ${
+                className={`hud-link whitespace-nowrap px-2 py-2 text-[12px] ${
                   active === section.id
-                    ? 'bg-secondary text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground'
                 }`}
                 aria-current={active === section.id ? 'location' : undefined}
               >
@@ -78,16 +76,16 @@ export default function Docs() {
           </nav>
         </aside>
 
-        <article className="grid gap-10">
+        <article className="col-span-full grid gap-12 lg:col-span-1">
           <section id="overview" className="scroll-mt-24">
             <Badge variant="outline">Operator guide</Badge>
-            <h1 className="mt-4 text-4xl font-medium tracking-tight">
+            <h1 className="mt-4 max-w-[20ch] text-[clamp(1.8rem,4vw,3.2rem)] font-extrabold leading-none tracking-[-0.02em]">
               CLI-first incident response, without giving us your data
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+            <p className="readable mt-4 max-w-2xl text-muted-foreground">
               Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, runs a
               staged agent workflow, and writes evidence to SQLite or to a Supabase project you
-              control. The website is documentation and a browser helper for your own auth — not a
+              control. The website is documentation and a browser helper for your own auth, not a
               hosted control plane.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -109,8 +107,8 @@ export default function Docs() {
           </section>
 
           <section id="quickstart" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">Quick start</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">Quick start</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Local mode is the default. Login is only required if you connect your own Supabase.
             </p>
             <div className="mt-4 grid gap-4">
@@ -153,8 +151,8 @@ sentinel supabase doctor`}</Code>
           </section>
 
           <section id="demo" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">30-second demo</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">30-second demo</h2>
+            <p className="readable mt-2 text-muted-foreground">
               No API key, no third-party fail URL. Sentinel starts a local HTTP server with{' '}
               <Inline>/ok</Inline> (200) and <Inline>/fail</Inline> (503), registers the failing
               endpoint, opens an incident, and prints the next commands.
@@ -169,8 +167,8 @@ sentinel demo`}</Code>
           </section>
 
           <section id="yaml" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">sentinel.yaml</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">sentinel.yaml</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Commit a project file next to the repo. <Inline>sentinel init</Inline> writes a sample
               if none exists. <Inline>sentinel up</Inline> registers missing services and starts
               the monitor.
@@ -193,8 +191,8 @@ sentinel demo`}</Code>
           </section>
 
           <section id="local" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">Local mode</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">Local mode</h2>
+            <p className="readable mt-2 text-muted-foreground">
               No account, no API server, no Sentinel-hosted database. Identity is{' '}
               <Inline>local@localhost</Inline>. Data lives in <Inline>.sentinel/sentinel.db</Inline>.
             </p>
@@ -209,13 +207,13 @@ SLACK_WEBHOOK_URL=`}</Code>
           </section>
 
           <section id="supabase" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">Bring your own Supabase</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">Bring your own Supabase</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Sentinel does not operate a shared database for customers. If you want team auth and
               Postgres, you create the project, you keep the keys, you own the rows.
             </p>
             <ol className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
-              <li>1. Create a project at supabase.com — this is yours, not ours.</li>
+              <li>1. Create a project at supabase.com. This is yours, not ours.</li>
               <li>
                 2. Run the schema: <Inline>sentinel schema --print</Inline> or copy{' '}
                 <Inline>supabase/schema.sql</Inline> into the SQL editor.
@@ -242,10 +240,10 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="commands" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">CLI reference</h2>
-            <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="border-b border-border bg-secondary/40 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            <h2 className="section-kicker">CLI reference</h2>
+            <div className="mt-4 overflow-x-auto border border-border">
+              <table className="w-full min-w-[520px] text-left text-[12px]">
+                <thead className="border-b border-border font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Command</th>
                     <th className="px-4 py-3">What it does</th>
@@ -284,8 +282,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="github" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">GitHub Action</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">GitHub Action</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Official composite action for a one-shot health probe. Copy{' '}
               <Inline>examples/github-health.yml</Inline> into your repo. Do not add a flaky
               public-URL check as a required status on this project.
@@ -305,8 +303,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="agents" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">Multi-agent workflow</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">Multi-agent workflow</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Each role has a narrow job and evidence context. Remediation with side effects is
               blocked until a human approves it.
             </p>
@@ -323,8 +321,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="mcp" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">MCP</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">MCP</h2>
+            <p className="readable mt-2 text-muted-foreground">
               Expose read-only operational context to Cursor, Claude Desktop, and other MCP hosts.
             </p>
             <Code>{`pip install "devops-sentinel-next[mcp]"
@@ -349,8 +347,8 @@ sentinel mcp`}</Code>
           </section>
 
           <section id="operator" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">Optional operator console</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <h2 className="section-kicker">Optional operator console</h2>
+            <p className="readable mt-2 text-muted-foreground">
               The pages under <Inline>/operator</Inline> talk to a FastAPI process you run. They
               are not a hosted SaaS dashboard. Start the API, then paste a bearer token from your
               session.
@@ -368,7 +366,7 @@ sentinel mcp`}</Code>
           </section>
 
           <section id="faq" className="scroll-mt-24">
-            <h2 className="text-2xl font-medium tracking-tight">FAQ</h2>
+            <h2 className="section-kicker">FAQ</h2>
             <div className="mt-4 grid gap-3">
               <Card>
                 <CardHeader>

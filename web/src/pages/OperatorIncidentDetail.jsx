@@ -106,7 +106,7 @@ export default function OperatorIncidentDetail() {
                   ['Detected', incident.detected_at || 'Unknown'],
                   ['Resolved', incident.resolved_at || 'Still open'],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg border border-border p-3">
+                  <div key={label} className="border border-border p-3">
                     <p className="text-xs text-muted-foreground">{label}</p>
                     <p className="mt-1 text-sm font-medium">{value}</p>
                   </div>
@@ -120,13 +120,13 @@ export default function OperatorIncidentDetail() {
                   value={resolutionNotes}
                   onChange={(event) => setResolutionNotes(event.target.value)}
                   placeholder="Optional context for generated postmortem…"
-                  className="min-h-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                  className="min-h-24 border border-input bg-transparent px-3 py-2 font-mono text-[13px] tracking-normal normal-case"
                 />
                 <Button type="submit" disabled={generating} className="w-fit">
                   {generating ? 'Generating…' : 'Generate postmortem'}
                 </Button>
               </form>
-              <div className="rounded-lg border border-border bg-secondary/20 p-4">
+              <div className="border border-border bg-black/20 p-4">
                 <h3 className="text-sm font-medium">Postmortem</h3>
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-6">
                   {incident.postmortem || 'No postmortem generated yet.'}

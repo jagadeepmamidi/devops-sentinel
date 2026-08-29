@@ -1,4 +1,4 @@
-const LINES = [
+const DEFAULT_LINES = [
   { tone: 'dim', text: '$ sentinel init' },
   { tone: 'ok', text: 'OK  Local mode ready. No Supabase or login required.' },
   { tone: 'dim', text: '$ sentinel services add production-api https://api.example.com/health' },
@@ -12,27 +12,40 @@ const LINES = [
 const TONE_CLASS = {
   dim: 'text-muted-foreground',
   ok: 'text-primary',
-  warn: 'text-amber-300',
+  warn: 'text-live',
+  sys: 'text-foreground',
 }
 
-export default function TerminalReplay() {
+export default function TerminalReplay({
+  title = 'SENTINEL / LOCAL',
+  meta = 'SQLITE',
+  lines = DEFAULT_LINES,
+  tall = false,
+}) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-border px-4 py-3 font-mono text-[11px] text-muted-foreground">
-        <span className="flex gap-1.5" aria-hidden="true">
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-          <i className="size-1.5 rounded-full bg-muted-foreground/50" />
-        </span>
-        <span>sentinel / local</span>
-        <span className="justify-self-end">SQLite</span>
+    <div className={`terminal-frame ${tall ? 'h-[280px]' : ''}`}>
+      <div className="terminal-frame-header font-mono text-[10px] tracking-[0.12em]">
+        <span>{title}</span>
+        <span>{meta}</span>
       </div>
       <pre
-        className="m-0 overflow-x-auto p-5 font-mono text-[13px] leading-7"
+        className="m-0 overflow-x-auto pt-8 font-mono text-[11px] leading-6 tracking-normal normal-case"
         aria-label="Sample Sentinel terminal session"
       >
-        {LINES.map((line) => (
-          <span key={line.text} className={`block ${TONE_CLASS[line.tone]}`}>
+        {lines.map((line, index) => (
+          <span
+            key={`${line.text}-${index}`}
+            className={`terminal-line block ${TONE_CLASS[line.tone] || TONE_CLASS.dim}`}
+            style={{ animationDelay: `${0.08 + index * 0.12}s` }}
+          >
+            {line.time ? (
+              <>
+                <span className="mr-3 text-[#555]">{line.time}</span>
+                {line.tag ? (
+                  <span className={`mr-3 inline-block w-10 ${TONE_CLASS[line.tone]}`}>{line.tag}</span>
+                ) : null}
+              </>
+            ) : null}
             {line.text}
           </span>
         ))}

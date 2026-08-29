@@ -4,17 +4,20 @@ export default function SiteBrand({ to = '/', onNavigate }) {
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-2.5 text-foreground no-underline"
+      className="inline-flex items-center gap-3 text-foreground no-underline hover:bg-transparent"
       aria-label="DevOps Sentinel home"
       onClick={onNavigate}
     >
       <span
-        className="grid size-7 place-items-center rounded-md bg-primary font-mono text-xs font-semibold text-primary-foreground"
+        className="grid size-8 place-items-center border-2 border-live font-mono text-sm font-bold text-primary"
         aria-hidden="true"
       >
-        S
+        &gt;_
       </span>
-      <span className="text-sm font-semibold tracking-tight">DevOps Sentinel</span>
+      <span className="text-[1.35rem] font-extrabold tracking-[-0.02em]">
+        SENTINEL
+        <i className="cursor-block" aria-hidden="true" />
+      </span>
     </Link>
   )
 }
