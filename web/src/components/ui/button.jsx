@@ -5,27 +5,26 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 text-[12px] font-bold tracking-[0.1em] uppercase whitespace-nowrap transition-none outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-3 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-sm text-sm font-medium whitespace-nowrap transition-[color,background-color,transform] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default:
-          "border border-foreground bg-transparent text-foreground hover:bg-foreground hover:text-background",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
-          "border border-destructive text-destructive hover:bg-destructive hover:text-background",
+          "bg-destructive text-white hover:bg-destructive/90",
         outline:
-          "border border-border bg-transparent text-foreground hover:bg-foreground hover:text-background",
+          "border border-border bg-transparent text-foreground hover:border-foreground hover:bg-secondary",
         secondary:
-          "border border-border bg-secondary text-secondary-foreground hover:bg-foreground hover:text-background",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
-          "border border-transparent text-foreground hover:bg-foreground hover:text-background",
-        link: "border-0 bg-transparent p-0 text-foreground hover:bg-foreground hover:text-background",
+          "text-muted-foreground hover:bg-secondary hover:text-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-auto px-4 py-2",
-        xs: "h-auto px-2 py-1 text-[11px]",
-        sm: "h-auto px-3 py-1.5 text-[11px]",
-        lg: "h-auto px-5 py-2.5",
+        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        xs: "h-6 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 px-3 text-xs has-[>svg]:px-2.5",
+        lg: "h-10 px-5 has-[>svg]:px-4",
         icon: "size-9",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",

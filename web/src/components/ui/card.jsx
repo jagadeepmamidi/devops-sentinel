@@ -39,7 +39,7 @@ function CardTitle({
   return (
     <div
       data-slot="card-title"
-      className={cn("font-bold tracking-tight uppercase", className)}
+      className={cn("font-semibold tracking-tight", className)}
       {...props} />
   );
 }
@@ -51,7 +51,7 @@ function CardDescription({
   return (
     <div
       data-slot="card-description"
-      className={cn("text-[12px] tracking-[0.05em] text-muted-foreground", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props} />
   );
 }

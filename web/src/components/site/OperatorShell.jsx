@@ -29,16 +29,14 @@ export default function OperatorShell({
 
   return (
     <SiteLayout navLinks={OPERATOR_NAV}>
-      <div className="site-grid py-10">
-        <Card className="col-span-full">
+      <div className="page-wrap grid gap-4 py-10">
+        <Card>
           <CardHeader>
-            <p className="section-kicker mb-2">Optional local console</p>
-            <CardTitle className="text-[clamp(1.6rem,3vw,2.4rem)] font-extrabold leading-none tracking-[-0.02em]">
-              {title}
-            </CardTitle>
+            <p className="text-xs text-muted-foreground">Optional local console</p>
+            <CardTitle className="text-3xl font-semibold tracking-tight">{title}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <p className="readable text-muted-foreground">{description}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{description}</p>
             <Alert>
               <AlertDescription>
                 This UI calls an API you run with <code className="font-mono">sentinel serve</code>.
@@ -75,16 +73,16 @@ export default function OperatorShell({
             </form>
             {extraActions}
             {error ? (
-              <p className="text-[12px] text-destructive" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {error}
               </p>
             ) : null}
           </CardContent>
         </Card>
-        <div className="col-span-full">{children}</div>
-        <p className="col-span-full readable text-muted-foreground">
+        {children}
+        <p className="text-sm text-muted-foreground">
           Need the CLI instead?{' '}
-          <Link className="hud-link px-1 text-foreground" to="/docs#quickstart">
+          <Link className="text-foreground underline" to="/docs#quickstart">
             Open the quick start
           </Link>
           .

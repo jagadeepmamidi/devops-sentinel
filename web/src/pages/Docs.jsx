@@ -2,7 +2,6 @@ import { useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import CommandInstall from '../components/site/CommandInstall'
 import SiteLayout from '../components/site/SiteLayout'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GITHUB_URL, INSTALL_COMMAND } from '@/lib/site'
@@ -24,7 +23,7 @@ const SECTIONS = [
 
 function Code({ children, className = '' }) {
   return (
-    <pre className={`overflow-x-auto border border-border bg-black/20 p-4 font-mono text-[12px] leading-6 tracking-normal normal-case ${className}`.trim()}>
+    <pre className={`overflow-x-auto border border-border bg-card p-4 font-mono text-[13px] leading-6 ${className}`.trim()}>
       {children}
     </pre>
   )
@@ -32,7 +31,7 @@ function Code({ children, className = '' }) {
 
 function Inline({ children }) {
   return (
-    <code className="border border-border bg-black/20 px-1.5 py-0.5 font-mono text-[12px] tracking-normal normal-case">
+    <code className="border border-border bg-card px-1.5 py-0.5 font-mono text-[12px]">
       {children}
     </code>
   )
@@ -55,18 +54,18 @@ export default function Docs() {
 
   return (
     <SiteLayout>
-      <div className="site-grid gap-8 py-10 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="col-span-full lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
-          <p className="section-kicker mb-3">Documentation</p>
+      <div className="page-wrap grid gap-8 py-10 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <aside className="lg:sticky lg:top-20 lg:self-start">
+          <p className="mb-3 text-xs text-muted-foreground">Documentation</p>
           <nav className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible" aria-label="Docs sections">
             {SECTIONS.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className={`hud-link whitespace-nowrap px-2 py-2 text-[12px] ${
+                className={`whitespace-nowrap px-2 py-2 text-sm ${
                   active === section.id
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground'
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 aria-current={active === section.id ? 'location' : undefined}
               >
@@ -76,39 +75,34 @@ export default function Docs() {
           </nav>
         </aside>
 
-        <article className="col-span-full grid gap-12 lg:col-span-1">
+        <article className="grid gap-12">
           <section id="overview" className="scroll-mt-24">
-            <Badge variant="outline">Operator guide</Badge>
-            <h1 className="mt-4 max-w-[20ch] text-[clamp(1.8rem,4vw,3.2rem)] font-extrabold leading-none tracking-[-0.02em]">
+            <h1 className="max-w-[20ch] text-4xl font-semibold tracking-tight">
               CLI-first incident response, without giving us your data
             </h1>
-            <p className="readable mt-4 max-w-2xl text-muted-foreground">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
               Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, runs a
               staged agent workflow, and writes evidence to SQLite or to a Supabase project you
               control. The website is documentation and a browser helper for your own auth, not a
               hosted control plane.
             </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <dl className="mt-6 divide-y divide-border border-y border-border">
               {[
                 ['Install', 'PyPI package. No signup wall.'],
                 ['Store', 'Local SQLite or bring-your-own Supabase.'],
                 ['Respond', 'Agents propose. Humans approve.'],
               ].map(([title, body]) => (
-                <Card key={title}>
-                  <CardHeader>
-                    <CardTitle className="text-base">{title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{body}</p>
-                  </CardContent>
-                </Card>
+                <div key={title} className="grid gap-1 py-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
+                  <dt className="text-sm font-medium">{title}</dt>
+                  <dd className="text-sm text-muted-foreground">{body}</dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </section>
 
           <section id="quickstart" className="scroll-mt-24">
-            <h2 className="section-kicker">Quick start</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">Quick start</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Local mode is the default. Login is only required if you connect your own Supabase.
             </p>
             <div className="mt-4 grid gap-4">
@@ -151,8 +145,8 @@ sentinel supabase doctor`}</Code>
           </section>
 
           <section id="demo" className="scroll-mt-24">
-            <h2 className="section-kicker">30-second demo</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">30-second demo</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               No API key, no third-party fail URL. Sentinel starts a local HTTP server with{' '}
               <Inline>/ok</Inline> (200) and <Inline>/fail</Inline> (503), registers the failing
               endpoint, opens an incident, and prints the next commands.
@@ -167,8 +161,8 @@ sentinel demo`}</Code>
           </section>
 
           <section id="yaml" className="scroll-mt-24">
-            <h2 className="section-kicker">sentinel.yaml</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">sentinel.yaml</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Commit a project file next to the repo. <Inline>sentinel init</Inline> writes a sample
               if none exists. <Inline>sentinel up</Inline> registers missing services and starts
               the monitor.
@@ -191,8 +185,8 @@ sentinel demo`}</Code>
           </section>
 
           <section id="local" className="scroll-mt-24">
-            <h2 className="section-kicker">Local mode</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">Local mode</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               No account, no API server, no Sentinel-hosted database. Identity is{' '}
               <Inline>local@localhost</Inline>. Data lives in <Inline>.sentinel/sentinel.db</Inline>.
             </p>
@@ -207,8 +201,8 @@ SLACK_WEBHOOK_URL=`}</Code>
           </section>
 
           <section id="supabase" className="scroll-mt-24">
-            <h2 className="section-kicker">Bring your own Supabase</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">Bring your own Supabase</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Sentinel does not operate a shared database for customers. If you want team auth and
               Postgres, you create the project, you keep the keys, you own the rows.
             </p>
@@ -240,7 +234,7 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="commands" className="scroll-mt-24">
-            <h2 className="section-kicker">CLI reference</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">CLI reference</h2>
             <div className="mt-4 overflow-x-auto border border-border">
               <table className="w-full min-w-[520px] text-left text-[12px]">
                 <thead className="border-b border-border font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -282,8 +276,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="github" className="scroll-mt-24">
-            <h2 className="section-kicker">GitHub Action</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">GitHub Action</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Official composite action for a one-shot health probe. Copy{' '}
               <Inline>examples/github-health.yml</Inline> into your repo. Do not add a flaky
               public-URL check as a required status on this project.
@@ -303,8 +297,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="agents" className="scroll-mt-24">
-            <h2 className="section-kicker">Multi-agent workflow</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">Multi-agent workflow</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Each role has a narrow job and evidence context. Remediation with side effects is
               blocked until a human approves it.
             </p>
@@ -321,8 +315,8 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="mcp" className="scroll-mt-24">
-            <h2 className="section-kicker">MCP</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">MCP</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               Expose read-only operational context to Cursor, Claude Desktop, and other MCP hosts.
             </p>
             <Code>{`pip install "devops-sentinel-next[mcp]"
@@ -347,8 +341,8 @@ sentinel mcp`}</Code>
           </section>
 
           <section id="operator" className="scroll-mt-24">
-            <h2 className="section-kicker">Optional operator console</h2>
-            <p className="readable mt-2 text-muted-foreground">
+            <h2 className="text-2xl font-semibold tracking-tight">Optional operator console</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
               The pages under <Inline>/operator</Inline> talk to a FastAPI process you run. They
               are not a hosted SaaS dashboard. Start the API, then paste a bearer token from your
               session.
@@ -366,7 +360,7 @@ sentinel mcp`}</Code>
           </section>
 
           <section id="faq" className="scroll-mt-24">
-            <h2 className="section-kicker">FAQ</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">FAQ</h2>
             <div className="mt-4 grid gap-3">
               <Card>
                 <CardHeader>

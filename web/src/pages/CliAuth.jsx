@@ -87,16 +87,16 @@ export default function CliAuth() {
 
   return (
     <SiteLayout>
-      <div className="site-grid py-12 lg:grid-cols-12">
-        <Card className="col-span-full lg:col-span-7">
+      <div className="page-wrap grid gap-6 py-12 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <p className="section-kicker mb-2">CLI auth helper</p>
-            <CardTitle className="text-[clamp(1.6rem,3vw,2.2rem)] font-extrabold leading-none tracking-[-0.02em]">
+            <p className="text-xs text-muted-foreground">CLI auth helper</p>
+            <CardTitle className="text-3xl font-semibold tracking-tight">
               Sign in to your Supabase, not ours
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <p className="readable text-muted-foreground">
+            <p className="text-sm leading-6 text-muted-foreground">
               Sentinel does not host accounts. This page is opened by{' '}
               <code className="font-mono text-foreground">sentinel login</code> and uses the
               project URL and anon key from your CLI config.
@@ -169,12 +169,12 @@ export default function CliAuth() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-full lg:col-span-5">
+        <Card>
           <CardHeader>
             <CardTitle>Prefer local?</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <pre className="overflow-x-auto border border-border bg-black/20 p-4 font-mono text-[12px] leading-6 tracking-normal normal-case">{`$ sentinel init
+            <pre className="overflow-x-auto border border-border bg-card p-4 font-mono text-[13px] leading-6">{`$ sentinel init
 $ sentinel login --local
 $ sentinel services add my-api https://api.example.com/health
 $ sentinel monitor my-api`}</pre>

@@ -201,9 +201,9 @@ Do not expose remote MCP directly to the public internet without authentication,
 
 Web console uses the same terminal language as the CLI:
 
-- charcoal CRT background (`#242526`) and JetBrains Mono
-- phosphor green for healthy status, orange-red for live/warn
-- sharp corners, HUD chrome, invert-on-hover links
+- dark charcoal background and JetBrains Mono
+- green health accent
+- prompt-style brand, command install, and live CLI replay
 - keyboard-visible focus states
 - working routes for docs, CLI auth (BYO Supabase), and optional operator UI
 

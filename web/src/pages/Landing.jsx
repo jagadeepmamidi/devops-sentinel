@@ -1,327 +1,190 @@
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import AgentPipeline from '../components/site/AgentPipeline'
 import CommandInstall from '../components/site/CommandInstall'
 import SiteLayout from '../components/site/SiteLayout'
 import TerminalReplay from '../components/site/TerminalReplay'
-import { GITHUB_URL } from '@/lib/site'
+import { Button } from '@/components/ui/button'
 
-const HEALTH_LOG = [
-  { time: '00:00.00', tag: 'SYS', tone: 'sys', text: 'WATCHER_START production-api' },
-  { time: '00:00.08', tag: 'EXEC', tone: 'sys', text: 'CHECK https://api.example.com/health' },
-  { time: '00:00.17', tag: 'OK', tone: 'ok', text: 'HTTP 200 84ms' },
-  { time: '00:00.18', tag: 'SYS', tone: 'sys', text: 'SQLITE_WRITE check #1' },
-  { time: '00:00.24', tag: 'EXEC', tone: 'sys', text: 'CHECK checkout-worker /ready' },
-  { time: '00:00.31', tag: 'OK', tone: 'ok', text: 'HTTP 200 112ms' },
-  { time: '00:00.90', tag: 'WARN', tone: 'warn', text: 'HTTP 503 1120ms' },
-  { time: '00:00.91', tag: 'SYS', tone: 'sys', text: 'INCIDENT_OPENED' },
-  { time: '00:01.02', tag: 'SYS', tone: 'sys', text: 'FIRST_RESPONDER notified' },
-  { time: '00:01.10', tag: 'SYS', tone: 'sys', text: 'STRATEGIST drafting plan' },
-]
-
-const MODELS = [
+const FEATURES = [
   {
-    code: '[A]',
-    name: 'CLI_FIRST',
-    visual: '$ sentinel',
+    command: 'sentinel init',
+    title: 'CLI first',
     body: 'Install, init, monitor, and generate postmortems without a hosted account.',
   },
   {
-    code: '[B]',
-    name: 'YOUR_STORE',
-    visual: '.sentinel/db',
+    command: '.sentinel/sentinel.db',
+    title: 'Your store',
     body: 'Local SQLite, or connect the Supabase project you already own. Sentinel never keeps a copy.',
   },
   {
-    code: '[C]',
-    name: 'SAFE_AGENTS',
-    visual: 'HUMAN_OK',
+    command: 'human approval',
+    title: 'Safe agents',
     body: 'Agents propose the next move. Anything with side effects waits for a human.',
-  },
-  {
-    code: '[D]',
-    name: 'HEALTH_SURFACE',
-    visual: 'HTTP 200',
-    body: 'Latency, status, SSL, retries, and JSON-path checks. Continuous, not a dashboard you babysit.',
-  },
-  {
-    code: '[E]',
-    name: 'MCP_READY',
-    visual: 'stdio',
-    body: 'Read-only operational context for Cursor, Claude, and other MCP hosts.',
-  },
-  {
-    code: '[F]',
-    name: 'SELF_HOST',
-    visual: 'sentinel serve',
-    body: 'Optional operator UI talks to an API you run. There is no Sentinel-hosted control plane.',
   },
 ]
 
 const HEALTH_ROWS = [
-  { name: 'api-gateway', url: '/health', latency: '84 ms', status: 'HEALTHY' },
-  { name: 'checkout-worker', url: '/ready', latency: '112 ms', status: 'HEALTHY' },
-  { name: 'edge-cache', url: '/ping', latency: '96 ms', status: 'WATCHING' },
+  { name: 'api-gateway', url: '/health', latency: '84 ms', status: 'Healthy' },
+  { name: 'checkout-worker', url: '/ready', latency: '112 ms', status: 'Healthy' },
+  { name: 'edge-cache', url: '/ping', latency: '96 ms', status: 'Watching' },
 ]
 
 export default function Landing() {
   return (
-    <SiteLayout hud>
-      <div className="site-grid pb-8">
-        <section className="col-span-full border-b-0 pt-16 pb-10 md:pt-28 md:pb-16">
-          <div className="mb-8 flex items-center gap-3">
-            <span
-              className="grid size-12 place-items-center border-2 border-live text-lg font-bold text-primary"
-              aria-hidden="true"
-            >
-              &gt;_
-            </span>
-            <span className="text-[clamp(1.8rem,4vw,2.6rem)] font-extrabold tracking-[-0.02em]">
-              SENTINEL
-              <i className="cursor-block" aria-hidden="true" />
-            </span>
-          </div>
-          <h1 className="max-w-[900px] text-[clamp(2rem,5vw,4.5rem)] font-extrabold leading-none tracking-[-0.02em]">
-            Watch the endpoint. Keep the incident in your own store.
-          </h1>
-          <p className="subtitle mt-4 max-w-[40ch] text-[1.15rem] font-normal tracking-[-0.01em] text-foreground normal-case">
-            Local-first health checks, incident memory, and agent response.
-          </p>
-
-          <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-6">
-              <p className="max-w-[45ch] text-[12px] leading-6 tracking-[0.05em] text-muted-foreground">
-                DevOps Sentinel is a local-first CLI for health checks, multi-agent incident
-                response, and postmortems. SQLite by default. Optional login against{' '}
-                <strong className="font-bold text-foreground">your</strong> Supabase project. We do
-                not host or store your operational data.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link to="/docs#quickstart" className="btn-raw">
-                  GET_STARTED
-                </Link>
-                <Link to="/docs#agents" className="btn-raw">
-                  AGENT_LOOP
-                </Link>
-              </div>
-              <div className="mt-6">
-                <CommandInstall />
-              </div>
-            </div>
-            <div className="lg:col-span-6">
-              <TerminalReplay
-                title="JOB: HEALTH_MESH"
-                meta="TIME_ELAPSED: 1.10s"
-                lines={HEALTH_LOG}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">01 THE_SIGNAL</h2>
-          <div className="grid gap-8 lg:grid-cols-12">
-            <p className="max-w-[35ch] text-[14px] leading-6 text-foreground lg:col-span-6">
-              Hosted SRE platforms ask you to ship telemetry into their cloud. Sentinel does the opposite.
+    <SiteLayout>
+      <div className="page-wrap pb-24">
+        <section className="grid items-center gap-10 pt-10 pb-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:pt-14 lg:pb-20">
+          <div className="max-w-xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
+              Watch the endpoint. Keep the incident in your own store.
+            </h1>
+            <p className="mt-5 max-w-[36ch] text-base leading-7 text-muted-foreground">
+              Local-first health checks, incident memory, and agent response. SQLite by default.
             </p>
-            <div className="lg:col-span-6">
-              <p className="max-w-[45ch] text-[12px] leading-6 tracking-[0.05em] text-muted-foreground">
-                Most on-call tools were built as SaaS: minutes to log in, a dashboard you babysit,
-                and incident memory that lives on someone else&apos;s disk.
-              </p>
-              <p className="mt-4 max-w-[45ch] text-[12px] leading-6 tracking-[0.05em] text-muted-foreground">
-                Sentinel checks endpoints you already own, writes evidence next to the repo or into
-                a database you provision, and stops agents at human approval.
-              </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild>
+                <Link to="/docs#quickstart">
+                  Get started
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/docs#agents">See the agent loop</Link>
+              </Button>
+            </div>
+            <div className="mt-6">
+              <CommandInstall />
             </div>
           </div>
+          <TerminalReplay />
         </section>
 
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">02 EXECUTION_MODEL</h2>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {MODELS.map((item) => (
-              <article key={item.name} className="diagram-box">
-                <div className="diagram-label">
-                  {item.code} {item.name}
-                </div>
-                <div className="diagram-visual normal-case tracking-normal">{item.visual}</div>
-                <p className="text-[11px] leading-6 tracking-[0.05em] text-muted-foreground">{item.body}</p>
+        <section className="border-t border-border py-20">
+          <h2 className="max-w-[18ch] text-3xl font-semibold tracking-tight">
+            On-call stays in the terminal. Evidence stays yours.
+          </h2>
+          <p className="mt-4 max-w-[58ch] text-sm leading-7 text-muted-foreground">
+            Hosted SRE platforms ask you to ship telemetry into their cloud. Sentinel checks
+            endpoints you already own, writes incident memory next to the repo or into a database
+            you provision, and stops agents at human approval.
+          </p>
+          <div className="mt-10 grid gap-px border border-border bg-border md:grid-cols-2">
+            <article className="bg-background p-6 md:row-span-2 md:flex md:flex-col md:justify-between">
+              <div>
+                <p className="font-mono text-xs text-primary">{FEATURES[0].command}</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight">{FEATURES[0].title}</h3>
+                <p className="mt-2 max-w-[36ch] text-sm leading-6 text-muted-foreground">
+                  {FEATURES[0].body}
+                </p>
+              </div>
+            </article>
+            {FEATURES.slice(1).map((item) => (
+              <article key={item.title} className="bg-background p-6">
+                <p className="font-mono text-xs text-primary">{item.command}</p>
+                <h3 className="mt-3 text-lg font-semibold tracking-tight">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">03 ARCHITECTURE_DELTA</h2>
-          <div className="grid gap-10 lg:grid-cols-12">
-            <ul className="data-list lg:col-span-6">
-              <li>
-                <strong>LOCAL-FIRST PARITY</strong>
-                <span className="text-muted-foreground">
-                  `sentinel init` writes SQLite under `.sentinel/`. No account, no API server, no
-                  Sentinel-hosted database.
-                </span>
-              </li>
-              <li>
-                <strong>BRING YOUR SUPABASE</strong>
-                <span className="text-muted-foreground">
-                  Team mode is `sentinel init --mode supabase` against your project URL and anon key.
-                  Auth, incidents, and postmortems stay in that project.
-                </span>
-              </li>
-            </ul>
-            <ul className="data-list lg:col-span-6">
-              <li>
-                <strong>AGENT-OPERABLE</strong>
-                <span className="text-muted-foreground">
-                  Four roles coordinate in the terminal. They recommend. They do not change
-                  infrastructure unless you approve it.
-                </span>
-              </li>
-              <li>
-                <strong>DENY-BY-DEFAULT</strong>
-                <span className="text-muted-foreground">
-                  Destructive remediation is an explicit approval, not a default. Keys stay in your
-                  config store.
-                </span>
-              </li>
-            </ul>
+        <section className="grid items-start gap-12 border-t border-border py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight">Four roles. One approval boundary.</h2>
+            <p className="mt-4 max-w-[42ch] text-sm leading-7 text-muted-foreground">
+              Sentinel coordinates agents in the terminal. They recommend. They do not change
+              infrastructure unless you approve it.
+            </p>
           </div>
+          <AgentPipeline />
         </section>
 
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">04 THE_AGENT_LOOP</h2>
-          <div className="grid items-start gap-10 lg:grid-cols-12">
-            <div className="lg:col-span-6">
-              <AgentPipeline />
-            </div>
-            <div className="lg:col-span-6">
-              <TerminalReplay
-                title="SENTINEL CLI"
-                meta="LOOP: DETECT → PLAN"
-                lines={[
-                  { tone: 'dim', text: '$ sentinel monitor production-api' },
-                  { tone: 'ok', text: '→ CHECK #1 HEALTHY  HTTP 200  84ms' },
-                  { tone: 'warn', text: '→ CHECK #4 DEGRADED HTTP 503  1120ms' },
-                  { tone: 'sys', text: '→ INCIDENT OPENED  evidence attached' },
-                  { tone: 'sys', text: '$ sentinel incidents show inc_4f2' },
-                  { tone: 'ok', text: '→ STRATEGIST drafted response plan' },
-                  { tone: 'dim', text: '$ sentinel postmortem generate inc_4f2' },
-                  { tone: 'ok', text: '→ WROTE postmortem.md  [human approval still required]' },
-                ]}
-                tall
-              />
+        <section className="grid items-center gap-10 border-t border-border py-20 lg:grid-cols-2">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight">
+              Local by default. Supabase only if you bring it.
+            </h2>
+            <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
+              <code className="text-foreground">sentinel init</code> writes SQLite under{' '}
+              <code className="text-foreground">.sentinel/</code>. Team mode is{' '}
+              <code className="text-foreground">sentinel init --mode supabase</code> against your
+              project URL and anon key. Auth, incidents, and postmortems stay in that project.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button asChild variant="outline">
+                <Link to="/docs#local">Local mode</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/docs#supabase">Bring your Supabase</Link>
+              </Button>
             </div>
           </div>
+          <TerminalReplay
+            title="sentinel init"
+            meta="local"
+            lines={[
+              { tone: 'dim', text: '$ sentinel init' },
+              { tone: 'ok', text: 'wrote .sentinel/sentinel.db' },
+              { tone: 'ok', text: 'identity local@localhost' },
+              { tone: 'dim', text: '$ sentinel demo' },
+              { tone: 'warn', text: 'opened incident on /fail (HTTP 503)' },
+              { tone: 'ok', text: 'next: sentinel incidents show <id>' },
+            ]}
+          />
         </section>
 
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">05 HEALTH_SURFACE</h2>
-          <div className="grid gap-10 lg:grid-cols-12">
-            <div className="lg:col-span-7">
-              <table className="spec-table">
-                <tbody>
-                  {HEALTH_ROWS.map((row) => (
-                    <tr key={row.name}>
-                      <td className="spec-key">
-                        <span className="block text-foreground normal-case tracking-normal">{row.name}</span>
-                        <span className="normal-case tracking-normal">{row.url}</span>
-                      </td>
-                      <td className="spec-value">
-                        <span className={row.status === 'WATCHING' ? 'text-live' : 'text-primary'}>
-                          {row.status}
-                        </span>
-                        <span className="ml-4 text-muted-foreground">{row.latency}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Link to="/docs#commands" className="btn-raw mt-6">
-                CLI_REFERENCE
-              </Link>
-            </div>
-            <div className="lg:col-span-5">
-              <p className="max-w-[40ch] text-[14px] leading-6 text-foreground">
-                Continuous checks, not a dashboard you babysit.
-              </p>
-              <p className="mt-4 max-w-[45ch] text-[12px] leading-6 tracking-[0.05em] text-muted-foreground">
-                HTTP 2xx and 3xx count as reachable. Failure and recovery thresholds keep a single
-                blip from opening or closing an incident.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="col-span-full border-b border-border py-16 md:py-24">
-          <h2 className="section-kicker">06 SYSTEM_SPECS</h2>
-          <div className="grid gap-10 lg:grid-cols-12">
-            <table className="spec-table lg:col-span-6">
+        <section className="border-t border-border py-20">
+          <h2 className="text-3xl font-semibold tracking-tight">
+            Continuous checks, not a dashboard you babysit
+          </h2>
+          <p className="mt-3 max-w-[55ch] text-sm leading-7 text-muted-foreground">
+            HTTP 2xx and 3xx count as reachable. Failure and recovery thresholds keep a single blip
+            from opening or closing an incident.
+          </p>
+          <div className="mt-8 overflow-x-auto border border-border">
+            <table className="w-full min-w-[480px] text-left text-sm">
+              <thead className="border-b border-border text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Service</th>
+                  <th className="px-4 py-3 font-medium">Path</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Latency</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr>
-                  <td className="spec-key">RUNTIME</td>
-                  <td className="spec-value">Python 3.10+. PyPI package devops-sentinel-next.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">DEFAULT_STORE</td>
-                  <td className="spec-value">SQLite at .sentinel/sentinel.db. Identity local@localhost.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">TEAM_MODE</td>
-                  <td className="spec-value">Bring-your-own Supabase. You keep the keys and the rows.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">CHECKS</td>
-                  <td className="spec-value">Status, body, JSON path, SSL days, retries, thresholds.</td>
-                </tr>
-              </tbody>
-            </table>
-            <table className="spec-table lg:col-span-6">
-              <tbody>
-                <tr>
-                  <td className="spec-key">AGENTS</td>
-                  <td className="spec-value">Watcher, First Responder, Investigator, Strategist.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">SAFETY</td>
-                  <td className="spec-value">Recommend only. Destructive work needs explicit approval.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">MCP</td>
-                  <td className="spec-value">Optional stdio tools for Cursor and Claude Desktop.</td>
-                </tr>
-                <tr>
-                  <td className="spec-key">OPERATOR_UI</td>
-                  <td className="spec-value">Optional. sentinel serve, then paste a bearer token.</td>
-                </tr>
+                {HEALTH_ROWS.map((row) => (
+                  <tr key={row.name} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 font-mono text-xs">{row.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{row.url}</td>
+                    <td className={`px-4 py-3 ${row.status === 'Watching' ? 'text-muted-foreground' : 'text-primary'}`}>
+                      {row.status}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs tabular-nums text-muted-foreground">
+                      {row.latency}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+          <Button asChild variant="link" className="mt-4 h-auto px-0">
+            <Link to="/docs#commands">CLI reference</Link>
+          </Button>
         </section>
 
-        <section className="col-span-full py-16 md:py-24">
-          <h2 className="section-kicker">07 INSTALL_CLI</h2>
-          <div className="grid items-start gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-7">
-              <p className="max-w-[40ch] text-[14px] leading-6 text-foreground">
-                Install once. Monitor from the terminal you already use.
-              </p>
-              <div className="mt-6">
-                <CommandInstall />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 lg:col-span-5">
-              <Link to="/docs#quickstart" className="btn-raw">
-                QUICK_START
-              </Link>
-              <Link to="/about" className="btn-raw">
-                WHY_THIS_EXISTS
-              </Link>
-              <a href={GITHUB_URL} className="btn-raw" target="_blank" rel="noopener noreferrer">
-                GITHUB
-              </a>
+        <section className="flex flex-col gap-6 border-t border-border py-16 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Install once. Monitor from the terminal you already use.
+            </h2>
+            <div className="mt-5 max-w-lg">
+              <CommandInstall />
             </div>
           </div>
+          <Button asChild variant="outline">
+            <Link to="/about">Why this exists</Link>
+          </Button>
         </section>
       </div>
     </SiteLayout>

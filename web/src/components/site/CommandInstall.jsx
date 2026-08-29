@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Check, Copy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { INSTALL_COMMAND } from '@/lib/site'
 
 export default function CommandInstall({
@@ -18,9 +20,9 @@ export default function CommandInstall({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div
-        className="flex max-w-full items-center gap-3 border border-border bg-black/20 px-3 py-2 font-mono text-[13px] tracking-normal normal-case"
+        className="flex max-w-full items-center gap-2 border border-border bg-card px-3 py-2 font-mono text-sm"
         role="group"
         aria-label="Install command"
       >
@@ -28,13 +30,12 @@ export default function CommandInstall({
           $
         </span>
         <code className="min-w-0 flex-1 overflow-x-auto text-foreground">{command}</code>
+        <Button type="button" variant="ghost" size="sm" onClick={copyCommand}>
+          {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <button type="button" className="btn-raw" onClick={copyCommand}>
-          {copied ? 'COPIED' : 'INSTALL_SCRIPT'}
-        </button>
-      </div>
-      {note ? <p className="text-[11px] tracking-[0.08em] text-muted-foreground">{note}</p> : null}
+      {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
       <span className="sr-only" aria-live="polite">
         {copied ? `${command} copied to clipboard.` : ''}
       </span>
