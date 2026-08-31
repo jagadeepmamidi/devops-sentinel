@@ -1,14 +1,4 @@
-"""
-ML Anomaly Detector - Isolation Forest for Proactive Detection
-==============================================================
-
-Uses scikit-learn's Isolation Forest to detect anomalies in:
-- Response times
-- Error rates
-- Traffic patterns
-
-Enables "predict before it fails" capability.
-"""
+"""ML Anomaly Detector - Isolation Forest for Proactive Detection"""
 
 import os
 import pickle
@@ -26,20 +16,7 @@ except ImportError:
 
 
 class AnomalyDetector:
-    """
-    ML-based anomaly detection using Isolation Forest
-    
-    Features:
-    - Unsupervised learning (no labeled data needed)
-    - Detects outliers in multivariate data
-    - Auto-trains on healthy service metrics
-    - Persists models to disk
-    
-    Metrics Analyzed:
-    - Response time (ms)
-    - Error rate (%)
-    - Request rate (req/s)
-    """
+    """ML-based anomaly detection using Isolation Forest."""
     
     def __init__(
         self,

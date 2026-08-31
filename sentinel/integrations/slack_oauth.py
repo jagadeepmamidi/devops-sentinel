@@ -1,13 +1,4 @@
-"""
-Slack OAuth - One-Click Integration
-====================================
-
-"Add to Slack" button flow:
-1. User clicks button → redirects to Slack
-2. User approves permissions → Slack redirects back
-3. We exchange code for tokens → Store in database
-4. Done! No manual copying needed.
-"""
+"""Slack OAuth - One-Click Integration"""
 
 import os
 import secrets

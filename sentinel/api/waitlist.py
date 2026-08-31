@@ -1,9 +1,4 @@
-"""
-Waitlist API Endpoint
-=====================
-
-Handle waitlist signups with email validation and duplicate prevention
-"""
+"""Waitlist API Endpoint"""
 
 from datetime import datetime
 

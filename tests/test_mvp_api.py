@@ -135,6 +135,8 @@ def test_generate_postmortem_persists_markdown(monkeypatch):
     payload = response.json()
     assert payload["incident_id"] == "inc-1"
     assert "Rollback completed" in payload["postmortem"]
+    assert payload["source"] == "fallback"
+    assert "not an AI-authored report" in payload["postmortem"]
     assert fake_db.saved_postmortem[0] == "inc-1"
 
 

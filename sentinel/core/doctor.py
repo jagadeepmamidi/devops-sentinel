@@ -10,6 +10,7 @@ import httpx
 
 from sentinel.cli.auth import get_current_user, get_storage_mode, is_logged_in
 from sentinel.cli.db import get_db
+from sentinel.core.postmortem_generator import PostmortemGenerator
 
 
 async def _check_api_health(api_url: str) -> bool:
@@ -21,14 +22,16 @@ async def _check_api_health(api_url: str) -> bool:
         return False
 
 
-def _check_agent_runtime() -> tuple[str, str]:
-    """Confirm optional CrewAI factory is importable when the extra is installed."""
+def _check_postmortem_runtime() -> tuple[str, str]:
+    """Confirm the postmortem generator imports; LLM keys remain optional."""
     try:
-        from agents import SentinelAgents  # noqa: F401
-
-        return "ok", "CrewAI agent factory and tool bridge importable"
+        PostmortemGenerator()
     except (ImportError, RuntimeError, TypeError, ValueError) as error:
-        return "warn", f"Optional [ai] extra unavailable: {error}"
+        return "fail", f"Postmortem generator unavailable: {error}"
+    llm_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if llm_key:
+        return "ok", "Template generator ready; LLM key present"
+    return "ok", "Template generator ready; LLM optional (fallback is labeled)"
 
 
 def run_doctor(strict: bool = False) -> dict[str, Any]:
@@ -98,19 +101,21 @@ def run_doctor(strict: bool = False) -> dict[str, Any]:
         {
             "name": "LLM Provider Key",
             "status": "ok" if llm_key else "warn",
-            "detail": "Configured" if llm_key else "Optional; postmortems use fallback mode",
+            "detail": "Configured" if llm_key else "Optional; postmortems use a labeled template fallback",
         },
         {
             "name": "API Health",
             "status": "ok" if api_ok else "warn",
             "detail": f"{api_url}/health reachable"
             if api_ok
-            else f"API not reachable at {api_url}/health",
+            else f"API not reachable at {api_url}/health (only needed for `sentinel serve`)",
         },
     ]
 
-    agent_status, agent_detail = _check_agent_runtime()
-    checks.append({"name": "Agent Runtime", "status": agent_status, "detail": agent_detail})
+    postmortem_status, postmortem_detail = _check_postmortem_runtime()
+    checks.append(
+        {"name": "Postmortem Runtime", "status": postmortem_status, "detail": postmortem_detail}
+    )
 
     failed = [check for check in checks if check["status"] == "fail"]
     warnings = [check for check in checks if check["status"] == "warn"]

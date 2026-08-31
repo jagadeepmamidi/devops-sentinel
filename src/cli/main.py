@@ -551,12 +551,22 @@ def dashboard(ctx: click.Context, refresh: int, once: bool) -> None:
 
 
 @cli.command()
-@click.option("--host", default=lambda: os.getenv("API_HOST", "0.0.0.0"), show_default=True, help="API host.")
+@click.option(
+    "--host",
+    default=lambda: os.getenv("API_HOST", "127.0.0.1"),
+    show_default="127.0.0.1",
+    help="Bind address. Defaults to localhost.",
+)
 @click.option("--port", default=lambda: int(os.getenv("API_PORT", os.getenv("PORT", "8000"))), show_default=True, help="API port.")
 @click.option("--reload", is_flag=True, help="Enable auto-reload for local development.")
 def serve(host: str, port: int, reload: bool) -> None:
-    """Start the FastAPI server."""
-    cmd = [sys.executable, "-m", "uvicorn", "api_server:app", "--host", host, "--port", str(port)]
+    """Start the optional operator API (localhost by default)."""
+    if (host or "").strip() in {"0.0.0.0", "::", "[::]", "*"}:
+        click.echo(
+            "WARNING: Binding to all interfaces. In local mode the operator API is unauthenticated.",
+            err=True,
+        )
+    cmd = [sys.executable, "-m", "uvicorn", "sentinel.api.app:app", "--host", host, "--port", str(port)]
     if reload:
         cmd.append("--reload")
     click.echo(f"Starting API server on {host}:{port}")

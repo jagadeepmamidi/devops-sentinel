@@ -1,15 +1,4 @@
-"""
-Failure Classifier - Confidence Scoring to Prevent Alert Spam
-============================================================
-
-Calculates confidence score for failures based on:
-- Consecutive failures
-- Error severity (status code)
-- Service criticality
-- Blast radius (affected downstream services)
-
-Only triggers incidents if confidence >= threshold (default 0.6)
-"""
+"""Failure Classifier - Confidence Scoring to Prevent Alert Spam"""
 
 from enum import Enum
 

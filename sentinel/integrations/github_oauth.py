@@ -1,9 +1,4 @@
-"""
-GitHub OAuth - One-Click Repo Monitoring
-=========================================
-
-"Connect GitHub" flow for deployment tracking
-"""
+"""GitHub OAuth - One-Click Repo Monitoring"""
 
 import os
 import secrets

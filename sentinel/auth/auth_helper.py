@@ -1,9 +1,4 @@
-"""
-Authentication Helper - Supabase Auth Integration
-==================================================
-
-Simple auth helpers for user authentication
-"""
+"""Authentication Helper - Supabase Auth Integration"""
 
 from fastapi import Depends, HTTPException, Request
 

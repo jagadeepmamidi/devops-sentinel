@@ -1,25 +1,11 @@
-"""
-Deployment Correlator - Link Incidents to Deployments
-======================================================
-
-Correlates incidents with recent deployments to identify bad releases
-"""
+"""Deployment Correlator - Link Incidents to Deployments"""
 
 import asyncio
 from datetime import datetime, timedelta
 
 
 class DeploymentCorrelator:
-    """
-    Correlate incidents with deployments
-    
-    Features:
-    - Track deployments per service
-    - Calculate incident rate post-deployment
-    - Identify problematic releases
-    - Suggest rollbacks
-    - Deployment risk scoring
-    """
+    """Correlate incidents with deployments."""
     
     def __init__(self, supabase_client):
         self.supabase = supabase_client

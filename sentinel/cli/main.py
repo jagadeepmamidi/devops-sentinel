@@ -1,15 +1,4 @@
-"""
-DevOps Sentinel CLI - Main Entry Point
-=======================================
-
-Usage:
-    sentinel login                   - Authenticate with browser
-    sentinel monitor <url>           - Monitor a URL for health
-    sentinel incidents list          - List recent incidents
-    sentinel postmortem <id>         - View/generate postmortem
-    sentinel status                  - Show configuration and connectivity
-    sentinel config                  - Show configuration
-"""
+"""Sentinel CLI entrypoint: init, health, monitor, incidents, postmortems."""
 
 import asyncio
 import json
@@ -179,7 +168,7 @@ def cli(ctx, output_json):
     """
     DevOps Sentinel - local-first SRE CLI.
 
-    Health checks, incident memory, multi-agent response, and postmortems.
+    Health checks, thresholded incidents, and postmortems.
     Default store is SQLite. Optional login talks to YOUR Supabase project.
 
     Quick start:
@@ -1159,9 +1148,35 @@ def _default_serve_port() -> int:
         return 8000
 
 
+_PUBLIC_BIND_HOSTS = frozenset({"0.0.0.0", "::", "[::]", "*"})
+
+
+def _serve_bind_is_public(host: str) -> bool:
+    return (host or "").strip().lower() in _PUBLIC_BIND_HOSTS
+
+
+def _warn_if_public_serve(host: str) -> None:
+    if not _serve_bind_is_public(host):
+        return
+    click.echo(
+        click.style(
+            "WARNING: Binding to "
+            f"{host} exposes the operator API on every interface.\n"
+            "In local mode, /api/services and /api/incidents do not require a bearer token.\n"
+            "Default bind is 127.0.0.1. Pass --host 0.0.0.0 only if you intend to expose this "
+            "process (for example behind a reverse proxy).",
+            fg="yellow",
+        ),
+        err=True,
+    )
+
+
 @cli.command()
 @click.option(
-    "--host", default=lambda: os.getenv("API_HOST", "0.0.0.0"), show_default=True, help="API host"
+    "--host",
+    default=lambda: os.getenv("API_HOST", "127.0.0.1"),
+    show_default="127.0.0.1",
+    help="Bind address. Defaults to localhost; use 0.0.0.0 only to expose the API.",
 )
 @click.option(
     "--port",
@@ -1172,8 +1187,9 @@ def _default_serve_port() -> int:
 )
 @click.option("--reload", is_flag=True, help="Enable auto-reload for local development")
 def serve(host, port, reload):
-    """Start the FastAPI server."""
+    """Start the optional operator API (localhost by default)."""
     os.environ["PORT"] = str(port)
+    _warn_if_public_serve(host)
     cmd = [
         sys.executable,
         "-m",
@@ -1225,16 +1241,19 @@ def schema_cmd(print_sql, output):
 
 @cli.command()
 def agents():
-    """Show the multi-agent incident response workflow."""
+    """Show the incident-response stages implemented by the CLI."""
     click.echo(
         """
-Sentinel agent loop (non-destructive by default)
-------------------------------------------------
-  Watcher           Detect failure, latency, SSL, or anomaly
-  First Responder   Open incident context and notify responders
-  Investigator      Correlate checks, events, deployments, dependencies
-  Strategist        Action plan, runbook suggestion, postmortem
-  Human approval    Required before remediation with side effects
+Incident response stages (CLI pipeline — not a separate agent runtime)
+----------------------------------------------------------------------
+  Detect     HTTP health check, latency, SSL, failure threshold
+  Open       Persist incident after consecutive failures
+  Notify     Optional Slack webhook when an incident opens
+  Plan       Template postmortem; optional LLM if a key is set
+  Approve    Destructive remediation is not executed automatically
+
+These labels describe the monitoring workflow. There is no CrewAI/multi-agent
+process running alongside the CLI.
 
 Start:
   sentinel monitor https://api.example.com/health --failure-threshold 3

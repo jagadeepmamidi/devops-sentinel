@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "devops-sentinel-next"
 version = "0.1.4"
-description = "Agent-accessible SRE operations platform for health checks, incidents, postmortems, and safe automation"
+description = "Local-first SRE CLI for HTTP health checks, thresholded incidents, and postmortems"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Jagadeep Mamidi", email = "jagadeep.mamidi@gmail.com" }]
@@ -61,14 +61,6 @@ dev = [
   "twine>=5.0",
   "mcp>=1.2,<2",
 ]
-ai = [
-  "openai>=1.0",
-  "anthropic>=0.18",
-  "langchain-core>=0.1.30",
-  "langchain-openai>=0.1.0",
-  "crewai==0.51.0",
-  "crewai-tools==0.8.0",
-]
 mcp = ["mcp>=1.2,<2"]
 all = [
   "pytest>=7.0",
@@ -79,12 +71,6 @@ all = [
   "bandit>=1.7.7",
   "build>=1.0",
   "twine>=5.0",
-  "openai>=1.0",
-  "anthropic>=0.18",
-  "langchain-core>=0.1.30",
-  "langchain-openai>=0.1.0",
-  "crewai==0.51.0",
-  "crewai-tools==0.8.0",
   "mcp>=1.2,<2",
   "supabase>=2.0",
 ]

@@ -1,9 +1,4 @@
-"""
-DevOps Sentinel - ML Module
-============================
-
-Machine learning components for predictive intelligence
-"""
+"""DevOps Sentinel - ML Module"""
 
 from .anomaly_detector import AnomalyDetector
 

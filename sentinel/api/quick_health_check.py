@@ -1,9 +1,4 @@
-"""
-Quick Health Check - Viral Feature for Instant Value
-=====================================================
-
-No signup required - check any URL instantly
-"""
+"""Quick Health Check - Viral Feature for Instant Value"""
 
 import asyncio
 import socket
@@ -14,16 +9,7 @@ import aiohttp
 
 
 class QuickHealthCheck:
-    """
-    Instant health check for any URL
-
-    Features:
-    - No authentication required (viral growth)
-    - Response time measurement
-    - SSL certificate validation
-    - HTTP status check
-    - Suggestions for issues
-    """
+    """Instant health check for any URL."""
 
     DEFAULT_TIMEOUT = 10  # seconds
 

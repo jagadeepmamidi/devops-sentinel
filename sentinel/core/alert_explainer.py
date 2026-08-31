@@ -1,24 +1,11 @@
-"""
-Alert Explainer - "Why Did Sentinel Page Me?" Feature
-======================================================
-
-Generate plain-English explanations for every alert
-"""
+"""Alert Explainer - "Why Did Sentinel Page Me?" Feature"""
 
 import asyncio
 from datetime import datetime, timedelta, timezone
 
 
 class AlertExplainer:
-    """
-    Generate human-readable explanations for alerts
-
-    Features:
-    - Plain-English explanations
-    - Context from deployments, baselines, history
-    - Similar incident references
-    - Actionable next steps
-    """
+    """Generate human-readable explanations for alerts."""
 
     def __init__(self, supabase_client):
         self.supabase = supabase_client

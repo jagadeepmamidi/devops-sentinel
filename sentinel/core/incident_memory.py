@@ -1,24 +1,11 @@
-"""
-Enhanced Incident Memory - Protected Similarity Search
-=======================================================
-
-Find similar past incidents with confidence thresholds
-"""
+"""Enhanced Incident Memory - Protected Similarity Search"""
 
 import asyncio
 from datetime import datetime
 
 
 class IncidentMemory:
-    """
-    Enhanced Incident Memory with protection
-
-    Features:
-    - Confidence threshold filtering
-    - Explanation generation
-    - Dismissal tracking (user feedback)
-    - Protected from bad suggestions
-    """
+    """Enhanced Incident Memory with protection."""
 
     # Only suggest incidents above this similarity threshold
     CONFIDENCE_THRESHOLD = 0.82

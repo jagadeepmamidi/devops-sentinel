@@ -1,9 +1,4 @@
-"""
-PagerDuty OAuth - One-Click On-Call Integration
-================================================
-
-"Connect PagerDuty" flow for on-call management
-"""
+"""PagerDuty OAuth - One-Click On-Call Integration"""
 
 import os
 import secrets

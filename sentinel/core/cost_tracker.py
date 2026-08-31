@@ -1,24 +1,11 @@
-"""
-Cost Tracker - AI Usage Monitoring and Budget Management
-=========================================================
-
-Track AI API costs per user and prevent budget overruns
-"""
+"""Cost Tracker - AI Usage Monitoring and Budget Management"""
 
 import asyncio
 from datetime import datetime
 
 
 class CostTracker:
-    """
-    Track and limit AI usage costs per user
-    
-    Features:
-    - Log every AI API call with cost
-    - Monthly budget limits per tier
-    - Admin alerts for over-budget users
-    - Cost dashboard for admins
-    """
+    """Track and limit AI usage costs per user."""
     
     TIER_BUDGETS = {
         'free': 0.50,      # $0.50/month max

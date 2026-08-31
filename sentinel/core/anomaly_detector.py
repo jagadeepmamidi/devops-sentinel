@@ -1,9 +1,4 @@
-"""
-Anomaly Detector - Statistical Anomaly Detection
-=================================================
-
-Detect anomalies in metrics without ML training
-"""
+"""Anomaly Detector - Statistical Anomaly Detection"""
 
 import math
 import statistics

@@ -1,9 +1,4 @@
-"""
-All Integrations Hub
-====================
-
-Central hub for managing all one-click OAuth integrations
-"""
+"""All Integrations Hub"""
 
 
 from fastapi import APIRouter, Depends, HTTPException

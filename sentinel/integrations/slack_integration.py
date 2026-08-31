@@ -1,9 +1,4 @@
-"""
-Slack Integration - Collaborative Incident Management
-======================================================
-
-Manage incidents through Slack threads with rich formatting
-"""
+"""Slack Integration - Collaborative Incident Management"""
 
 import json
 from datetime import datetime
@@ -12,17 +7,7 @@ import aiohttp
 
 
 class SlackIntegration:
-    """
-    Slack integration for incident management
-    
-    Features:
-    - Create incident threads
-    - Post updates to threads
-    - Rich message formatting
-    - Interactive buttons (Acknowledge, Resolve)
-    - Thread-based collaboration
-    - Status updates
-    """
+    """Slack integration for incident management."""
     
     def __init__(self, webhook_url: str, bot_token: str | None = None):
         """

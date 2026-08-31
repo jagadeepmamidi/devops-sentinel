@@ -1,25 +1,11 @@
-"""
-On-Call Manager - Rotation & Escalation
-========================================
-
-Manages on-call schedules, rotations, and escalation policies
-"""
+"""On-Call Manager - Rotation & Escalation"""
 
 import asyncio
 from datetime import datetime, timedelta
 
 
 class OnCallManager:
-    """
-    Manage on-call schedules and escalations
-    
-    Features:
-    - Round-robin rotation
-    - Time-based schedules (weekly, daily)
-    - Multi-layer escalation
-    - Timezone-aware scheduling
-    - Override assignments
-    """
+    """Manage on-call schedules and escalations."""
     
     def __init__(self, supabase_client):
         self.supabase = supabase_client

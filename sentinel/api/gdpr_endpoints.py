@@ -1,9 +1,4 @@
-"""
-GDPR Compliance Endpoints - Data Export and Deletion
-=====================================================
-
-User rights: Access, Export, Delete all personal data
-"""
+"""GDPR Compliance Endpoints - Data Export and Deletion"""
 
 from datetime import datetime
 

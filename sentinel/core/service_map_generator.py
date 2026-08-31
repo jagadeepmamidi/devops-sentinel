@@ -1,25 +1,11 @@
-"""
-Service Map Generator - Visualize Dependencies
-===============================================
-
-Generate interactive service dependency maps
-"""
+"""Service Map Generator - Visualize Dependencies"""
 
 
 import networkx as nx
 
 
 class ServiceMapGenerator:
-    """
-    Generate service dependency maps
-    
-    Features:
-    - Build dependency graph
-    - Detect critical paths
-    - Identify single points of failure
-    - Calculate service criticality
-    - Export to visualization formats (Mermaid, D3.js, Cytoscape)
-    """
+    """Generate service dependency maps."""
     
     def __init__(self, supabase_client):
         self.supabase = supabase_client

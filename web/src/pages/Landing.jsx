@@ -21,8 +21,8 @@ const FEATURES = [
   },
   {
     command: 'human approval',
-    title: 'Safe agents',
-    body: 'Agents propose the next move. Anything with side effects waits for a human.',
+    title: 'No silent remediations',
+    body: 'The CLI opens incidents and drafts postmortems. It does not mutate infrastructure on its own.',
   },
 ]
 
@@ -42,7 +42,7 @@ export default function Landing() {
               Watch the endpoint. Keep the incident in your own store.
             </h1>
             <p className="mt-5 max-w-[36ch] text-base leading-7 text-muted-foreground">
-              Local-first health checks, incident memory, and agent response. SQLite by default.
+              Local-first health checks, incident memory, and labeled postmortems. SQLite by default.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild>
@@ -52,7 +52,7 @@ export default function Landing() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/docs#agents">See the agent loop</Link>
+                <Link to="/docs#agents">See the response stages</Link>
               </Button>
               <Button asChild variant="outline">
                 <a href="#live-demo">Try a live 503</a>
@@ -96,10 +96,10 @@ export default function Landing() {
 
         <section className="grid items-start gap-12 border-t border-border py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight">Four roles. One approval boundary.</h2>
+            <h2 className="text-3xl font-semibold tracking-tight">Detect, open, plan. Humans still decide.</h2>
             <p className="mt-4 max-w-[42ch] text-sm leading-7 text-muted-foreground">
-              Sentinel coordinates agents in the terminal. They recommend. They do not change
-              infrastructure unless you approve it.
+              These are CLI pipeline stages, not a separate multi-agent runtime. Sentinel records
+              evidence and drafts a postmortem. It does not change infrastructure on its own.
             </p>
           </div>
           <AgentPipeline />

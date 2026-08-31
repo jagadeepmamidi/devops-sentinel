@@ -1,9 +1,4 @@
-"""
-PagerDuty Integration - Critical Incident Escalation
-=====================================================
-
-Route critical incidents to on-call engineers via PagerDuty
-"""
+"""PagerDuty Integration - Critical Incident Escalation"""
 
 import asyncio
 from datetime import datetime
@@ -12,17 +7,7 @@ import aiohttp
 
 
 class PagerDutyIntegration:
-    """
-    PagerDuty integration for incident escalation
-    
-    Features:
-    - Trigger incidents for P0/P1 alerts
-    - Auto-acknowledge from DevOps Sentinel
-    - Auto-resolve when incidents close
-    - Link incidents bidirectionally
-    - Escalation to backup on-call
-    - Incident notes sync
-    """
+    """PagerDuty integration for incident escalation."""
     
     def __init__(self, integration_key: str, api_token: str | None = None):
         self.integration_key = integration_key

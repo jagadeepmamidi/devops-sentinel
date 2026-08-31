@@ -1,9 +1,4 @@
-"""
-Email Notification System - SMTP-Based Alerting
-================================================
-
-Send email notifications for incidents, postmortems, and digests
-"""
+"""Email Notification System - SMTP-Based Alerting"""
 
 import asyncio
 from datetime import datetime, timedelta
@@ -14,17 +9,7 @@ import aiosmtplib
 
 
 class EmailNotificationSystem:
-    """
-    Email notification system for DevOps Sentinel
-    
-    Features:
-    - Incident alerts (immediate)
-    - Daily/weekly digest emails
-    - Postmortem delivery
-    - Custom templates per severity
-    - HTML + plain text emails
-    - Attachment support
-    """
+    """Email notification system for DevOps Sentinel."""
     
     def __init__(self, smtp_config: dict):
         """
