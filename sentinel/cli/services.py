@@ -150,7 +150,29 @@ def services_check(ctx, service_id, timeout):
         latency = result.get("latency_ms") or 0
         healthy = bool(result.get("healthy"))
         error = result.get("error") or ""
-        db.log_health_check(service_id, status_code, int(latency), healthy, error)
+        from sentinel.core.detect import default_model_dir, detect_check
+
+        history = db.get_latest_health_checks(service_id, limit=200) if db.connected else []
+        detection = detect_check(
+            history,
+            healthy=healthy,
+            status_code=result.get("status_code"),
+            latency_ms=result.get("latency_ms"),
+            error=error,
+            service_id=service_id,
+            model_dir=default_model_dir(db) if db.connected else None,
+        )
+        result.update(detection.as_dict())
+        db.log_health_check(
+            service_id,
+            status_code,
+            int(latency),
+            healthy,
+            error,
+            diag=detection.diag,
+            anomaly_score=detection.anomaly_score,
+            model_id=detection.model_id,
+        )
         db.update_service_status(
             service_id,
             "healthy" if healthy else ("degraded" if status_code else "down"),
@@ -162,20 +184,28 @@ def services_check(ctx, service_id, timeout):
             "status_code": result.get("status_code"),
             "latency_ms": result.get("latency_ms"),
             "healthy": healthy,
+            **detection.as_dict(),
         }
         if error:
             payload["error"] = error
         return payload
 
     result = asyncio.run(run())
-    click.echo(
-        json.dumps(result, indent=2)
-        if _json(ctx)
-        else (
-            f"HEALTHY {result.get('status_code')} | {result.get('latency_ms', 0)}ms"
-            if result["healthy"]
-            else f"DOWN | {result.get('error') or result.get('status_code')}"
+    from sentinel.core.detect import format_detect_fields
+
+    if _json(ctx):
+        click.echo(json.dumps(result, indent=2))
+    elif result["healthy"] and result.get("watch"):
+        click.echo(
+            f"WATCH {result.get('status_code')} | {result.get('latency_ms', 0)}ms | {format_detect_fields(result)}"
         )
-    )
+    elif result["healthy"]:
+        click.echo(
+            f"HEALTHY {result.get('status_code')} | {result.get('latency_ms', 0)}ms | {format_detect_fields(result)}"
+        )
+    else:
+        click.echo(
+            f"DOWN | {result.get('error') or result.get('status_code')} | {format_detect_fields(result)}"
+        )
     if not result["healthy"]:
         raise click.exceptions.Exit(1)

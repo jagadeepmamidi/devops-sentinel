@@ -11,7 +11,7 @@ from mcp.server.fastmcp import FastMCP
 
 from sentinel.api.quick_health_check import QuickHealthCheck
 from sentinel.application.incidents import IncidentService
-from sentinel.core.anomaly_detector import AnomalyDetector
+from sentinel.core.detect import detect_check
 from sentinel.core.doctor import run_doctor
 from sentinel.core.postmortem_generator import PostmortemGenerator
 
@@ -138,10 +138,24 @@ def resolve_incident(incident_id: str, action_plan: str = "") -> dict:
 
 @mcp.tool()
 def analyze_anomaly(metric_name: str, current_value: float, historical_values: list) -> dict:
-    """Detect statistical anomalies against historical baseline values."""
+    """Score a metric with the same local detector as `sentinel monitor` (warmup until 20 samples)."""
     if len(historical_values) < 3:
         return _error("invalid_input", "Provide at least 3 historical values.")
-    return AnomalyDetector().detect(metric_name, current_value, historical_values)
+    history = [
+        {"response_time_ms": float(value), "status_code": 200, "is_healthy": True}
+        for value in historical_values
+    ]
+    detection = detect_check(
+        history,
+        healthy=True,
+        status_code=200,
+        latency_ms=float(current_value),
+        service_id=f"mcp-{metric_name}",
+    )
+    payload = detection.as_dict()
+    payload["metric_name"] = metric_name
+    payload["current_value"] = current_value
+    return payload
 
 
 def main() -> None:

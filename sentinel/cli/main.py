@@ -100,6 +100,11 @@ def print_incident_card(result: dict) -> None:
     click.echo(f"  severity: {result.get('incident_severity') or 'unknown'}")
     click.echo(f"  service:  {result.get('service')}")
     click.echo(f"  detail:   {result.get('error') or 'threshold exceeded'}")
+    if result.get("diag") or result.get("model_id"):
+        click.echo(
+            f"  detect:   diag={result.get('diag') or 'unknown'} "
+            f"model={result.get('model_id') or 'warmup'}"
+        )
     click.echo("  next:")
     click.echo(f"    sentinel incidents show {incident_id}")
     click.echo(f"    sentinel incidents ack {incident_id}")
@@ -321,13 +326,23 @@ def monitor(
                     notify_slack_incident(result)
                 return
             state = (
-                "HEALTHY"
-                if result["healthy"]
-                else ("DEGRADED" if result.get("status_code") else "DOWN")
+                "WATCH"
+                if result.get("watch") and result.get("healthy")
+                else (
+                    "HEALTHY"
+                    if result["healthy"]
+                    else ("DEGRADED" if result.get("status_code") else "DOWN")
+                )
             )
             extra_err = f" | {result['error']}" if result.get("error") else ""
+            from ..core.detect import format_detect_fields
+
+            watch_color = "yellow" if state == "WATCH" else ("green" if result["healthy"] else "yellow")
             click.echo(
-                f"{result['service']} {click.style(state, fg='green' if result['healthy'] else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | check #{result['check']}{extra_err}"
+                f"{result['service']} {click.style(state, fg=watch_color)} | "
+                f"{result.get('status_code') or result.get('error', '')} | "
+                f"{result.get('latency_ms', 0):.0f}ms | check #{result['check']} | "
+                f"{format_detect_fields(result)}{extra_err}"
             )
             if result.get("incident_opened"):
                 print_incident_card(result)
@@ -357,23 +372,68 @@ def monitor(
 @click.pass_context
 def health(ctx, url, timeout, expect_status, body, json_path, json_equals, ssl_min_days):
     """Run one health check. Exit 1 when unhealthy or unreachable."""
+    from ..core.detect import default_model_dir, detect_check, format_detect_fields
+
     check_url_once = _monitor_components()[1]
     expect = _parse_expect(expect_status, body, json_path, json_equals, ssl_min_days)
     result = asyncio.run(check_url_once(url, timeout, expect=expect)).as_dict()
+    db = get_db()
+    user = get_current_user() if is_logged_in() else None
+    history: list = []
+    service_id = None
+    if user and db.connected:
+        service = db.get_service_by_url(user["id"], url)
+        if service:
+            service_id = service["id"]
+            history = db.get_latest_health_checks(service_id, limit=200)
+    detection = detect_check(
+        history,
+        healthy=bool(result.get("healthy")),
+        status_code=result.get("status_code"),
+        latency_ms=result.get("latency_ms"),
+        error=result.get("error") or "",
+        expect_reasons=result.get("expect"),
+        service_id=service_id,
+        model_dir=default_model_dir(db) if db.connected else None,
+    )
+    result.update(detection.as_dict())
+    if service_id and db.connected:
+        db.log_health_check(
+            service_id,
+            result.get("status_code") or 0,
+            int(result.get("latency_ms") or 0),
+            bool(result.get("healthy")),
+            result.get("error") or "",
+            diag=detection.diag,
+            anomaly_score=detection.anomaly_score,
+            model_id=detection.model_id,
+        )
+    detect_suffix = f" | {format_detect_fields(result)}"
     if ctx.obj.get("json"):
         click.echo(json.dumps(result, indent=2, default=str))
+    elif result["healthy"] and result.get("watch"):
+        extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
+        hint = f" | {result['error']}" if result.get("error") else ""
+        click.echo(
+            f"{click.style('WATCH', fg='yellow')} {url} | HTTP {result['status_code']} | "
+            f"{result['latency_ms']:.0f}ms{extra}{detect_suffix}{hint}"
+        )
     elif result["healthy"]:
         extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
         hint = f" | {result['error']}" if result.get("error") else ""
         click.echo(
-            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms{extra}{hint}"
+            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | "
+            f"{result['latency_ms']:.0f}ms{extra}{detect_suffix}{hint}"
         )
     elif result.get("status_code"):
         click.echo(
-            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms | {result.get('error', '')}"
+            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | "
+            f"{result['latency_ms']:.0f}ms | {result.get('error', '')}{detect_suffix}"
         )
     else:
-        click.echo(f"{click.style('X', fg='red')} {url} | UNREACHABLE | {result.get('error', '')}")
+        click.echo(
+            f"{click.style('X', fg='red')} {url} | UNREACHABLE | {result.get('error', '')}{detect_suffix}"
+        )
     if not result["healthy"]:
         raise click.exceptions.Exit(1)
 
@@ -988,18 +1048,35 @@ def demo(ctx, keep_going):
 
         def render(result):
             result["service"] = service.get("name", "demo-fail")
-            state = "DOWN" if not result.get("healthy") else "HEALTHY"
+            state = "WATCH" if result.get("watch") and result.get("healthy") else (
+                "DOWN" if not result.get("healthy") else "HEALTHY"
+            )
+            from ..core.detect import format_detect_fields
+
             click.echo(
-                f"{result['service']} {click.style(state, fg='green' if result.get('healthy') else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms"
+                f"{result['service']} {click.style(state, fg='green' if result.get('healthy') and not result.get('watch') else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | {format_detect_fields(result)}"
             )
             if result.get("incident_opened"):
                 print_incident_card(result)
 
         asyncio.run(runner.run_forever(render, once=True))
         click.echo("Healthy contrast check:")
+        from ..core.detect import default_model_dir, detect_check, format_detect_fields
+
         ok_result = asyncio.run(check_once(server.ok_url, 5)).as_dict()
+        ok_detection = detect_check(
+            [],
+            healthy=bool(ok_result.get("healthy")),
+            status_code=ok_result.get("status_code"),
+            latency_ms=ok_result.get("latency_ms"),
+            error=ok_result.get("error") or "",
+            service_id=None,
+            model_dir=default_model_dir(db) if db.connected else None,
+        )
+        ok_result.update(ok_detection.as_dict())
         click.echo(
-            f"{click.style('OK', fg='green')} {server.ok_url} | HTTP {ok_result.get('status_code')} | {ok_result.get('latency_ms') or 0:.0f}ms"
+            f"{click.style('OK', fg='green')} {server.ok_url} | HTTP {ok_result.get('status_code')} | "
+            f"{ok_result.get('latency_ms') or 0:.0f}ms | {format_detect_fields(ok_result)}"
         )
         if keep_going:
             click.echo("keep-going: Ctrl+C to stop.")

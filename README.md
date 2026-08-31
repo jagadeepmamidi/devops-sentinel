@@ -15,8 +15,9 @@ Source: [github.com/jagadeepmamidi/devops-sentinel](https://github.com/jagadeepm
 | `sentinel init` / local SQLite | Bring-your-own Supabase | Hosted SaaS / account wall |
 | HTTP health checks (`health`, `monitor`, `up`) | Slack webhook on incident open | CrewAI / live multi-agent runtime |
 | Failure and recovery thresholds | LLM postmortem when you set a key | Autonomous remediation that mutates infra |
-| Incident open/resolve + event timeline | MCP (`pip install "...[mcp]"`) | Production-grade ML anomaly engine |
-| Labeled template postmortems | `sentinel serve` operator API (localhost) | Transactional outbox / Kafka / FAISS |
+| Local detect+diagnose (`diag=` `model=` `anomaly=` on every check) | MCP (`pip install "...[mcp]"`) | Model-opened incidents or auto-restart |
+| Incident open/resolve + event timeline | `sentinel serve` operator API (localhost) | Transactional outbox / Kafka / FAISS |
+| Labeled template postmortems |  |  |
 
 The website (`web/`) is a Vite SPA: docs, a live failing-endpoint demo, a BYO-Supabase auth helper, and an optional operator UI that talks to **your** `sentinel serve` process.
 
@@ -156,6 +157,17 @@ Storage is behind `SentinelDB`. SQLite uses the same project, service, health-ch
 7. Generate a **labeled** template postmortem, or an LLM draft when a key works.
 
 Failure and recovery thresholds prevent one transient request from opening or resolving an incident. MTTD is left unset when there is not enough evidence to compute it.
+
+## Local detect and diagnose
+
+Every `health`, `monitor`, and `up` check prints `diag=` `model=` `anomaly=`.
+
+- HTTP still decides **open/resolve**. The model never opens an incident and never remediates.
+- First 20 checks per service: `model=warmup`, `diag=unknown` unless the HTTP probe already failed (`http_5xx`, `unreachable`, …).
+- After 20 SQLite rows: Isolation Forest on that service’s history (`model=iforest`). If sklearn is missing, z-score `model=baseline`.
+- A healthy HTTP 200 with an outlier latency prints **WATCH** and `diag=latency`. Slack `--notify` still fires only when an incident opens.
+- Labels are a closed set: `http_5xx` `http_4xx` `unreachable` `latency` `expect_mismatch` `tls` `unknown`.
+- Models live next to the DB under `.sentinel/models/`.
 
 ## Incident-response stages
 

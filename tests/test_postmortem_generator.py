@@ -52,3 +52,20 @@ async def test_postmortem_falls_back_when_llm_raises(monkeypatch):
     assert "402" in (result["fallback_reason"] or "")
     assert "LLM call failed" in result["markdown"]
     assert "not an AI-authored report" in result["markdown"]
+
+
+@pytest.mark.asyncio
+async def test_postmortem_cites_local_detector(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = await PostmortemGenerator().generate(
+        {
+            "id": "inc-3",
+            "severity": "high",
+            "service_name": "api",
+            "investigation_report": '{"diag": "http_5xx", "model_id": "iforest", "anomaly_score": 0.4}',
+        },
+        [{"metadata": {"diag": "http_5xx", "model_id": "iforest"}}],
+    )
+    assert "diag=http_5xx" in result["markdown"]
+    assert "model=iforest" in result["markdown"]

@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from .detect import HISTORY_LIMIT, default_model_dir, detect_check
 from .health_spec import HealthExpect, evaluate_expect
 from .monitoring_policy import (
     MonitoringState,
@@ -172,6 +173,19 @@ class MonitorRunner:
         opened = False
         resolved = False
         service_id = self.service["id"] if self.service else None
+        history: list = []
+        if service_id and self.db and self.db.connected:
+            history = self.db.get_latest_health_checks(service_id, limit=HISTORY_LIMIT)
+        detection = detect_check(
+            history,
+            healthy=result.healthy,
+            status_code=result.status_code,
+            latency_ms=result.latency_ms,
+            error=result.error or "",
+            expect_reasons=result.expect_reasons,
+            service_id=service_id,
+            model_dir=default_model_dir(self.db) if self.db else None,
+        )
         if service_id and self.db and self.db.connected:
             self.db.log_health_check(
                 service_id,
@@ -179,6 +193,9 @@ class MonitorRunner:
                 int(result.latency_ms or 0),
                 result.healthy,
                 result.error or "",
+                diag=detection.diag,
+                anomaly_score=detection.anomaly_score,
+                model_id=detection.model_id,
             )
             self.db.update_service_status(
                 service_id,
@@ -208,10 +225,12 @@ class MonitorRunner:
                     detail,
                     error_code=result.status_code,
                     status="alerting",
+                    extra_metadata=detection.as_dict(),
                 )
                 self.active_incident_id = incident["id"] if incident else None
                 opened = self.active_incident_id is not None
         payload = result.as_dict()
+        payload.update(detection.as_dict())
         payload.update(
             {
                 "check": self.check_count,

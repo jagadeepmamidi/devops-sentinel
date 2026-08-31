@@ -146,7 +146,7 @@ class SentinelDB:
             CREATE TABLE IF NOT EXISTS health_checks (
                 id TEXT PRIMARY KEY, service_id TEXT NOT NULL, status_code INTEGER,
                 response_time_ms REAL, is_healthy INTEGER NOT NULL, error_message TEXT,
-                checked_at TEXT NOT NULL
+                checked_at TEXT NOT NULL, diag TEXT, anomaly_score REAL, model_id TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_local_checks_service ON health_checks(service_id, checked_at DESC);
             CREATE TABLE IF NOT EXISTS incident_events (
@@ -157,7 +157,21 @@ class SentinelDB:
             CREATE INDEX IF NOT EXISTS idx_local_events_incident ON incident_events(incident_id, created_at);
             """
         )
+        self._migrate_sqlite()
         self._sqlite.commit()
+
+    def _migrate_sqlite(self) -> None:
+        """Add columns introduced after the original local schema."""
+        assert self._sqlite is not None
+        columns = {
+            row[1] for row in self._connection().execute("PRAGMA table_info(health_checks)")
+        }
+        if "diag" not in columns:
+            self._connection().execute("ALTER TABLE health_checks ADD COLUMN diag TEXT")
+        if "anomaly_score" not in columns:
+            self._connection().execute("ALTER TABLE health_checks ADD COLUMN anomaly_score REAL")
+        if "model_id" not in columns:
+            self._connection().execute("ALTER TABLE health_checks ADD COLUMN model_id TEXT")
 
     @staticmethod
     def _now() -> str:
@@ -498,8 +512,17 @@ class SentinelDB:
         error_message: str,
         error_code: int | None = None,
         status: str = "detecting",
+        extra_metadata: dict | None = None,
     ) -> dict | None:
         now = self._now()
+        detection_meta = extra_metadata or {}
+        investigation = json.dumps(detection_meta) if detection_meta else None
+        event_meta = {
+            "severity": severity,
+            "status": status,
+            "error_code": error_code,
+            **detection_meta,
+        }
         if self.local:
             item = {
                 "id": str(uuid4()),
@@ -512,7 +535,7 @@ class SentinelDB:
                 "detected_at": now,
                 "resolved_at": None,
                 "mttr_seconds": None,
-                "investigation_report": None,
+                "investigation_report": investigation,
                 "action_plan": None,
                 "postmortem": None,
                 "created_at": now,
@@ -528,24 +551,23 @@ class SentinelDB:
                 service_id,
                 "detected",
                 error_message,
-                {"severity": severity, "status": status, "error_code": error_code},
+                event_meta,
             )
             return item
         if not self.client:
             return None
-        result = self._execute(
-            self.client.table("incidents").insert(
-                {
-                    "user_id": user_id,
-                    "service_id": service_id,
-                    "severity": severity,
-                    "status": status,
-                    "error_code": error_code,
-                    "error_message": error_message,
-                    "detected_at": now,
-                }
-            )
-        )
+        payload = {
+            "user_id": user_id,
+            "service_id": service_id,
+            "severity": severity,
+            "status": status,
+            "error_code": error_code,
+            "error_message": error_message,
+            "detected_at": now,
+        }
+        if investigation:
+            payload["investigation_report"] = investigation
+        result = self._execute(self.client.table("incidents").insert(payload))
         incident = result.data[0] if result and result.data else None
         if incident:
             self.create_incident_event(
@@ -554,7 +576,7 @@ class SentinelDB:
                 service_id,
                 "detected",
                 error_message,
-                {"severity": severity, "status": status, "error_code": error_code},
+                event_meta,
             )
         return incident
 
@@ -641,10 +663,15 @@ class SentinelDB:
         response_time_ms: int,
         is_healthy: bool,
         error: str = "",
+        diag: str | None = None,
+        anomaly_score: float | None = None,
+        model_id: str | None = None,
     ) -> bool:
         if self.local:
             self._connection().execute(
-                "INSERT INTO health_checks VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO health_checks (id, service_id, status_code, response_time_ms, "
+                "is_healthy, error_message, checked_at, diag, anomaly_score, model_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (
                     str(uuid4()),
                     service_id,
@@ -653,23 +680,29 @@ class SentinelDB:
                     int(is_healthy),
                     error,
                     self._now(),
+                    diag,
+                    anomaly_score,
+                    model_id,
                 ),
             )
             self._commit()
             return True
         if not self.client:
             return False
-        self._execute(
-            self.client.table("health_checks").insert(
-                {
-                    "service_id": service_id,
-                    "status_code": status_code,
-                    "response_time_ms": response_time_ms,
-                    "is_healthy": is_healthy,
-                    "error_message": error,
-                }
-            )
-        )
+        payload = {
+            "service_id": service_id,
+            "status_code": status_code,
+            "response_time_ms": response_time_ms,
+            "is_healthy": is_healthy,
+            "error_message": error,
+        }
+        if diag is not None:
+            payload["diag"] = diag
+        if anomaly_score is not None:
+            payload["anomaly_score"] = anomaly_score
+        if model_id is not None:
+            payload["model_id"] = model_id
+        self._execute(self.client.table("health_checks").insert(payload))
         return True
 
     def get_latest_health_checks(self, service_id: str, limit: int = 10) -> list[dict]:
