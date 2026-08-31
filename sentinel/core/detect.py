@@ -108,6 +108,10 @@ def diagnose_http(
     lowered = blob.lower()
     if status_code is None or status_code == 0:
         return DIAG_UNREACHABLE
+    if status_code >= 500:
+        return DIAG_HTTP_5XX
+    if status_code >= 400:
+        return DIAG_HTTP_4XX
     if "tls" in lowered or "certificate" in lowered:
         return DIAG_TLS
     if any(
@@ -115,10 +119,6 @@ def diagnose_http(
         for token in ("body missing", "json path", "expected", "not in", "not 2xx")
     ):
         return DIAG_EXPECT
-    if status_code >= 500:
-        return DIAG_HTTP_5XX
-    if status_code >= 400:
-        return DIAG_HTTP_4XX
     return DIAG_UNKNOWN
 
 

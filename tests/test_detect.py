@@ -31,6 +31,7 @@ def test_diagnose_http_closed_set():
     assert diagnose_http(False, 200, "", ["body missing 'ok'"]) == "expect_mismatch"
     assert diagnose_http(False, 200, "", ["TLS expires in 3d (min 14d)"]) == "tls"
     assert diagnose_http(True, 200, "") == DIAG_UNKNOWN
+    assert diagnose_http(False, 503, "status 503 is not 2xx/3xx") == DIAG_HTTP_5XX
 
 
 def test_warmup_does_not_watch(tmp_path):
