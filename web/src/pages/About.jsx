@@ -13,9 +13,9 @@ export default function About() {
           </h1>
           <p className="mt-4 max-w-[62ch] text-base leading-7 text-muted-foreground">
             Most SRE platforms ask you to ship telemetry into their cloud. DevOps Sentinel is the
-            opposite: a PyPI CLI that checks endpoints you already own, writes incident memory next
-            to the repo or into a database you provision, and coordinates agents that stop at human
-            approval.
+            opposite: a PyPI CLI that checks endpoints you already own and writes incident memory
+            next to the repo or into a database you provision. The website is documentation and a
+            live demo for that CLI, not a hosted SaaS.
           </p>
         </div>
 
@@ -28,15 +28,16 @@ export default function About() {
             </p>
             <p>
               <strong className="text-foreground">Product:</strong> health checks, thresholded
-              incidents, a four-role agent loop, postmortems, MCP for AI operators, optional Slack.
+              incidents, labeled postmortems, optional MCP and Slack. Not a hosted control plane.
             </p>
             <p>
               <strong className="text-foreground">Trust model:</strong> local SQLite is enough.
               Supabase is compatibility for teams that already run it. Bring-your-own, never ours.
             </p>
             <p>
-              <strong className="text-foreground">Safety:</strong> agents explain and propose.
-              Destructive remediation is an explicit approval, not a default.
+              <strong className="text-foreground">Safety:</strong> the CLI records evidence and
+              drafts reports. Destructive remediation is not a default, and is not implemented as
+              an autonomous executor.
             </p>
           </div>
         </section>
@@ -46,7 +47,7 @@ export default function About() {
           <ul className="mt-4 grid gap-2 text-sm leading-7 text-muted-foreground">
             <li>Host your incident database or sell access to it.</li>
             <li>Require an account before `pip install` works.</li>
-            <li>Let agents mutate infrastructure without a human.</li>
+            <li>Let the CLI mutate infrastructure without a human.</li>
             <li>Hide the workflow behind a waitlist or a fake console.</li>
           </ul>
         </section>

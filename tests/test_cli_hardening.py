@@ -43,6 +43,10 @@ def test_json_doctor_after_init_is_parseable(tmp_path: Path, monkeypatch):
     payload = json.loads(result.output)
     assert payload["mode"] == "local"
     assert payload["failed_count"] == 0
+    names = [check["name"] for check in payload["checks"]]
+    assert "Postmortem Runtime" in names
+    assert "Agent Runtime" not in names
+    assert "CrewAI" not in result.output
 
 
 def test_local_delete_unknown_service_fails(tmp_path: Path, monkeypatch):
@@ -113,6 +117,7 @@ def test_postmortem_falls_back_when_provider_errors(monkeypatch):
         )
     assert generated["source"] == "fallback"
     assert "402" in (generated["fallback_reason"] or "")
+    assert "LLM call failed" in generated["markdown"]
 
 
 def test_mcp_server_module_registers_tools():

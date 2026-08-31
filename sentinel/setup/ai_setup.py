@@ -1,9 +1,4 @@
-"""
-OpenAI/OpenRouter Quick Setup
-==============================
-
-Helps users get AI keys with guidance
-"""
+"""OpenAI/OpenRouter Quick Setup"""
 
 import asyncio
 import os

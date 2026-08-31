@@ -1,9 +1,4 @@
-"""
-Email Notification Templates - Professional Alert Emails
-=========================================================
-
-HTML email templates for various notifications
-"""
+"""Email Notification Templates - Professional Alert Emails"""
 
 from datetime import datetime
 

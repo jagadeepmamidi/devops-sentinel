@@ -27,5 +27,28 @@ async def test_postmortem_generator_creates_markdown_without_ai(monkeypatch):
     )
 
     assert result["status"] == "draft"
+    assert result["source"] == "fallback"
+    assert result["fallback_reason"] is None
     assert "Payments API" in result["markdown"]
     assert "Rolled back the failing deploy." in result["markdown"]
+    assert "not an AI-authored report" in result["markdown"]
+    assert "DevOps Sentinel AI" not in result["markdown"]
+
+
+@pytest.mark.asyncio
+async def test_postmortem_falls_back_when_llm_raises(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+
+    async def boom(*_args, **_kwargs):
+        raise RuntimeError("LLM HTTP 402: credits")
+
+    monkeypatch.setattr(PostmortemGenerator, "_generate_with_ai", boom)
+    result = await PostmortemGenerator().generate(
+        {"id": "inc-2", "severity": "high", "service_name": "api"},
+        [],
+    )
+
+    assert result["source"] == "fallback"
+    assert "402" in (result["fallback_reason"] or "")
+    assert "LLM call failed" in result["markdown"]
+    assert "not an AI-authored report" in result["markdown"]

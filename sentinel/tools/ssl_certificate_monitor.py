@@ -1,9 +1,4 @@
-"""
-SSL Certificate Monitor - Track SSL Expiration
-==============================================
-
-Monitors SSL certificate expiration and alerts before expiry
-"""
+"""SSL Certificate Monitor - Track SSL Expiration"""
 
 import asyncio
 import socket
@@ -12,14 +7,7 @@ from datetime import datetime
 
 
 class SSLCertificateMonitor:
-    """
-    Monitor SSL certificate expiration dates
-    
-    Features:
-    - Check certificate expiration
-    - Alert at configurable thresholds (30 days, 7 days, 1 day)
-    - Track certificate details (issuer, subject, validity)
-    """
+    """Monitor SSL certificate expiration dates."""
     
     def __init__(self):
         self.default_alert_days = [30, 7, 1]  # Alert at 30, 7, and 1 day before expiry

@@ -1,9 +1,4 @@
-"""
-Slack Integration - Real-time Notifications & Commands
-=======================================================
-
-Slack webhooks, slash commands, and interactive messages
-"""
+"""Slack Integration - Real-time Notifications & Commands"""
 
 import hashlib
 import hmac
@@ -14,15 +9,7 @@ import aiohttp
 
 
 class SlackIntegration:
-    """
-    Slack integration for DevOps Sentinel
-
-    Features:
-    - Incident alerts with smart formatting
-    - Interactive acknowledge/resolve buttons
-    - /sentinel slash commands
-    - Channel-based routing by severity
-    """
+    """Slack integration for DevOps Sentinel."""
 
     def __init__(
         self,

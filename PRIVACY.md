@@ -17,19 +17,12 @@ DevOps Sentinel is designed with **privacy as a core principle**. Unlike commerc
 
 ### 1. Data That Stays in YOUR Infrastructure
 
-All operational data remains in **your own Supabase instance**:
+All operational data remains in **your** store — local SQLite by default, or **your own Supabase instance** if you opt in:
 
 - **Service Health Data**: Response times, status codes, error messages
 - **Incident Records**: Incident details, postmortems, resolutions
-- **Incident Embeddings**: Vector representations for similarity search (stored in your Supabase)
-- **Service Dependencies**: Your service dependency graph
-- **Runbooks**: Your playbooks and remediation steps
-- **Baselines**: Statistical metrics calculated from your services
-- **Anomalies**: ML-detected anomalies from your metrics
-- **User Comments**: Incident timeline and collaboration data
-- **On-Call Schedules**: Your team's rotation schedules
 
-**We Never See This Data**. It lives in your Supabase database with your credentials.
+**We Never See This Data**. It lives in your local SQLite file or your Supabase project.
 
 ### 2. Data We Process (But Don't Store)
 
@@ -79,7 +72,7 @@ If you opt-in to usage analytics:
 ## Data Storage & Security
 
 ### Your Responsibility
-Since all data lives in **your Supabase instance**:
+Since operational data lives in **your local SQLite file or your Supabase instance**:
 - **You control access**: Set your own Row-Level Security (RLS) policies
 - **You control backups**: Supabase auto-backups or your own
 - **You control encryption**: Supabase uses encryption at rest and in transit
@@ -195,7 +188,7 @@ Since data is in **your** Supabase instance:
 
 ## Summary
 
-[INFO] **Your data stays with you** (in your Supabase)
+[INFO] **Your data stays with you** (local SQLite, or your Supabase)
 [NO] **We don't store, see, or sell your data**
 [INFO] **Open source & auditable**
 [YES] **GDPR & CCPA friendly by design**

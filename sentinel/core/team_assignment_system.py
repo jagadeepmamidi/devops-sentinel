@@ -1,25 +1,11 @@
-"""
-Team Assignment System - Collaborative Incident Ownership
-==========================================================
-
-Assign incidents to team members and track ownership
-"""
+"""Team Assignment System - Collaborative Incident Ownership"""
 
 import asyncio
 from datetime import datetime, timedelta, timezone
 
 
 class TeamAssignmentSystem:
-    """
-    Manage incident assignments and team collaboration
-
-    Features:
-    - Auto-assign based on on-call schedule
-    - Manual assignment override
-    - Load balancing across team
-    - Assignment history tracking
-    - Workload metrics
-    """
+    """Manage incident assignments and team collaboration."""
 
     def __init__(self, supabase_client):
         self.supabase = supabase_client

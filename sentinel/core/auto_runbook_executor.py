@@ -1,9 +1,4 @@
-"""
-Auto-Runbook Execution Engine - Automated Remediation
-=======================================================
-
-Execute runbooks automatically for known incident types
-"""
+"""Runbook executor. Destructive steps require approval; several handlers are incomplete."""
 
 import asyncio
 import subprocess
@@ -11,19 +6,7 @@ from datetime import datetime
 
 
 class AutoRunbookExecutor:
-    """
-    Auto-execute remediation runbooks
-    
-    Features:
-    - Match incidents to runbooks
-    - Execute steps automatically
-    - Require approval for destructive actions
-    - SSH command execution
-    - Kubectl/Docker commands
-    - Database maintenance
-    - Rollback on failure
-    - Execution auditing
-    """
+    """Match a known incident to a runbook. Destructive steps require approval."""
     
     def __init__(self, supabase_client, approval_required: bool = True):
         self.supabase = supabase_client
@@ -351,7 +334,7 @@ class AutoRunbookExecutor:
         database: str = 'postgresql'
     ) -> str:
         """Execute database query (read-only recommended)"""
-        # This is a simplified version - production would use proper DB clients
+        # Placeholder: no live database client is wired here.
         print(f"[DB] Executing query on {database}: {query[:50]}...")
         
         # In production, would use psycopg2, asyncpg, etc.

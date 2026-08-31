@@ -17,7 +17,7 @@ const SECTIONS = [
   { id: 'supabase', title: 'Your Supabase' },
   { id: 'commands', title: 'CLI reference' },
   { id: 'github', title: 'GitHub Action' },
-  { id: 'agents', title: 'Agents' },
+  { id: 'agents', title: 'Response stages' },
   { id: 'mcp', title: 'MCP' },
   { id: 'operator', title: 'Operator console' },
   { id: 'faq', title: 'FAQ' },
@@ -83,16 +83,15 @@ export default function Docs() {
               CLI-first incident response, without giving us your data
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, runs a
-              staged agent workflow, and writes evidence to SQLite or to a Supabase project you
-              control. The website is documentation and a browser helper for your own auth, not a
-              hosted control plane.
+              Sentinel monitors HTTP endpoints, opens incidents after a failure threshold, and
+              writes evidence to SQLite or to a Supabase project you control. The website is
+              documentation and a live 503 demo for the CLI, not a hosted control plane.
             </p>
             <dl className="mt-6 divide-y divide-border border-y border-border">
               {[
                 ['Install', 'PyPI package. No signup wall.'],
                 ['Store', 'Local SQLite or bring-your-own Supabase.'],
-                ['Respond', 'Agents propose. Humans approve.'],
+                ['Respond', 'Incidents and labeled postmortems. No auto-remediation.'],
               ].map(([title, body]) => (
                 <div key={title} className="grid gap-1 py-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
                   <dt className="text-sm font-medium">{title}</dt>
@@ -275,12 +274,12 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                     ['sentinel dashboard [--once]', 'Live terminal table of registered services'],
                     ['sentinel incidents list|show|ack|resolve|export', 'Incident memory and timeline'],
                     ['sentinel postmortem generate|view', 'OpenRouter/OpenAI write-up when a key is set; otherwise a local template'],
-                    ['sentinel agents', 'Print the Watcher → Strategist workflow'],
+                    ['sentinel agents', 'Print the CLI response stages (not a separate agent runtime)'],
                     ['sentinel doctor', 'Mode-aware diagnostics'],
                     ['sentinel supabase doctor', 'Probe YOUR Supabase URL, key, tables, and RLS'],
                     ['sentinel config set|list|remove', 'Store provider keys in ~/.sentinel/config.json'],
                     ['sentinel mcp / devops-sentinel-mcp', 'Read-only tools for Cursor and Claude Desktop'],
-                    ['sentinel serve', 'Optional local FastAPI for the operator console'],
+                    ['sentinel serve', 'Optional operator API; binds 127.0.0.1 unless you pass --host'],
                     ['sentinel completion bash|zsh|fish|powershell', 'Shell completions'],
                   ].map(([command, detail]) => (
                     <tr key={command} className="border-b border-border last:border-0">
@@ -315,17 +314,16 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
           </section>
 
           <section id="agents" className="scroll-mt-24">
-            <h2 className="text-2xl font-semibold tracking-tight">Multi-agent workflow</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Incident-response stages</h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              Each role has a narrow job and evidence context. Remediation with side effects is
-              blocked until a human approves it.
+              This is the CLI pipeline. It is not a CrewAI or multi-agent runtime. Remediation
+              with side effects is not executed automatically.
             </p>
             <Code>{`Health check
-  → Watcher           detect failure, latency, SSL, anomaly
-  → First Responder   open incident, notify
-  → Investigator      correlate checks, events, deployments
-  → Strategist        action plan + postmortem
-  → Human approval    required before destructive remediation`}</Code>
+  → Detect     failure, latency, SSL
+  → Open       persist incident, optional Slack
+  → Plan       template postmortem (or LLM if a key is set)
+  → Human      destructive remediation is not auto-executed`}</Code>
             <p className="mt-3 text-sm text-muted-foreground">
               Optional AI keys: <Inline>sentinel config set openrouter_api_key</Inline>. Default
               model is <Inline>openai/gpt-4o-mini</Inline>. Without a key, or if the model call
@@ -365,7 +363,8 @@ sentinel mcp`}</Code>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               The pages under <Inline>/operator</Inline> talk to a FastAPI process you run. They
               are not a hosted SaaS dashboard. In local mode they read the same SQLite store as the
-              CLI — no bearer token. Paste a token only when the API is in Supabase mode.
+              CLI — no bearer token. <Inline>sentinel serve</Inline> binds localhost by default.
+              Do not pass <Inline>--host 0.0.0.0</Inline> unless you intend to expose that API.
             </p>
             <Code>{`sentinel serve
 # local mode: open /operator/services — no token

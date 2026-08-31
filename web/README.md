@@ -1,6 +1,6 @@
 # DevOps Sentinel Web
 
-Public site for the local-first SRE CLI: product story, docs, BYO-Supabase auth helper, and an optional operator console.
+Public site for the local-first SRE CLI: docs, a live 503 demo the CLI can monitor, a BYO-Supabase auth helper, and an optional operator console talking to your local `sentinel serve`.
 
 ## Run
 
@@ -23,4 +23,4 @@ Optional local operator console:
 VITE_API_URL=http://localhost:8000
 ```
 
-Then run `sentinel serve` and open `/operator/services`.
+Then run `sentinel serve` (binds 127.0.0.1 by default) and open `/operator/services`.

@@ -1,9 +1,4 @@
-"""
-AI Postmortem Generator
-=======================
-
-Generate structured postmortems from incident data using AI
-"""
+"""Postmortem markdown from incident evidence. Uses an LLM when a key is set; otherwise a labeled template."""
 
 from datetime import datetime, timezone
 import json
@@ -13,15 +8,7 @@ import httpx
 
 
 class PostmortemGenerator:
-    """
-    AI-powered postmortem generation
-
-    Features:
-    - Auto-generate from incident timeline
-    - SRE-standard format
-    - Action item extraction
-    - Blameless language enforcement
-    """
+    """Build a draft postmortem from stored incident data."""
 
     # Standard postmortem template
     TEMPLATE = """
@@ -72,7 +59,7 @@ class PostmortemGenerator:
 
 ---
 
-*Generated with DevOps Sentinel AI. Review and edit before sharing.*
+*{footer}*
 """
 
     def __init__(self, ai_client=None):
@@ -129,13 +116,12 @@ class PostmortemGenerator:
         else:
             sections = self._generate_template_sections(incident, events, resolution)
 
-        # Compile postmortem
         postmortem = self.TEMPLATE.format(
             title=title,
             date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             severity=severity,
             duration=duration,
-            author="DevOps Sentinel AI",
+            author="DevOps Sentinel",
             summary=sections["summary"],
             impact=sections["impact"],
             timeline=timeline,
@@ -145,6 +131,7 @@ class PostmortemGenerator:
             improvements=sections["improvements"],
             action_items=sections["action_items"],
             lessons=sections["lessons"],
+            footer=self._source_footer(source, fallback_reason),
         )
 
         return {
@@ -156,6 +143,20 @@ class PostmortemGenerator:
             "source": source,
             "fallback_reason": fallback_reason,
         }
+
+    @staticmethod
+    def _source_footer(source: str, fallback_reason: str | None) -> str:
+        if source == "ai":
+            return "Generated with an LLM. Review and edit before sharing."
+        if fallback_reason:
+            reason = fallback_reason.replace("\n", " ").strip()[:180]
+            return (
+                "Template postmortem — the LLM call failed, so this is not an AI-authored report. "
+                f"Reason: {reason}"
+            )
+        return (
+            "Template postmortem — no LLM key configured. This is not an AI-authored report."
+        )
 
     async def _generate_with_ai(
         self, incident: dict, events: list[dict], resolution: str | None
@@ -385,86 +386,3 @@ class PostmortemGenerator:
             result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
 
         return result
-
-
-# FastAPI routes
-
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-
-router = APIRouter(prefix="/api/postmortems", tags=["postmortems"])
-
-
-class GenerateRequest(BaseModel):
-    incident_id: str
-    resolution_notes: str | None = None
-
-
-@router.post("/generate")
-async def generate_postmortem(request: GenerateRequest, supabase=None):
-    """Generate AI postmortem for an incident."""
-    if supabase is None:
-        raise HTTPException(503, "Postmortem storage is not configured")
-
-    # Get incident
-    result = await supabase.table("incidents").select("*").eq("id", request.incident_id).execute()
-
-    if not result.data:
-        raise HTTPException(404, "Incident not found")
-
-    incident = result.data[0]
-
-    # Get events
-    events_result = (
-        await supabase.table("incident_events")
-        .select("*")
-        .eq("incident_id", request.incident_id)
-        .order("timestamp")
-        .execute()
-    )
-
-    events = events_result.data or []
-
-    # Generate postmortem
-    generator = PostmortemGenerator()
-    postmortem = await generator.generate(
-        incident=incident, events=events, resolution=request.resolution_notes
-    )
-
-    # Store
-    await (
-        supabase.table("postmortems")
-        .insert(
-            {
-                "incident_id": request.incident_id,
-                "content": postmortem["markdown"],
-                "sections": postmortem["sections"],
-                "status": "draft",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-        .execute()
-    )
-
-    return postmortem
-
-
-@router.get("/{incident_id}")
-async def get_postmortem(incident_id: str, supabase=None):
-    """Get postmortem for an incident."""
-    if supabase is None:
-        raise HTTPException(503, "Postmortem storage is not configured")
-
-    result = (
-        await supabase.table("postmortems")
-        .select("*")
-        .eq("incident_id", incident_id)
-        .order("created_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-
-    if not result.data:
-        raise HTTPException(404, "Postmortem not found")
-
-    return result.data[0]

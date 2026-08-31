@@ -1,9 +1,4 @@
-"""
-Supabase Auth Service
-=====================
-
-Complete authentication flow with Supabase
-"""
+"""Supabase auth helpers for optional team mode."""
 
 import logging
 import os
@@ -66,16 +61,7 @@ class UserResponse(BaseModel):
 
 # Auth service class
 class AuthService:
-    """
-    Supabase authentication service
-
-    Handles:
-    - Sign up (email/password)
-    - Sign in
-    - Token refresh
-    - Password reset
-    - User profile
-    """
+    """Supabase email/password auth when team mode is enabled."""
 
     def __init__(self, client: Any | None = None):
         self.client = client or supabase

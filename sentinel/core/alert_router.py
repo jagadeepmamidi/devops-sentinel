@@ -1,13 +1,4 @@
-"""
-Alert Router - Severity-Based Intelligent Routing
-=================================================
-
-Routes incidents to the right people based on:
-- Severity level (P0-P3)
-- On-call schedule
-- Service ownership
-- Escalation policies
-"""
+"""Alert Router - Severity-Based Intelligent Routing"""
 
 import asyncio
 from datetime import datetime, timezone

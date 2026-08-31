@@ -42,6 +42,9 @@ def test_should_open_incident_only_after_threshold():
 
     assert not should_open_incident(MonitoringState(consecutive_failures=2), thresholds, has_active_incident=False)
     assert should_open_incident(MonitoringState(consecutive_failures=3), thresholds, has_active_incident=False)
+    assert not should_open_incident(
+        MonitoringState(consecutive_failures=5), thresholds, has_active_incident=True
+    )
 
 
 def test_should_resolve_incident_only_after_recovery_threshold():
@@ -49,3 +52,13 @@ def test_should_resolve_incident_only_after_recovery_threshold():
 
     assert not should_resolve_incident(MonitoringState(consecutive_healthy=1), thresholds, has_active_incident=True)
     assert should_resolve_incident(MonitoringState(consecutive_healthy=2), thresholds, has_active_incident=True)
+    assert not should_resolve_incident(
+        MonitoringState(consecutive_healthy=5), thresholds, has_active_incident=False
+    )
+
+
+def test_seed_monitoring_state_empty_and_healthy_streak():
+    assert seed_monitoring_state([]) == MonitoringState()
+    state = seed_monitoring_state([{"is_healthy": True}, {"is_healthy": True}, {"is_healthy": False}])
+    assert state.consecutive_healthy == 2
+    assert state.consecutive_failures == 0

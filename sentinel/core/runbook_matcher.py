@@ -1,31 +1,11 @@
-"""
-Runbook Matcher - Smart Playbook Matching Engine
-================================================
-
-Automatically matches incidents to relevant runbooks/playbooks based on:
-- Error message patterns (regex matching)
-- Tags and keywords
-- Service type
-- Historical effectiveness
-
-Tracks runbook usage and success rates for continuous improvement.
-"""
+"""Runbook Matcher - Smart Playbook Matching Engine"""
 
 import re
 from datetime import datetime
 
 
 class RunbookMatcher:
-    """
-    Matches incidents to relevant runbooks and tracks effectiveness
-    
-    Features:
-    - Pattern-based matching (regex on error messages)
-    - Tag-based categorization
-    - Service-specific runbooks
-    - Effectiveness tracking (success rate)
-    - Auto-suggest best runbook based on past success
-    """
+    """Matches incidents to relevant runbooks and tracks effectiveness."""
     
     def __init__(self, db_client=None):
         """

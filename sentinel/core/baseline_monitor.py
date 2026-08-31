@@ -1,14 +1,4 @@
-"""
-Baseline Monitor - Degraded State Detection
-==========================================
-
-Monitors service baselines and detects DEGRADED state before full failure.
-
-Key Features:
-- Calculates statistical baselines (avg, p50, p95, p99, stddev)
-- Detects degradation when response times exceed thresholds
-- Provides early warning before catastrophic failure
-"""
+"""Baseline Monitor - Degraded State Detection"""
 
 import asyncio
 import statistics
@@ -16,19 +6,7 @@ from datetime import datetime, timedelta
 
 
 class BaselineMonitor:
-    """
-    Monitors service health baselines and detects degraded states
-    
-    States:
-        HEALTHY: Normal operation within baseline
-        DEGRADED: Performance degrading (warning state)
-        FAILED: Complete failure
-    
-    Degradation Triggers:
-        - Response time > 1.5x p95 baseline
-        - Response time > 2.0x average baseline
-        - Error rate > 2x normal
-    """
+    """Monitors service health baselines and detects degraded states."""
     
     def __init__(self, db_client=None):
         """

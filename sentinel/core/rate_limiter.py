@@ -1,9 +1,4 @@
-"""
-Rate Limiter - API Rate Limiting for Free Tier Protection
-==========================================================
-
-Prevent abuse of free tier with intelligent rate limiting
-"""
+"""Rate Limiter - API Rate Limiting for Free Tier Protection"""
 
 import asyncio
 from datetime import datetime, timedelta

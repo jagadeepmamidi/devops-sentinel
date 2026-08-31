@@ -1,26 +1,11 @@
-"""
-Chaos Engineering Tools - Automated Failure Injection
-=======================================================
-
-Test system resilience by injecting controlled failures
-"""
+"""Chaos Engineering Tools - Automated Failure Injection"""
 
 import asyncio
 from datetime import datetime, timezone
 
 
 class ChaosEngineeringTools:
-    """
-    Chaos engineering for DevOps Sentinel
-
-    Features:
-    - Network latency injection
-    - Service kill tests
-    - Dependency failure simulation
-    - Resource exhaustion
-    - Traffic spike simulation
-    - Blast radius measurement
-    """
+    """Chaos engineering for DevOps Sentinel."""
 
     def __init__(self, supabase_client):
         self.supabase = supabase_client

@@ -1,13 +1,4 @@
-"""
-Custom Health Check Tool - Execute Python/Bash Scripts
-=====================================================
-
-Enables custom health checks beyond basic HTTP:
-- Python scripts
-- Bash/Shell scripts  
-- TCP port checks
-- DNS resolution checks
-"""
+"""Custom Health Check Tool - Execute Python/Bash Scripts"""
 
 import asyncio
 import os

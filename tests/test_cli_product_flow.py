@@ -84,8 +84,10 @@ def test_schema_print_contains_core_tables():
 def test_agents_describes_approval_boundary():
     result = CliRunner().invoke(cli, ["agents"])
     assert result.exit_code == 0
-    assert "Watcher" in result.output
-    assert "Human approval" in result.output
+    assert "CrewAI" in result.output
+    assert "not a separate agent runtime" in result.output
+    assert "Detect" in result.output
+    assert "not executed automatically" in result.output
 
 
 def test_watch_is_monitor_alias():

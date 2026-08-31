@@ -1,16 +1,4 @@
-"""
-DevOps Sentinel CLI - Authentication Module
-============================================
-
-Handles user authentication via browser redirect (OAuth-style).
-Similar to how GitHub CLI, Stripe CLI, and Vercel CLI work.
-
-Usage:
-    sentinel login          - Opens browser for login
-    sentinel login --token  - Use API token (for CI/CD)
-    sentinel logout         - Clear saved credentials
-    sentinel whoami         - Show current user
-"""
+"""DevOps Sentinel CLI - Authentication Module"""
 
 import json
 import os

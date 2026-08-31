@@ -1,10 +1,4 @@
-"""
-BYOK (Bring Your Own Key) Tier Helper
-======================================
-
-Detects if user has provided their own API keys
-and automatically assigns them the 'byok' tier.
-"""
+"""BYOK (Bring Your Own Key) Tier Helper"""
 
 import os
 

@@ -209,4 +209,6 @@ async def generate_postmortem(
         "postmortem": postmortem["markdown"],
         "generated_at": postmortem["generated_at"],
         "status": postmortem["status"],
+        "source": postmortem.get("source", "fallback"),
+        "fallback_reason": postmortem.get("fallback_reason"),
     }

@@ -1,15 +1,4 @@
-"""
-Dependency Analyzer - Service Dependency Graph
-==============================================
-
-Builds and analyzes service dependency graph for:
-- Cascade failure prediction
-- Blast radius calculation  
-- Critical path identification
-- Impact analysis
-
-Uses NetworkX for graph operations.
-"""
+"""Dependency Analyzer - Service Dependency Graph"""
 
 
 import sys

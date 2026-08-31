@@ -1,23 +1,26 @@
-# DevOps Sentinel Next
+# DevOps Sentinel
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Terminal-first SRE operations for health checks, incidents, evidence-backed response plans, and postmortems.**
+**Local-first SRE CLI for HTTP health checks, thresholded incidents, and postmortems.**
 
-DevOps Sentinel works locally without Supabase, an account, or an API server. Team deployments can keep using Supabase compatibility mode. Python remains canonical runtime; FastAPI, MCP, web console, and npm client use shared contracts.
+This is a command-line tool you install with pip. The website is documentation plus a live 503 demo for that CLI — not a hosted control plane. Sentinel does not store your data.
 
-## Why Sentinel?
+Source: [github.com/jagadeepmamidi/devops-sentinel](https://github.com/jagadeepmamidi/devops-sentinel) · Package: [devops-sentinel-next on PyPI](https://pypi.org/project/devops-sentinel-next/) · Site: [devops-sentinel-seven.vercel.app](https://devops-sentinel-seven.vercel.app/)
 
-- **Local-first:** SQLite persistence and local identity work offline.
-- **Fast signal:** HTTP health checks with latency, status, SSL, retries, and suggestions.
-- **Incident memory:** Store health evidence, incident timelines, response plans, and postmortems.
-- **Agent-ready:** Expose safe operational context to Claude, Cursor, and other MCP hosts.
-- **Multi-agent response:** Watcher, First Responder, Investigator, and Strategist roles coordinate response.
-- **Safe by default:** Agents recommend remediation; destructive actions require explicit approval.
-- **Scriptable:** Consistent CLI commands, JSON output, and CI-friendly API tokens.
-- **Self-hostable:** Local SQLite by default, optional Supabase compatibility, no telemetry.
+## What it is today
 
-## Quick start — no Supabase
+| Shipped | Optional | Not shipped |
+| --- | --- | --- |
+| `sentinel init` / local SQLite | Bring-your-own Supabase | Hosted SaaS / account wall |
+| HTTP health checks (`health`, `monitor`, `up`) | Slack webhook on incident open | CrewAI / live multi-agent runtime |
+| Failure and recovery thresholds | LLM postmortem when you set a key | Autonomous remediation that mutates infra |
+| Incident open/resolve + event timeline | MCP (`pip install "...[mcp]"`) | Production-grade ML anomaly engine |
+| Labeled template postmortems | `sentinel serve` operator API (localhost) | Transactional outbox / Kafka / FAISS |
+
+The website (`web/`) is a Vite SPA: docs, a live failing-endpoint demo, a BYO-Supabase auth helper, and an optional operator UI that talks to **your** `sentinel serve` process.
+
+## Quick start
 
 ```bash
 pip install devops-sentinel-next
@@ -31,19 +34,16 @@ sentinel incidents list
 
 `sentinel init` defaults to local mode:
 
-- Data: `.sentinel/sentinel.db` in initialized project
+- Data: `.sentinel/sentinel.db` in the initialized project
 - Identity: `local@localhost`
 - Login: not required
 - API server: not required for CLI monitoring
 - AI and Slack: optional
 
-Useful local commands:
-
 ```bash
 sentinel whoami
 sentinel config
 sentinel doctor
-sentinel agents
 sentinel demo
 sentinel up --once
 sentinel monitor https://api.example.com/health --failure-threshold 3
@@ -51,11 +51,11 @@ sentinel health https://api.example.com/health --expect 200 --json-path status -
 sentinel postmortem generate <incident-id> --output postmortem.md
 ```
 
-Commit `sentinel.yaml` (written by `sentinel init`) and run `sentinel up` to register those services and monitor them. Example: `examples/sentinel.yaml`.
+Commit `sentinel.yaml` (written by `sentinel init`) and run `sentinel up` to register those services. Example: `examples/sentinel.yaml`.
 
 Optional richer checks on `health` and `monitor`: `--expect` status codes, `--body` substring, `--json-path` / `--json-equals`, `--ssl-min-days`. When a monitor opens an incident it prints a card with `incidents show`, `ack`, and `postmortem generate`.
 
-Run `sentinel init --mode supabase` only when using **your** Supabase project for auth and persistence. Sentinel does not host customer data.
+Run `sentinel init --mode supabase` only when using **your** Supabase project. Sentinel does not host customer data.
 
 ```bash
 sentinel init --mode supabase --url https://YOUR-PROJECT.supabase.co
@@ -66,7 +66,7 @@ sentinel supabase doctor  # URL, anon key, REST, tables, RLS
 
 ## Configuration
 
-`.env` is loaded from the current project directory. Provider keys can also be stored in a user-level file, similar to CLI auth stores:
+`.env` is loaded from the current project directory. Provider keys can also be stored in a user-level file:
 
 ```bash
 sentinel config set openrouter_api_key
@@ -75,15 +75,13 @@ sentinel config list
 sentinel config remove openrouter_api_key
 ```
 
-`config set` prompts with hidden input and stores values in `~/.sentinel/config.json` with restrictive permissions. Existing process variables and project `.env` values take precedence. `sentinel config` always masks secrets. Local mode needs no login; `sentinel login` is only for Supabase compatibility mode.
+`config set` prompts with hidden input and stores values in `~/.sentinel/config.json` with restrictive permissions. Process variables and project `.env` values take precedence. `sentinel config` always masks secrets. Local mode needs no login.
 
-`sentinel postmortem generate` calls OpenRouter (or OpenAI) when a key is present. Default model is `openai/gpt-4o-mini` with `SENTINEL_LLM_MAX_TOKENS=1024`. If the model call fails, the CLI writes the local template and says so.
+`sentinel postmortem generate` calls OpenRouter (or OpenAI) when a key is present. Default model is `openai/gpt-4o-mini` with `SENTINEL_LLM_MAX_TOKENS=1024`. If the model call fails, the CLI writes the local template and **says so** (yellow stderr plus a footer in the markdown). The HTTP generate endpoint returns `source` and `fallback_reason` so a template report is never presented as AI-authored.
 
 `sentinel monitor https://…` auto-registers the URL so failure thresholds persist incidents. `--notify` posts `SLACK_WEBHOOK_URL` when an incident opens.
 
-`sentinel serve` in local mode exposes `/api/services` and `/api/incidents` without a bearer token. Bind `0.0.0.0:$PORT` on Render.
-
-Local-first example:
+`sentinel serve` binds **127.0.0.1** by default. In local mode `/api/services` and `/api/incidents` do not require a bearer token — that is intentional for localhost. Binding `0.0.0.0` (Docker/Render, or `--host 0.0.0.0`) prints a warning; do not expose that API to the public internet without auth.
 
 ```env
 SENTINEL_MODE=local
@@ -100,10 +98,9 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-key
 ```
 
-Configuration precedence: process environment, project `.env`, user config, defaults.
-Secrets are redacted by `sentinel config`.
+Configuration precedence: process environment, project `.env`, user config, defaults. Secrets are redacted by `sentinel config`.
 
-Service commands use the `services` namespace:
+Service commands:
 
 ```bash
 sentinel services add production-api https://api.example.com/health
@@ -111,12 +108,12 @@ sentinel services list
 sentinel services check <service-id>
 ```
 
-HTTP 2xx and 3xx responses count as reachable/healthy. Redirects still appear with their response code.
+HTTP 2xx and 3xx responses count as reachable. Redirects still appear with their response code.
 
-MCP support is optional:
+MCP is optional:
 
 ```bash
-pip install "devops-sentinel-next[mcp]"   # pins mcp 1.x (FastMCP)
+pip install "devops-sentinel-next[mcp]"
 sentinel mcp
 ```
 
@@ -136,18 +133,17 @@ Cursor `mcp.json` (also in `examples/mcp.json`):
 ## Architecture
 
 ```text
-CLI / FastAPI / MCP / npm client / web console
-                         ↓
-                 Sentinel application
-                         ↓
-          Storage adapter + auth adapter
-                 ↓                ↓
-        SQLite local mode   Supabase compatibility
-                         ↓
-                  Optional AI / Slack
+CLI (canonical)
+  → health check → SQLite (or your Supabase)
+  → open/resolve incidents using failure/recovery thresholds
+  → template postmortem, or LLM if a key is set (fallback is labeled)
+
+Website (this repo's web/)
+  → docs + live 503 demo for the CLI
+  → optional operator UI → your local `sentinel serve`
 ```
 
-Storage is behind `SentinelDB`. SQLite uses the same project, service, health-check, incident, event, and postmortem method contracts as the Supabase adapter. Supabase remains optional so local installs do not need the Supabase Python package.
+Storage is behind `SentinelDB`. SQLite uses the same project, service, health-check, incident, event, and postmortem method contracts as the Supabase adapter.
 
 ## Monitoring and incident lifecycle
 
@@ -155,65 +151,39 @@ Storage is behind `SentinelDB`. SQLite uses the same project, service, health-ch
 2. Run a single check or continuous monitor.
 3. Persist health-check evidence.
 4. Open incidents after failure-threshold evaluation.
-5. Record detection, alerting, investigation, and recovery events.
+5. Record detection and recovery events.
 6. Resolve after recovery-threshold evaluation.
-7. Generate fallback or optional AI-assisted postmortems.
-8. Require human approval before destructive remediation.
+7. Generate a **labeled** template postmortem, or an LLM draft when a key works.
 
-Failure and recovery thresholds prevent one transient request from opening or resolving an incident.
+Failure and recovery thresholds prevent one transient request from opening or resolving an incident. MTTD is left unset when there is not enough evidence to compute it.
 
-## Multi-agent workflow
+## Incident-response stages
 
-Sentinel uses a staged workflow. Each role has narrow responsibility and evidence context:
+The CLI pipeline is:
 
 ```text
 Health check
     ↓
-Watcher             Detect failure, latency, or anomaly
+Detect              Failure, latency, or SSL
     ↓
-First Responder     Create incident context and notify responders
+Open / notify       Incident row + optional Slack
     ↓
-Investigator        Correlate checks, events, deployments, and dependencies
+Plan                Template or optional LLM postmortem
     ↓
-Strategist          Produce action plan, runbook suggestion, and postmortem
-    ↓
-Human approval      Approve any remediation with operational side effects
+Human               Destructive remediation is not auto-executed
 ```
 
-Agent definitions live in `agents.py`; orchestration lives in `orchestrator.py`. The workflow is intentionally non-destructive. Agents can explain and propose; they cannot run arbitrary shell commands or change infrastructure without an approval boundary.
+`sentinel agents` prints this map. It is **not** a CrewAI crew and does not run a separate agent process.
 
-MCP hosts can query read-only operational context:
+MCP hosts can query read-only operational context: `health_check`, `health_check_batch`, `doctor`, `list_incidents`, `get_incident`, `get_incident_events`, `analyze_anomaly`, `generate_postmortem`.
 
-- `health_check`
-- `health_check_batch`
-- `doctor`
-- `list_incidents`
-- `get_incident`
-- `get_incident_events`
-- `analyze_anomaly`
-- `generate_postmortem`
+Do not expose remote MCP to the public internet without authentication.
 
-Start local MCP stdio mode:
+GitHub Action for a one-shot health probe: `.github/actions/sentinel-health`. Copy `examples/github-health.yml` into a consuming repo.
 
-```bash
-sentinel mcp
-```
+## Website
 
-GitHub Action for a one-shot health probe lives at `.github/actions/sentinel-health`. Copy `examples/github-health.yml` into a consuming repo. Do not add a public-URL health job as a required check on this repository.
-
-Do not expose remote MCP directly to the public internet without authentication, authorization, rate limiting, and audit logging.
-
-## Web console
-
-Web console uses the same terminal language as the CLI:
-
-- dark charcoal background and JetBrains Mono
-- green health accent
-- prompt-style brand, command install, and live CLI replay
-- keyboard-visible focus states
-- working routes for docs, CLI auth (BYO Supabase), and optional operator UI
-
-Run it during development:
+The marketing site is a client-rendered SPA. Static HTML includes the GitHub and PyPI links so a crawler that cannot execute JavaScript can still find the repo.
 
 ```bash
 cd web
@@ -221,7 +191,7 @@ npm install
 npm run dev
 ```
 
-Operator routes:
+Operator routes talk to a FastAPI process you run (`sentinel serve`), not a hosted backend:
 
 - `/operator/services`
 - `/operator/incidents`
@@ -231,24 +201,21 @@ Operator routes:
 
 `packages/client` calls the HTTP API. It does not duplicate Python monitoring logic.
 
-```bash
-cd packages/client
-npm install
-npm run build
-```
+## Development
 
-Publish target: `@devops-sentinel/client`.
-
-## Development and verification
+Dependencies live in `pyproject.toml` only (`pip install -e ".[dev]"`). There is no `requirements.txt`.
 
 ```bash
 python -m pip install -e ".[dev]"
-pytest -q -o addopts=""
+pytest -q -o addopts="" --cov=sentinel.core --cov-report=term-missing
 python -m ruff check sentinel tests
 cd web
 npm run lint
 npm run build
 ```
 
+Docker and Render bind `0.0.0.0` on purpose (containers must listen on all interfaces). The CLI default remains localhost.
+
+## License
 
 MIT License.
