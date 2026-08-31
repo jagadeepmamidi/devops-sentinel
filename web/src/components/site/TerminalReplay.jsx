@@ -6,7 +6,7 @@ const DEFAULT_LINES = [
   { tone: 'dim', text: '$ sentinel monitor production-api --failure-threshold 3' },
   { tone: 'ok', text: 'production-api HEALTHY | HTTP 200 | 84ms | check #1' },
   { tone: 'warn', text: 'production-api DEGRADED | HTTP 503 | 1120ms | check #4' },
-  { tone: 'dim', text: 'Watcher opened incident. First Responder notified. Strategist drafting plan.' },
+  { tone: 'dim', text: 'INCIDENT OPENED after 3 consecutive failures. Next: sentinel incidents show <id>' },
 ]
 
 const TONE_CLASS = {

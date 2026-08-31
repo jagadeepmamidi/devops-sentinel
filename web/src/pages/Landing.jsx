@@ -72,7 +72,7 @@ export default function Landing() {
           <p className="mt-4 max-w-[58ch] text-sm leading-7 text-muted-foreground">
             Hosted SRE platforms ask you to ship telemetry into their cloud. Sentinel checks
             endpoints you already own, writes incident memory next to the repo or into a database
-            you provision, and stops agents at human approval.
+            you provision. It does not mutate infrastructure on its own.
           </p>
           <div className="mt-10 grid gap-px border border-border bg-border md:grid-cols-2">
             <article className="bg-background p-6 md:row-span-2 md:flex md:flex-col md:justify-between">

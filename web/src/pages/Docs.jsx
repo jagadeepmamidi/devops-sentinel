@@ -274,12 +274,12 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                     ['sentinel dashboard [--once]', 'Live terminal table of registered services'],
                     ['sentinel incidents list|show|ack|resolve|export', 'Incident memory and timeline'],
                     ['sentinel postmortem generate|view', 'OpenRouter/OpenAI write-up when a key is set; otherwise a local template'],
-                    ['sentinel agents', 'Print the Watcher → Strategist workflow'],
+                    ['sentinel agents', 'Print the CLI response stages (not a separate agent runtime)'],
                     ['sentinel doctor', 'Mode-aware diagnostics'],
                     ['sentinel supabase doctor', 'Probe YOUR Supabase URL, key, tables, and RLS'],
                     ['sentinel config set|list|remove', 'Store provider keys in ~/.sentinel/config.json'],
                     ['sentinel mcp / devops-sentinel-mcp', 'Read-only tools for Cursor and Claude Desktop'],
-                    ['sentinel serve', 'Optional local FastAPI for the operator console'],
+                    ['sentinel serve', 'Optional operator API; binds 127.0.0.1 unless you pass --host'],
                     ['sentinel completion bash|zsh|fish|powershell', 'Shell completions'],
                   ].map(([command, detail]) => (
                     <tr key={command} className="border-b border-border last:border-0">
