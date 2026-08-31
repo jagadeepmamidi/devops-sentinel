@@ -21,11 +21,21 @@ from .monitoring_policy import (
 
 HEALTHY_STATUS_CODES = range(200, 400)
 BODY_LIMIT = 64_000
+HTML_PAGE_HINT = "got text/html — this is a web page, not a JSON health endpoint"
 
 
 def is_healthy_status(status_code: int) -> bool:
     """Return whether HTTP status belongs to healthy 2xx/3xx range."""
     return status_code in HEALTHY_STATUS_CODES
+
+
+def looks_like_html(content_type: str, body: str) -> bool:
+    """True when the response is an HTML document rather than a health payload."""
+    lowered = (content_type or "").lower()
+    if "text/html" in lowered:
+        return True
+    stripped = (body or "").lstrip()[:64].lower()
+    return stripped.startswith("<!doctype html") or stripped.startswith("<html")
 
 
 @dataclass
@@ -79,6 +89,12 @@ async def check_url_once(
             default_status_healthy=is_healthy_status(response.status_code),
         )
         error = "; ".join(evaluation.reasons) if evaluation.reasons else None
+        if (
+            evaluation.healthy
+            and not error
+            and looks_like_html(response.headers.get("content-type", ""), body)
+        ):
+            error = HTML_PAGE_HINT
         return HealthCheckResult(
             url=url,
             healthy=evaluation.healthy,

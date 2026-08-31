@@ -20,6 +20,67 @@ function json(status, payload) {
   }
 }
 
+function cacheKey(probe) {
+  return `live:${probe}`
+}
+
+async function runtimeCache() {
+  try {
+    const mod = await import('@vercel/functions')
+    if (typeof mod.getCache === 'function') {
+      return mod.getCache({ namespace: 'sentinel-demo' })
+    }
+  } catch {
+    // Local Vite / Node: in-memory Map is enough.
+  }
+  return null
+}
+
+async function readBrokenUntil(probe) {
+  const fromMemory = liveBrokenUntil.get(probe) || 0
+  if (fromMemory > Date.now()) return fromMemory
+  const cache = await runtimeCache()
+  if (!cache) return 0
+  try {
+    const stored = await cache.get(cacheKey(probe))
+    const until = typeof stored === 'number' ? stored : Number(stored)
+    if (Number.isFinite(until) && until > Date.now()) {
+      liveBrokenUntil.set(probe, until)
+      return until
+    }
+  } catch {
+    return 0
+  }
+  return 0
+}
+
+async function writeBrokenUntil(probe, until) {
+  liveBrokenUntil.set(probe, until)
+  const cache = await runtimeCache()
+  if (!cache) return
+  const ttl = Math.max(1, Math.ceil((until - Date.now()) / 1000))
+  try {
+    await cache.set(cacheKey(probe), until, {
+      ttl,
+      tags: ['sentinel-demo-live', `probe:${probe}`],
+      name: 'demo-live-probe',
+    })
+  } catch {
+    // Keep the in-memory write even if Runtime Cache is unavailable.
+  }
+}
+
+async function clearBrokenUntil(probe) {
+  liveBrokenUntil.delete(probe)
+  const cache = await runtimeCache()
+  if (!cache) return
+  try {
+    await cache.delete(cacheKey(probe))
+  } catch {
+    // ignore
+  }
+}
+
 export function normalizeDemoPath(requestUrl) {
   const url = new URL(requestUrl, 'http://sentinel.demo')
   let pathname = url.pathname.replace(/\/+$/, '') || '/'
@@ -32,9 +93,9 @@ export function normalizeDemoPath(requestUrl) {
 /**
  * @param {string} requestUrl
  * @param {string} [method]
- * @returns {{ status: number, headers: Record<string, string>, body: string } | null}
+ * @returns {Promise<{ status: number, headers: Record<string, string>, body: string } | null>}
  */
-export function handleDemoRequest(requestUrl, method = 'GET') {
+export async function handleDemoRequest(requestUrl, method = 'GET') {
   if (!requestUrl) return null
 
   let pathname
@@ -82,10 +143,10 @@ export function handleDemoRequest(requestUrl, method = 'GET') {
 
   const probe = liveMatch[1] || 'default'
   const now = Date.now()
-  const until = liveBrokenUntil.get(probe) || 0
 
   if (methodUpper === 'POST' || methodUpper === 'PUT') {
-    liveBrokenUntil.set(probe, now + LIVE_TTL_MS)
+    const until = now + LIVE_TTL_MS
+    await writeBrokenUntil(probe, until)
     return json(200, {
       status: 'broken',
       demo: true,
@@ -96,7 +157,7 @@ export function handleDemoRequest(requestUrl, method = 'GET') {
   }
 
   if (methodUpper === 'DELETE') {
-    liveBrokenUntil.delete(probe)
+    await clearBrokenUntil(probe)
     return json(200, {
       status: 'ok',
       demo: true,
@@ -109,6 +170,7 @@ export function handleDemoRequest(requestUrl, method = 'GET') {
     return json(405, { status: 'error', error: 'method_not_allowed' })
   }
 
+  const until = await readBrokenUntil(probe)
   if (until > now) {
     return json(503, {
       status: 'error',
@@ -145,10 +207,13 @@ export function demoApiMiddleware(req, res, next) {
     next()
     return
   }
-  const result = handleDemoRequest(url, req.method || 'GET')
-  if (!result) {
-    next()
-    return
-  }
-  applyDemoResponse(res, result)
+  Promise.resolve(handleDemoRequest(url, req.method || 'GET'))
+    .then((result) => {
+      if (!result) {
+        next()
+        return
+      }
+      applyDemoResponse(res, result)
+    })
+    .catch(next)
 }

@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/components/ui/**/*.{js,jsx}'],
+    files: ['src/components/ui/**/*.{js,jsx}', 'middleware.js', 'vite.config.js'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

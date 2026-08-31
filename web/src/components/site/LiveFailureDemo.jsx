@@ -25,6 +25,13 @@ function originOf() {
   return window.location.origin
 }
 
+function isSpaDocument(response, body) {
+  const contentType = response.headers.get('content-type') || ''
+  if (contentType.includes('text/html')) return true
+  if (typeof body?.raw === 'string' && /^\s*</.test(body.raw)) return true
+  return false
+}
+
 export default function LiveFailureDemo() {
   const probe = useDemoProbe()
   const origin = originOf()
@@ -38,18 +45,20 @@ export default function LiveFailureDemo() {
   const [busy, setBusy] = useState('')
   const [result, setResult] = useState(null)
   const [usedFailFallback, setUsedFailFallback] = useState(false)
+  const [spaMiss, setSpaMiss] = useState(false)
 
   const resultTone = useMemo(() => {
     if (!result) return 'text-muted-foreground'
+    if (spaMiss) return 'text-destructive'
     if (result.status >= 500) return 'text-destructive'
     if (result.status >= 200 && result.status < 400) return 'text-primary'
     return 'text-foreground'
-  }, [result])
+  }, [result, spaMiss])
 
   async function copyMonitor() {
     if (!monitorCommand) return
     try {
-      await navigator.clipboard.writeText(monitorCommand.replaceAll('\n', ' && '))
+      await navigator.clipboard.writeText(monitorCommand)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
     } catch {
@@ -70,16 +79,46 @@ export default function LiveFailureDemo() {
     if (!liveUrl) return
     setBusy('break')
     setUsedFailFallback(false)
+    setSpaMiss(false)
     try {
-      await fetch(liveUrl, { method: 'POST' })
+      const posted = await fetch(liveUrl, { method: 'POST' })
+      const postedBody = await readJson(posted)
+      if (isSpaDocument(posted, postedBody) || posted.status === 405) {
+        setSpaMiss(true)
+        setResult({
+          status: posted.status,
+          url: liveUrl,
+          body: {
+            error: 'demo_api_not_routed',
+            message:
+              'This host served the website HTML (HTTP 200) instead of the demo API. Sentinel treats that as HEALTHY. Wait for /api/demo to be routed in front of the SPA, then try Break again.',
+          },
+        })
+        return
+      }
       let response = await fetch(liveUrl)
+      let body = await readJson(response)
       let fallback = false
-      if (response.ok) {
+      if (response.ok || isSpaDocument(response, body)) {
         response = await fetch(failUrl)
-        fallback = true
+        body = await readJson(response)
+        fallback = !isSpaDocument(response, body)
+        if (!fallback) {
+          setSpaMiss(true)
+          setResult({
+            status: response.status,
+            url: liveUrl,
+            body: {
+              error: 'demo_api_not_routed',
+              message:
+                'Break did not stick: GET still returned the homepage HTML. The CLI will stay HEALTHY until /api/demo/live returns JSON 503.',
+            },
+          })
+          return
+        }
       }
       setUsedFailFallback(fallback)
-      setResult({ status: response.status, body: await readJson(response), url: fallback ? failUrl : liveUrl })
+      setResult({ status: response.status, body, url: fallback ? failUrl : liveUrl })
     } catch (error) {
       setResult({ status: 0, body: { error: error instanceof Error ? error.message : 'request_failed' }, url: liveUrl })
     } finally {
@@ -91,10 +130,24 @@ export default function LiveFailureDemo() {
     if (!liveUrl) return
     setBusy('restore')
     setUsedFailFallback(false)
+    setSpaMiss(false)
     try {
       await fetch(liveUrl, { method: 'DELETE' })
       const response = await fetch(liveUrl)
-      setResult({ status: response.status, body: await readJson(response), url: liveUrl })
+      const body = await readJson(response)
+      if (isSpaDocument(response, body)) {
+        setSpaMiss(true)
+        setResult({
+          status: response.status,
+          url: liveUrl,
+          body: {
+            error: 'demo_api_not_routed',
+            message: 'Restore hit the homepage HTML, not the demo API.',
+          },
+        })
+        return
+      }
+      setResult({ status: response.status, body, url: liveUrl })
     } catch (error) {
       setResult({ status: 0, body: { error: error instanceof Error ? error.message : 'request_failed' }, url: liveUrl })
     } finally {
@@ -118,7 +171,8 @@ export default function LiveFailureDemo() {
           </li>
           <li>
             <span className="text-primary">2.</span> Point the CLI at this page&apos;s live probe
-            (healthy until you break it):
+            (healthy until you break it). On Windows PowerShell run each line separately —{' '}
+            <code className="text-foreground">&&</code> is not valid there.
           </li>
         </ol>
         <div
@@ -158,7 +212,12 @@ export default function LiveFailureDemo() {
             {`HTTP ${result.status || 'ERR'}  ${result.url}\n${JSON.stringify(result.body, null, 2)}`}
           </pre>
         ) : null}
-        {usedFailFallback ? (
+        {spaMiss ? (
+          <p className="text-xs leading-6 text-destructive">
+            The CLI stays HEALTHY because this URL is returning the homepage HTML (HTTP 200), not
+            JSON 503.
+          </p>
+        ) : usedFailFallback ? (
           <p className="text-xs leading-6 text-muted-foreground">
             This host did not keep the live-probe switch. Use the always-fail URL so the CLI still
             sees HTTP 503:{' '}

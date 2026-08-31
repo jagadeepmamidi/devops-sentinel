@@ -169,7 +169,8 @@ sentinel demo`}</Code>
               page hosts a public probe so you can configure the CLI, press a button here, and
               watch HTTP 503 land in your terminal. The live URL stays 200 until you break it.{' '}
               <Inline>/api/demo/fail</Inline> is an always-on 503 if you just want a dummy error
-              endpoint.
+              endpoint. On Windows PowerShell, run the two commands as separate lines —{' '}
+              <Inline>&&</Inline> is not a statement separator there.
             </p>
             <div className="mt-4">
               <LiveFailureDemo />
