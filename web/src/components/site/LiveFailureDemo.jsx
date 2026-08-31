@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DEMO_FAIL_PATH, DEMO_LIVE_PATH, INSTALL_COMMAND } from '@/lib/site'
 
 const PROBE_KEY = 'sentinel-demo-probe'
 
+function readProbe() {
+  if (typeof window === 'undefined') return ''
+  let id = sessionStorage.getItem(PROBE_KEY)
+  if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
+    id = crypto.randomUUID()
+    sessionStorage.setItem(PROBE_KEY, id)
+  }
+  return id
+}
+
 function useDemoProbe() {
-  const [probe, setProbe] = useState('')
-
-  useEffect(() => {
-    let id = sessionStorage.getItem(PROBE_KEY)
-    if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
-      id = crypto.randomUUID()
-      sessionStorage.setItem(PROBE_KEY, id)
-    }
-    setProbe(id)
-  }, [])
-
+  const [probe] = useState(readProbe)
   return probe
 }
 
