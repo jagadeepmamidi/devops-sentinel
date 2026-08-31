@@ -98,6 +98,7 @@ Homepage = "https://github.com/jagadeepmamidi/devops-sentinel"
 Documentation = "https://devops-sentinel-seven.vercel.app/"
 Repository = "https://github.com/jagadeepmamidi/devops-sentinel"
 Issues = "https://github.com/jagadeepmamidi/devops-sentinel/issues"
+PyPI = "https://pypi.org/project/devops-sentinel-next/"
 
 [tool.setuptools]
 packages = [

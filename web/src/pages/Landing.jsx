@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import AgentPipeline from '../components/site/AgentPipeline'
 import CommandInstall from '../components/site/CommandInstall'
+import LiveFailureDemo from '../components/site/LiveFailureDemo'
 import SiteLayout from '../components/site/SiteLayout'
 import TerminalReplay from '../components/site/TerminalReplay'
 import { Button } from '@/components/ui/button'
+import { PYPI_URL } from '@/lib/site'
 
 const FEATURES = [
   {
@@ -51,6 +53,9 @@ export default function Landing() {
               </Button>
               <Button asChild variant="outline">
                 <Link to="/docs#agents">See the agent loop</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <a href="#live-demo">Try a live 503</a>
               </Button>
             </div>
             <div className="mt-6">
@@ -173,6 +178,25 @@ export default function Landing() {
           </Button>
         </section>
 
+        <section id="live-demo" className="grid items-start gap-10 border-t border-border py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight">
+              Break this site. Watch it in your terminal.
+            </h2>
+            <p className="mt-4 max-w-[46ch] text-sm leading-7 text-muted-foreground">
+              After <code className="text-foreground">pip install</code> and{' '}
+              <code className="text-foreground">sentinel init</code>, point the CLI at the live
+              probe on this page. It stays HTTP 200 until you press the button. Then it returns
+              503 so <code className="text-foreground">sentinel monitor</code> can open an
+              incident in the terminal you already have open.
+            </p>
+            <Button asChild variant="link" className="mt-4 h-auto px-0">
+              <Link to="/docs#live-demo">Same walkthrough in the docs</Link>
+            </Button>
+          </div>
+          <LiveFailureDemo />
+        </section>
+
         <section className="flex flex-col gap-6 border-t border-border py-16 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
@@ -182,9 +206,16 @@ export default function Landing() {
               <CommandInstall />
             </div>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/about">Why this exists</Link>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="outline">
+              <a href={PYPI_URL} target="_blank" rel="noopener noreferrer">
+                View on PyPI
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/about">Why this exists</Link>
+            </Button>
+          </div>
         </section>
       </div>
     </SiteLayout>

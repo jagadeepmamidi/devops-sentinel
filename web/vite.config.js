@@ -3,11 +3,24 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { demoApiMiddleware } from './demo-api.mjs'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
+function sentinelDemoApiPlugin() {
+  return {
+    name: 'sentinel-demo-api',
+    configureServer(server) {
+      server.middlewares.use(demoApiMiddleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(demoApiMiddleware)
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [sentinelDemoApiPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(rootDir, './src'),
@@ -20,6 +33,9 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+        bypass(req) {
+          if (req.url?.split('?')[0].startsWith('/api/demo')) return req.url
+        },
       },
     },
   },
