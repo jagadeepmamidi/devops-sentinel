@@ -1,16 +1,17 @@
 """Regression tests for remediation safety controls."""
 
+import importlib
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.core.auto_runbook_executor import AutoRunbookExecutor
 from src.tools.custom_health_check_tool import CustomHealthCheckTool
 
 
-@pytest.fixture
-def executor():
-    return AutoRunbookExecutor(MagicMock(), approval_required=True)
+@pytest.fixture(params=["src.core.auto_runbook_executor", "sentinel.core.auto_runbook_executor"])
+def executor(request):
+    module = importlib.import_module(request.param)
+    return module.AutoRunbookExecutor(MagicMock(), approval_required=True)
 
 
 @pytest.mark.asyncio
