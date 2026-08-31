@@ -14,23 +14,42 @@ class FakeMonitorDB:
     def get_active_incident_for_service(self, user_id, service_id):
         return None
 
-    def get_latest_health_checks(self, service_id, limit=3):
-        return []
-
-    def log_health_check(self, service_id, status_code, latency_ms, is_healthy, error):
-        self.health_checks.append(
-            {
-                "service_id": service_id,
-                "status_code": status_code,
-                "is_healthy": is_healthy,
-                "error": error,
-            }
-        )
+    path = None
 
     def update_service_status(self, service_id, status, latency_ms):
         self.status_updates.append((service_id, status, latency_ms))
 
-    def create_incident(self, user_id, service_id, severity, detail, error_code=None, status="alerting"):
+    def log_health_check(
+        self,
+        service_id,
+        status_code,
+        latency_ms,
+        is_healthy,
+        error,
+        diag=None,
+        anomaly_score=None,
+        model_id=None,
+    ):
+        self.health_checks.append(
+            {
+                "service_id": service_id,
+                "status_code": status_code,
+                "response_time_ms": latency_ms,
+                "is_healthy": is_healthy,
+                "error": error,
+                "diag": diag,
+                "anomaly_score": anomaly_score,
+                "model_id": model_id,
+            }
+        )
+
+    def get_latest_health_checks(self, service_id, limit=3):
+        rows = [row for row in reversed(self.health_checks) if row["service_id"] == service_id]
+        return rows[:limit]
+
+    def create_incident(
+        self, user_id, service_id, severity, detail, error_code=None, status="alerting", extra_metadata=None
+    ):
         incident = {
             "id": f"inc-{self._next_id}",
             "user_id": user_id,
@@ -39,6 +58,7 @@ class FakeMonitorDB:
             "detail": detail,
             "error_code": error_code,
             "status": status,
+            "extra_metadata": extra_metadata or {},
         }
         self._next_id += 1
         self.incidents.append(incident)
@@ -170,3 +190,65 @@ def test_monitor_runner_resolves_after_recovery_threshold():
     assert resolved["incident_resolved"] is True
     assert db.resolved == ["inc-1"]
     assert runner.active_incident_id is None
+
+
+def test_monitor_runner_persists_diag_on_open():
+    import asyncio
+
+    async def run():
+        db = FakeMonitorDB()
+        runner = MonitorRunner(
+            url="https://example.com/health",
+            db=db,
+            user_id="user-1",
+            service={"id": "svc-1"},
+            failure_threshold=1,
+            recovery_threshold=2,
+        )
+        client = SequenceClient([503])
+        payload = await runner.check(client)
+        return db, payload
+
+    db, payload = asyncio.run(run())
+    assert payload["diag"] == "http_5xx"
+    assert payload["model_id"] == "warmup"
+    assert payload["watch"] is False
+    assert payload["incident_opened"] is True
+    assert db.health_checks[0]["diag"] == "http_5xx"
+    assert db.incidents[0]["extra_metadata"]["diag"] == "http_5xx"
+
+
+def test_monitor_runner_watch_does_not_open_incident(monkeypatch):
+    import asyncio
+
+    from sentinel.core.detect import Detection
+    from sentinel.core import monitor_runner as runner_mod
+
+    monkeypatch.setattr(
+        runner_mod,
+        "detect_check",
+        lambda *args, **kwargs: Detection(
+            diag="latency", model_id="iforest", anomaly_score=1.2, watch=True
+        ),
+    )
+
+    async def run():
+        db = FakeMonitorDB()
+        runner = MonitorRunner(
+            url="https://example.com/health",
+            db=db,
+            user_id="user-1",
+            service={"id": "svc-1"},
+            failure_threshold=1,
+            recovery_threshold=2,
+        )
+        client = SequenceClient([200])
+        payload = await runner.check(client)
+        return db, payload
+
+    db, payload = asyncio.run(run())
+    assert payload["healthy"] is True
+    assert payload["watch"] is True
+    assert payload["incident_opened"] is False
+    assert db.incidents == []
+    assert db.status_updates[0][1] == "healthy"

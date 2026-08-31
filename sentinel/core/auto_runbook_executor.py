@@ -1,8 +1,12 @@
 """Runbook executor. Destructive steps require approval; several handlers are incomplete."""
 
 import asyncio
+import os
+import re
+import shlex
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 
 class AutoRunbookExecutor:
@@ -12,6 +16,7 @@ class AutoRunbookExecutor:
         self.supabase = supabase_client
         self.approval_required = approval_required
         self.execution_history = []
+        self.command_timeout = int(os.getenv("SENTINEL_COMMAND_TIMEOUT", "30"))
         
         # Action handlers
         self.action_handlers = {
@@ -182,18 +187,13 @@ class AutoRunbookExecutor:
         
         # Check if approval required
         if is_destructive and self.approval_required and not auto_approve:
-            # In real impl, would send approval request to Slack/UI
             print(f"[RUNBOOK] Step {step_number}: Approval required for '{step.get('description')}'")
-            # Mock approval (in production, would wait for user input)
-            approved = True  # Simulate approval
-            
-            if not approved:
-                return {
-                    'step': step_number,
-                    'status': 'denied',
-                    'action': action_type,
-                    'message': 'Approval denied'
-                }
+            return {
+                "step": step_number,
+                "status": "denied",
+                "action": action_type,
+                "message": "Explicit approval is required before destructive actions",
+            }
         
         # Get action handler
         handler = self.action_handlers.get(action_type)
@@ -243,90 +243,106 @@ class AutoRunbookExecutor:
                         value = value.replace(placeholder, str(incident.get(field, '')))
             
             interpolated[key] = value
-        
+
         return interpolated
-    
-    async def _restart_service(self, service_name: str, method: str = 'systemctl') -> str:
-        """Restart a service"""
-        if method == 'systemctl':
-            command = f"systemctl restart {service_name}"
-        elif method == 'docker':
-            command = f"docker restart {service_name}"
-        elif method == 'kubectl':
-            command = f"kubectl rollout restart deployment/{service_name}"
+
+    @staticmethod
+    def _safe_identifier(value: str, field: str = "identifier") -> str:
+        """Validate names interpolated into privileged commands."""
+        if not isinstance(value, str) or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", value
+        ):
+            raise ValueError(f"Invalid {field}")
+        return value
+
+    async def _run_process(
+        self, args: list[str], timeout: int | None = None
+    ) -> subprocess.CompletedProcess:
+        """Run an allowlisted command without invoking a shell."""
+        return await asyncio.to_thread(
+            subprocess.run,
+            args,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout or self.command_timeout,
+            check=False,
+        )
+
+    async def _restart_service(self, service_name: str, method: str = "systemctl") -> str:
+        """Restart a service using an argv list, never a shell."""
+        service_name = self._safe_identifier(service_name, "service name")
+        if method == "systemctl":
+            args = ["systemctl", "restart", service_name]
+        elif method == "docker":
+            args = ["docker", "restart", service_name]
+        elif method == "kubectl":
+            args = ["kubectl", "rollout", "restart", f"deployment/{service_name}"]
         else:
             raise ValueError(f"Unknown restart method: {method}")
-        
-        # Execute command
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-        
+
+        result = await self._run_process(args)
         if result.returncode == 0:
             return f"Service {service_name} restarted successfully"
-        else:
-            raise Exception(f"Restart failed: {result.stderr}")
-    
+        raise RuntimeError(f"Restart failed: {result.stderr}")
+
     async def _scale_service(
         self,
         service_name: str,
         replicas: int,
-        method: str = 'kubectl'
+        method: str = "kubectl",
     ) -> str:
-        """Scale a service"""
-        if method == 'kubectl':
-            command = f"kubectl scale deployment/{service_name} --replicas={replicas}"
-        elif method == 'docker-compose':
-            command = f"docker-compose up -d --scale {service_name}={replicas}"
+        """Scale a service using an argv list."""
+        service_name = self._safe_identifier(service_name, "service name")
+        replicas = int(replicas)
+        if replicas < 0 or replicas > 1000:
+            raise ValueError("replicas must be between 0 and 1000")
+        if method == "kubectl":
+            args = ["kubectl", "scale", f"deployment/{service_name}", f"--replicas={replicas}"]
+        elif method == "docker-compose":
+            args = ["docker-compose", "up", "-d", "--scale", f"{service_name}={replicas}"]
         else:
             raise ValueError(f"Unknown scale method: {method}")
-        
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+
+        result = await self._run_process(args)
         if result.returncode == 0:
             return f"Scaled {service_name} to {replicas} replicas"
-        else:
-            raise Exception(f"Scale failed: {result.stderr}")
-    
+        raise RuntimeError(f"Scale failed: {result.stderr}")
+
     async def _run_command(
         self,
         command: str,
         host: str | None = None,
-        timeout: int = 30
+        timeout: int = 30,
     ) -> str:
-        """Run arbitrary command"""
+        """Run a command only when explicitly enabled for a trusted environment."""
+        if os.getenv("SENTINEL_ALLOW_ARBITRARY_COMMANDS", "").lower() != "true":
+            raise PermissionError(
+                "Arbitrary commands are disabled; use an allowlisted runbook action"
+            )
+        if not command or len(command) > 2048:
+            raise ValueError("Invalid command")
+        args = shlex.split(command, posix=os.name != "nt")
+        if not args:
+            raise ValueError("Invalid command")
         if host:
-            # SSH into remote host
-            full_command = f"ssh {host} '{command}'"
-        else:
-            full_command = command
-        
-        result = subprocess.run(
-            full_command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout
-        )
-        
+            args = ["ssh", self._safe_identifier(host, "host")] + args
+
+        result = await self._run_process(args, timeout=timeout)
         if result.returncode == 0:
             return result.stdout
-        else:
-            raise Exception(f"Command failed: {result.stderr}")
-    
+        raise RuntimeError(f"Command failed: {result.stderr}")
+
     async def _kubectl_apply(self, manifest_path: str) -> str:
-        """Apply Kubernetes manifest"""
-        command = f"kubectl apply -f {manifest_path}"
-        
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        """Apply a Kubernetes manifest from an existing YAML/JSON file."""
+        path = Path(manifest_path).expanduser().resolve()
+        if not path.is_file() or path.suffix.lower() not in {".yaml", ".yml", ".json"}:
+            raise ValueError("manifest_path must reference an existing YAML, JSON, or YML file")
+
+        result = await self._run_process(["kubectl", "apply", "-f", str(path)])
         if result.returncode == 0:
             return result.stdout
-        else:
-            raise Exception(f"kubectl apply failed: {result.stderr}")
+        raise RuntimeError(f"kubectl apply failed: {result.stderr}")
     
     async def _database_query(
         self,
@@ -362,20 +378,28 @@ class AutoRunbookExecutor:
         method: str = 'kubectl'
     ) -> str:
         """Rollback to previous deployment"""
-        if method == 'kubectl':
-            command = f"kubectl rollout undo deployment/{service_name}"
-        elif method == 'docker':
-            # Would need deployment tracking
-            command = f"docker service update --rollback {service_name}"
+        if method == "kubectl":
+            args = [
+                "kubectl",
+                "rollout",
+                "undo",
+                f"deployment/{self._safe_identifier(service_name, 'service name')}",
+            ]
+        elif method == "docker":
+            args = [
+                "docker",
+                "service",
+                "update",
+                "--rollback",
+                self._safe_identifier(service_name, "service name"),
+            ]
         else:
             raise ValueError(f"Unknown rollback method: {method}")
-        
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+
+        result = await self._run_process(args)
         if result.returncode == 0:
             return f"Rolled back {service_name} to previous version"
-        else:
-            raise Exception(f"Rollback failed: {result.stderr}")
+        raise RuntimeError(f"Rollback failed: {result.stderr}")
     
     async def _find_matching_runbook(self, incident: dict) -> dict | None:
         """Find best matching runbook for incident"""

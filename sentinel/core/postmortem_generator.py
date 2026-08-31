@@ -104,6 +104,8 @@ class PostmortemGenerator:
         # Build timeline
         timeline = self._format_timeline(events)
 
+        evidence = self._detection_evidence(incident, events or [])
+
         source = "fallback"
         fallback_reason = None
         if self.ai_client or os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"):
@@ -112,9 +114,13 @@ class PostmortemGenerator:
                 source = "ai"
             except Exception as error:  # noqa: BLE001 — fall back for any provider failure
                 fallback_reason = str(error)
-                sections = self._generate_template_sections(incident, events, resolution)
+                sections = self._generate_template_sections(
+                    incident, events, resolution, evidence=evidence
+                )
         else:
-            sections = self._generate_template_sections(incident, events, resolution)
+            sections = self._generate_template_sections(
+                incident, events, resolution, evidence=evidence
+            )
 
         postmortem = self.TEMPLATE.format(
             title=title,
@@ -235,8 +241,35 @@ class PostmortemGenerator:
                 template[key] = value.strip()
         return template
 
+    @staticmethod
+    def _detection_evidence(incident: dict, events: list[dict]) -> dict:
+        report = incident.get("investigation_report")
+        if isinstance(report, dict) and report.get("diag"):
+            return report
+        if isinstance(report, str) and report.startswith("{"):
+            try:
+                parsed = json.loads(report)
+                if isinstance(parsed, dict) and parsed.get("diag"):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+        for event in events:
+            meta = event.get("metadata") or {}
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except json.JSONDecodeError:
+                    meta = {}
+            if isinstance(meta, dict) and meta.get("diag"):
+                return meta
+        return {}
+
     def _generate_template_sections(
-        self, incident: dict, events: list[dict], resolution: str | None
+        self,
+        incident: dict,
+        events: list[dict],
+        resolution: str | None,
+        evidence: dict | None = None,
     ) -> dict:
         """Generate sections using templates (no AI)"""
         service = incident.get("service_name", "the service")
@@ -279,6 +312,13 @@ class PostmortemGenerator:
             "- Increased traffic patterns\n"
             "- Dependencies on external services"
         )
+        evidence = evidence or {}
+        if evidence.get("diag"):
+            contributing_factors += (
+                f"\n- Local detector: diag={evidence.get('diag')} "
+                f"model={evidence.get('model_id')} "
+                f"score={evidence.get('anomaly_score')}"
+            )
 
         # What went well
         what_went_well = (

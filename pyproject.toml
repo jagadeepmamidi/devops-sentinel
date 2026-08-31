@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-sentinel-next"
-version = "0.1.4"
-description = "Local-first SRE CLI for HTTP health checks, thresholded incidents, and postmortems"
+version = "0.1.5"
+description = "Local-first SRE CLI: HTTP checks, thresholded incidents, local detect/diagnose, and postmortems"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Jagadeep Mamidi", email = "jagadeep.mamidi@gmail.com" }]
@@ -44,6 +44,7 @@ dependencies = [
   "cryptography>=42.0",
   "dnspython>=2.0",
   "pyyaml>=6.0",
+  "scikit-learn>=1.3",
 ]
 
 [project.optional-dependencies]
@@ -95,7 +96,6 @@ packages = [
   "sentinel.api",
   "sentinel.auth",
   "sentinel.integrations",
-  "sentinel.ml",
   "sentinel.notifications",
   "sentinel.setup",
   "sentinel.tools",

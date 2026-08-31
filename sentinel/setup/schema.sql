@@ -137,7 +137,10 @@ CREATE TABLE health_checks (
     response_time_ms FLOAT,
     is_healthy BOOLEAN,
     error_message TEXT,
-    checked_at TIMESTAMPTZ DEFAULT now()
+    checked_at TIMESTAMPTZ DEFAULT now(),
+    diag TEXT,
+    anomaly_score FLOAT,
+    model_id TEXT
 );
 
 CREATE INDEX idx_health_checks_service_id ON health_checks(service_id);

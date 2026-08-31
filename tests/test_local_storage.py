@@ -24,13 +24,37 @@ def test_local_storage_round_trip(monkeypatch, tmp_path: Path):
     assert service["project_id"] == project["id"]
     assert db.list_services(user["id"])[0]["url"] == "https://example.com/health"
 
-    db.log_health_check(service["id"], 503, 120, False, "upstream unavailable")
-    incident = db.create_incident(user["id"], service["id"], "high", "HTTP 503", 503, "alerting")
+    db.log_health_check(
+        service["id"],
+        503,
+        120,
+        False,
+        "upstream unavailable",
+        diag="http_5xx",
+        anomaly_score=0.41,
+        model_id="warmup",
+    )
+    rows = db.get_latest_health_checks(service["id"], limit=1)
+    assert rows[0]["diag"] == "http_5xx"
+    assert rows[0]["model_id"] == "warmup"
+    assert rows[0]["anomaly_score"] == 0.41
+    incident = db.create_incident(
+        user["id"],
+        service["id"],
+        "high",
+        "HTTP 503",
+        503,
+        "alerting",
+        extra_metadata={"diag": "http_5xx", "model_id": "warmup", "watch": False},
+    )
     active_incident = db.get_active_incident_for_service(user["id"], service["id"])
     assert incident is not None
+    assert "http_5xx" in (incident.get("investigation_report") or "")
     assert active_incident is not None
     assert active_incident["id"] == incident["id"]
-    assert db.list_incident_events(incident["id"])[0]["event_type"] == "detected"
+    detected = db.list_incident_events(incident["id"])[0]
+    assert detected["event_type"] == "detected"
+    assert detected["metadata"]["diag"] == "http_5xx"
 
     assert db.resolve_incident(incident["id"], "Service recovered")
     resolved_incident = db.get_incident(incident["id"])

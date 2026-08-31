@@ -146,6 +146,8 @@ def test_demo_opens_incident(tmp_path: Path, monkeypatch):
     assert "INCIDENT OPENED" in result.output
     assert "HTTP 200" in result.output
     assert "demo-fail" in result.output
+    assert "diag=" in result.output
+    assert "model=" in result.output
 
 
 def test_demo_server_ok_and_fail():
@@ -160,6 +162,16 @@ def test_health_cli_expect_mismatch_exits_one():
     with DemoServer() as server:
         result = CliRunner().invoke(cli, ["health", server.fail_url, "--expect", "200"])
     assert result.exit_code == 1
+    assert "diag=" in result.output
+
+
+def test_health_cli_prints_detect_fields():
+    with DemoServer() as server:
+        result = CliRunner().invoke(cli, ["health", server.ok_url])
+    assert result.exit_code == 0, result.output
+    assert "diag=" in result.output
+    assert "model=warmup" in result.output
+    assert "anomaly=" in result.output
 
 
 def test_monitor_once_on_demo_ok():
@@ -167,3 +179,4 @@ def test_monitor_once_on_demo_ok():
         result = CliRunner().invoke(cli, ["monitor", server.ok_url, "--once", "--timeout", "5"])
     assert result.exit_code == 0, result.output
     assert "HEALTHY" in result.output
+    assert "diag=" in result.output
