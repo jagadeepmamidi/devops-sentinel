@@ -43,31 +43,36 @@ function sendFile(res, filePath, status = 200) {
   createReadStream(filePath).pipe(res)
 }
 
-const server = createServer((req, res) => {
-  const demo = handleDemoRequest(req.url || '/', req.method || 'GET')
-  if (demo) {
-    res.writeHead(demo.status, {
-      'X-Frame-Options': 'DENY',
-      ...demo.headers,
-    })
-    res.end(demo.body)
-    return
-  }
+const server = createServer(async (req, res) => {
+  try {
+    const demo = await handleDemoRequest(req.url || '/', req.method || 'GET')
+    if (demo) {
+      res.writeHead(demo.status, {
+        'X-Frame-Options': 'DENY',
+        ...demo.headers,
+      })
+      res.end(demo.body)
+      return
+    }
 
-  const filePath = safeFile(req.url || '/')
-  if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
-    sendFile(res, filePath)
-    return
-  }
+    const filePath = safeFile(req.url || '/')
+    if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
+      sendFile(res, filePath)
+      return
+    }
 
-  const index = path.join(distDir, 'index.html')
-  if (existsSync(index)) {
-    sendFile(res, index)
-    return
-  }
+    const index = path.join(distDir, 'index.html')
+    if (existsSync(index)) {
+      sendFile(res, index)
+      return
+    }
 
-  res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
-  res.end('Not found')
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+    res.end('Not found')
+  } catch {
+    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+    res.end('Internal error')
+  }
 })
 
 server.listen(port, host, () => {

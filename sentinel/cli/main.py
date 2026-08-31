@@ -336,8 +336,9 @@ def monitor(
                 if result["healthy"]
                 else ("DEGRADED" if result.get("status_code") else "DOWN")
             )
+            extra_err = f" | {result['error']}" if result.get("error") else ""
             click.echo(
-                f"{result['service']} {click.style(state, fg='green' if result['healthy'] else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | check #{result['check']}"
+                f"{result['service']} {click.style(state, fg='green' if result['healthy'] else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | check #{result['check']}{extra_err}"
             )
             if result.get("incident_opened"):
                 print_incident_card(result)
@@ -374,8 +375,9 @@ def health(ctx, url, timeout, expect_status, body, json_path, json_equals, ssl_m
         click.echo(json.dumps(result, indent=2, default=str))
     elif result["healthy"]:
         extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
+        hint = f" | {result['error']}" if result.get("error") else ""
         click.echo(
-            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms{extra}"
+            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | {result['latency_ms']:.0f}ms{extra}{hint}"
         )
     elif result.get("status_code"):
         click.echo(

@@ -32,6 +32,23 @@ async def test_check_url_once_expect_status_mismatch():
 
 
 @pytest.mark.asyncio
+async def test_check_url_once_html_page_stays_healthy_with_hint():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html; charset=utf-8"},
+            text="<!doctype html><html lang='en'><body>spa</body></html>",
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        result = await check_url_once("https://example.test/api/demo/live/x", client=client)
+    assert result.healthy is True
+    assert result.status_code == 200
+    assert "text/html" in (result.error or "")
+
+
+@pytest.mark.asyncio
 async def test_check_url_once_json_path_and_body():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"status": "ok", "nested": {"ready": True}})

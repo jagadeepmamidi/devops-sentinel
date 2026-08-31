@@ -1,7 +1,7 @@
-import { handleDemoRequest, applyDemoResponse } from '../../demo-api.mjs'
+import { applyDemoResponse, handleDemoRequest } from '../../demo-api.mjs'
 
-export default function handler(req, res) {
-  const result = handleDemoRequest(req.url || '/', req.method || 'GET')
+export default async function handler(req, res) {
+  const result = await handleDemoRequest(req.url || '/', req.method || 'GET')
   if (!result) {
     res.statusCode = 404
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
