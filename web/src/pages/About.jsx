@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import SiteLayout from '../components/site/SiteLayout'
 import { Button } from '@/components/ui/button'
-import { GITHUB_URL } from '@/lib/site'
+import { GITHUB_URL, PYPI_URL } from '@/lib/site'
 
 export default function About() {
   return (
@@ -54,6 +54,11 @@ export default function About() {
         <div className="flex flex-wrap gap-3">
           <Button asChild>
             <Link to="/docs#quickstart">Read the quick start</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <a href={PYPI_URL} target="_blank" rel="noopener noreferrer">
+              PyPI
+            </a>
           </Button>
           <Button asChild variant="outline">
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">

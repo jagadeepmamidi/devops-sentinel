@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { INSTALL_COMMAND } from '@/lib/site'
+import { INSTALL_COMMAND, PYPI_URL } from '@/lib/site'
 
 export default function CommandInstall({
   command = INSTALL_COMMAND,
   note = 'Python 3.10+ · local-first · no account required',
+  pypi = command === INSTALL_COMMAND,
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -35,7 +36,24 @@ export default function CommandInstall({
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </div>
-      {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
+      {note ? (
+        <p className="text-xs text-muted-foreground">
+          {note}
+          {pypi ? (
+            <>
+              {' · '}
+              <a
+                href={PYPI_URL}
+                className="text-foreground underline-offset-4 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                PyPI
+              </a>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       <span className="sr-only" aria-live="polite">
         {copied ? `${command} copied to clipboard.` : ''}
       </span>

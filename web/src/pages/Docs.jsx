@@ -1,15 +1,17 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import CommandInstall from '../components/site/CommandInstall'
+import LiveFailureDemo from '../components/site/LiveFailureDemo'
 import SiteLayout from '../components/site/SiteLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { GITHUB_URL, INSTALL_COMMAND } from '@/lib/site'
+import { GITHUB_URL, INSTALL_COMMAND, PYPI_URL } from '@/lib/site'
 
 const SECTIONS = [
   { id: 'overview', title: 'Overview' },
   { id: 'quickstart', title: 'Quick start' },
   { id: 'demo', title: 'Demo' },
+  { id: 'live-demo', title: 'Live 503' },
   { id: 'yaml', title: 'sentinel.yaml' },
   { id: 'local', title: 'Local mode' },
   { id: 'supabase', title: 'Your Supabase' },
@@ -160,6 +162,20 @@ sentinel demo`}</Code>
             </p>
           </section>
 
+          <section id="live-demo" className="scroll-mt-24">
+            <h2 className="text-2xl font-semibold tracking-tight">Break this website from the CLI</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              Local <Inline>sentinel demo</Inline> spins up its own <Inline>/fail</Inline>. This
+              page hosts a public probe so you can configure the CLI, press a button here, and
+              watch HTTP 503 land in your terminal. The live URL stays 200 until you break it.{' '}
+              <Inline>/api/demo/fail</Inline> is an always-on 503 if you just want a dummy error
+              endpoint.
+            </p>
+            <div className="mt-4">
+              <LiveFailureDemo />
+            </div>
+          </section>
+
           <section id="yaml" className="scroll-mt-24">
             <h2 className="text-2xl font-semibold tracking-tight">sentinel.yaml</h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -247,6 +263,7 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                   {[
                     ['sentinel init [--mode local|supabase]', 'Create .env, sentinel.yaml, and local identity or BYO Supabase config'],
                     ['sentinel demo', 'Local 503 loop: open an incident and print the next commands'],
+                    ['GET /api/demo/live/:id  (this site)', 'Healthy until you press Break on the website; then HTTP 503 for two minutes'],
                     ['sentinel up [--once]', 'Register services from sentinel.yaml and monitor them'],
                     ['sentinel login [--local|--device|--token]', 'Local identity, or auth against your Supabase'],
                     ['sentinel schema [--print]', 'Show or print the SQL your project needs'],
@@ -396,8 +413,12 @@ sentinel mcp`}</Code>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    <Inline>{INSTALL_COMMAND}</Inline>. Source:{' '}
-                    <a className="text-foreground underline" href={GITHUB_URL}>
+                    <Inline>{INSTALL_COMMAND}</Inline>. Package:{' '}
+                    <a className="text-foreground underline" href={PYPI_URL} target="_blank" rel="noopener noreferrer">
+                      PyPI
+                    </a>
+                    . Source:{' '}
+                    <a className="text-foreground underline" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                       GitHub
                     </a>
                     .
