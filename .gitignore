@@ -44,7 +44,10 @@ env/
 *.swo
 *~
 .agents/
+.agent/
+.claude/
 .cursor/
+.gemini/
 .opencode/
 .windsurf/
 
@@ -54,6 +57,7 @@ env/
 htmlcov/
 .tox/
 .nox/
+.playwright-cli/
 
 # Type Checking
 .mypy_cache/
@@ -83,6 +87,7 @@ tools_OLD_BACKUP/
 *.tmp
 *.temp
 .cache/
+output/
 
 /.crew/
 /.crew

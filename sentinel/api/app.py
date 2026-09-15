@@ -6,23 +6,41 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+from sentinel import __version__ as APP_VERSION
 from sentinel.api.mvp_routes import router as monitoring_router
 from sentinel.api.quick_health_check import router as quick_health_router
 from sentinel.auth.auth_service import router as auth_router
 from sentinel.setup.ai_setup import router as ai_setup_router
 from sentinel.setup.supabase_setup import router as supabase_setup_router
 
-from sentinel import __version__ as APP_VERSION
-
 APP_NAME = "DevOps Sentinel API"
 WEB_DIST_DIR = Path(__file__).resolve().parents[2] / "web" / "dist"
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def safe_web_dist_file(full_path: str, dist_root: Path | None = None) -> Path | None:
+    """Return a file under the web dist root, or None if the path escapes it."""
+    root = (dist_root or WEB_DIST_DIR).resolve()
+    if not full_path or "\x00" in full_path:
+        return None
+    candidate = (root / full_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    if candidate.is_file():
+        return candidate
+    return None
 
 
 @asynccontextmanager
@@ -64,14 +82,14 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
-        return {"status": "healthy", "version": APP_VERSION, "timestamp": datetime.utcnow().isoformat()}
+        return {"status": "healthy", "version": APP_VERSION, "timestamp": _utc_timestamp()}
 
     @app.get("/api/status")
     async def status():
         return {
             "status": "healthy",
             "version": APP_VERSION,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utc_timestamp(),
         }
 
     @app.get("/")
@@ -84,14 +102,14 @@ def create_app() -> FastAPI:
                 "name": APP_NAME,
                 "version": APP_VERSION,
                 "status": "running",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utc_timestamp(),
             }
         )
 
     @app.get("/{full_path:path}")
     async def frontend(full_path: str):
-        candidate = WEB_DIST_DIR / full_path
-        if candidate.is_file():
+        candidate = safe_web_dist_file(full_path)
+        if candidate is not None:
             return FileResponse(candidate)
 
         index_path = WEB_DIST_DIR / "index.html"

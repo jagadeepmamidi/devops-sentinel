@@ -1,9 +1,11 @@
 """Quick Health Check - Viral Feature for Instant Value"""
 
 import asyncio
+import ipaddress
 import socket
 import ssl
 from datetime import datetime, timezone
+from urllib.parse import urljoin, urlparse
 
 import aiohttp
 
@@ -12,6 +14,31 @@ class QuickHealthCheck:
     """Instant health check for any URL."""
 
     DEFAULT_TIMEOUT = 10  # seconds
+    _BLOCKED_HOSTS = {"localhost", "0.0.0.0", "::1", "metadata.google.internal"}
+
+    async def _is_safe_hostname(self, hostname: str | None) -> bool:
+        """Reject loopback, private, link-local, and other non-public resolved IPs."""
+        if not hostname:
+            return False
+        if hostname.lower().rstrip(".") in self._BLOCKED_HOSTS:
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+            addr_info = await loop.run_in_executor(None, lambda: socket.getaddrinfo(hostname, None))
+            for info in addr_info:
+                addr = ipaddress.ip_address(info[4][0])
+                if (
+                    addr.is_loopback
+                    or addr.is_private
+                    or addr.is_link_local
+                    or addr.is_multicast
+                    or addr.is_reserved
+                    or addr.is_unspecified
+                ):
+                    return False
+            return True
+        except (OSError, ValueError):
+            return False
 
     async def check_url(self, url: str, timeout: int | None = None) -> dict:
         """
@@ -26,13 +53,36 @@ class QuickHealthCheck:
         """
         timeout_seconds: int = timeout if timeout is not None else self.DEFAULT_TIMEOUT
 
+        if "://" in url and not url.startswith(("http://", "https://")):
+            return {
+                "url": url,
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "status": "error",
+                "error": "Forbidden: Only http and https URLs are allowed.",
+                "healthy": False,
+                "suggestions": ["Please provide a valid public URL"],
+            }
+
         # Normalize URL
         if not url.startswith(("http://", "https://")):
             url = f"https://{url}"
 
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not await self._is_safe_hostname(
+            parsed.hostname
+        ):
+            return {
+                "url": url,
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "status": "error",
+                "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
+                "healthy": False,
+                "suggestions": ["Please provide a valid public URL"],
+            }
+
         result = {
             "url": url,
-            "checked_at": datetime.utcnow().isoformat(),
+            "checked_at": datetime.now(timezone.utc).isoformat(),
             "status": "unknown",
             "healthy": False,
         }
@@ -75,7 +125,7 @@ class QuickHealthCheck:
                 "Verify network connectivity",
             ]
 
-        except Exception as e:
+        except (OSError, ValueError, TypeError) as e:
             result["status"] = "error"
             result["error"] = str(e)
 
@@ -89,48 +139,72 @@ class QuickHealthCheck:
         return result
 
     async def _check_http(self, url: str, timeout: int) -> dict:
-        """Perform HTTP request and measure response"""
-        start_time = datetime.utcnow()
+        """Perform HTTP request and measure response with safe redirect following."""
+        start_time = datetime.now(timezone.utc)
+        current_url = url
+        redirect_count = 0
+        max_redirects = 5
 
-        async with (
-            aiohttp.ClientSession() as session,
-            session.get(
-                url,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-                allow_redirects=True,
-                ssl=False,  # We check SSL separately
-            ) as response,
-        ):
-            end_time = datetime.utcnow()
-            elapsed_ms = (end_time - start_time).total_seconds() * 1000
+        async with aiohttp.ClientSession() as session:
+            while True:
+                parsed = urlparse(current_url)
+                if parsed.scheme not in {"http", "https"} or not await self._is_safe_hostname(
+                    parsed.hostname
+                ):
+                    return {
+                        "status_code": 403,
+                        "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
+                        "healthy": False,
+                    }
 
-            # Read some content to verify it works
-            content_length = str(response.headers.get("Content-Length", "0"))
-            try:
-                content_length_value = int(content_length)
-            except (TypeError, ValueError):
-                content_length_value = 0
+                async with session.get(
+                    current_url,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    allow_redirects=False,
+                    ssl=False,
+                ) as response:
+                    if (
+                        response.status in (301, 302, 303, 307, 308)
+                        and redirect_count < max_redirects
+                    ):
+                        location = response.headers.get("Location")
+                        if location:
+                            current_url = urljoin(current_url, location)
+                            redirect_count += 1
+                            continue
 
-            return {
-                "status_code": response.status,
-                "response_time_ms": round(elapsed_ms, 2),
-                "content_length": content_length_value,
-                "headers": {
-                    "server": response.headers.get("Server", "Unknown"),
-                    "content_type": response.headers.get("Content-Type", "Unknown"),
-                },
-                "redirected": str(response.url) != url,
-                "final_url": str(response.url),
-            }
+                    end_time = datetime.now(timezone.utc)
+                    elapsed_ms = (end_time - start_time).total_seconds() * 1000
+                    content_length = str(response.headers.get("Content-Length", "0"))
+                    try:
+                        content_length_value = int(content_length)
+                    except (TypeError, ValueError):
+                        content_length_value = 0
+
+                    return {
+                        "status_code": response.status,
+                        "response_time_ms": round(elapsed_ms, 2),
+                        "content_length": content_length_value,
+                        "headers": {
+                            "server": response.headers.get("Server", "Unknown"),
+                            "content_type": response.headers.get("Content-Type", "Unknown"),
+                        },
+                        "redirected": current_url != url,
+                        "final_url": current_url,
+                    }
 
     async def _check_ssl(self, url: str) -> dict:
         """Check SSL certificate validity"""
         try:
-            from urllib.parse import urlparse
-
             parsed = urlparse(url)
             hostname = parsed.hostname
             port = parsed.port or 443
+
+            if not await self._is_safe_hostname(hostname):
+                return {
+                    "valid": False,
+                    "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
+                }
 
             # Create SSL context
             context = ssl.create_default_context()
@@ -161,9 +235,6 @@ class QuickHealthCheck:
                         and isinstance(item[1], str)
                     ):
                         issuer[item[0]] = item[1]
-
-            # Calculate days until expiry
-            from datetime import datetime
 
             normalized_expiry = not_after.replace(" GMT", " +0000")
             expiry_date = datetime.strptime(normalized_expiry, "%b %d %H:%M:%S %Y %z")

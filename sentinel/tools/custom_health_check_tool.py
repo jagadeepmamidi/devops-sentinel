@@ -3,15 +3,20 @@
 import asyncio
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 
+import dns.exception
 import dns.resolver
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class CustomHealthCheckTool:
     """
     Execute custom health check scripts and specialized checks
-    
+
     Supported Check Types:
     - http: Standard HTTP/HTTPS (handled by existing tool)
     - script: Python or Bash script execution
@@ -19,16 +24,16 @@ class CustomHealthCheckTool:
     - dns: DNS resolution test
     - ssl: SSL certificate validation (separate tool)
     """
-    
+
     def __init__(self, timeout_seconds: int = 30):
         """
         Initialize custom health check tool
-        
+
         Args:
             timeout_seconds: Max execution time for scripts
         """
         self.timeout = timeout_seconds
-    
+
     async def execute_check(
         self,
         check_type: str,
@@ -36,11 +41,11 @@ class CustomHealthCheckTool:
     ) -> dict:
         """
         Execute health check based on type
-        
+
         Args:
             check_type: 'script', 'tcp', 'dns', 'http'
             check_config: Configuration dict
-        
+
         Returns:
             Result dict with is_healthy, response_time, details
         """
@@ -55,11 +60,11 @@ class CustomHealthCheckTool:
                 'is_healthy': False,
                 'error': f'Unknown check type: {check_type}'
             }
-    
+
     async def execute_script_check(self, config: dict) -> dict:
         """
         Execute Python or Bash script
-        
+
         Config format:
         {
             'script': 'python script content or bash commands',
@@ -67,7 +72,7 @@ class CustomHealthCheckTool:
             'expected_output': 'OK' (optional),
             'expected_exit_code': 0 (optional)
         }
-        
+
         Returns:
             Health check result
         """
@@ -75,17 +80,26 @@ class CustomHealthCheckTool:
         script_type = config.get('script_type', 'bash')
         expected_output = config.get('expected_output')
         expected_exit_code = config.get('expected_exit_code', 0)
-        
+
         if not script:
             return {
                 'is_healthy': False,
                 'error': 'No script provided'
             }
-        
-        start_time = datetime.utcnow()
-        
+
+        if os.getenv('SENTINEL_ALLOW_SCRIPT_CHECKS', '').lower() != 'true':
+            return {
+                'is_healthy': False,
+                'error': 'Script health checks are disabled; set SENTINEL_ALLOW_SCRIPT_CHECKS=true in a trusted environment'
+            }
+
+        if script_type not in {'python', 'bash'}:
+            return {'is_healthy': False, 'error': 'script_type must be python or bash'}
+
+        start_time = _now()
+        script_path = None
+
         try:
-            # Write script to temp file
             with tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.py' if script_type == 'python' else '.sh',
@@ -93,19 +107,18 @@ class CustomHealthCheckTool:
             ) as f:
                 f.write(script)
                 script_path = f.name
-            
-            # Execute script
+
             if script_type == 'python':
                 cmd = ['python', script_path]
             else:
                 cmd = ['bash', script_path]
-            
+
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            
+
             try:
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(),
@@ -113,27 +126,24 @@ class CustomHealthCheckTool:
                 )
             except asyncio.TimeoutError:
                 process.kill()
+                await process.wait()
                 return {
                     'is_healthy': False,
                     'error': f'Script execution timeout ({self.timeout}s)',
-                    'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
+                    'response_time_ms': (_now() - start_time).total_seconds() * 1000
                 }
-            
-            # Clean up temp file
-            os.unlink(script_path)
-            
+
             exit_code = process.returncode
             output = stdout.decode('utf-8').strip()
             error_output = stderr.decode('utf-8').strip()
-            
-            response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-            
-            # Check success criteria
+
+            response_time = (_now() - start_time).total_seconds() * 1000
+
             is_healthy = (exit_code == expected_exit_code)
-            
+
             if expected_output and output != expected_output:
                 is_healthy = False
-            
+
             return {
                 'is_healthy': is_healthy,
                 'response_time_ms': response_time,
@@ -142,18 +152,24 @@ class CustomHealthCheckTool:
                 'error': error_output if error_output else None,
                 'details': f'Script executed with exit code {exit_code}'
             }
-            
-        except Exception as e:
+
+        except (OSError, UnicodeError, ValueError) as e:
             return {
                 'is_healthy': False,
                 'error': f'Script execution failed: {e!s}',
-                'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
+                'response_time_ms': (_now() - start_time).total_seconds() * 1000
             }
-    
+        finally:
+            if script_path:
+                try:
+                    os.unlink(script_path)
+                except FileNotFoundError:
+                    pass
+
     async def execute_tcp_check(self, config: dict) -> dict:
         """
         Check TCP port connectivity
-        
+
         Config format:
         {
             'host': 'localhost',
@@ -162,50 +178,49 @@ class CustomHealthCheckTool:
         """
         host = config.get('host')
         port = config.get('port')
-        
+
         if not host or not port:
             return {
                 'is_healthy': False,
                 'error': 'Missing host or port'
             }
-        
-        start_time = datetime.utcnow()
-        
+
+        start_time = _now()
+
         try:
-            # Attempt TCP connection
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port),
                 timeout=self.timeout
             )
-            
+
             writer.close()
             await writer.wait_closed()
-            
-            response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-            
+
+            response_time = (_now() - start_time).total_seconds() * 1000
+
             return {
                 'is_healthy': True,
                 'response_time_ms': response_time,
                 'details': f'TCP connection to {host}:{port} successful'
             }
-            
+
         except asyncio.TimeoutError:
             return {
                 'is_healthy': False,
                 'error': f'TCP connection timeout to {host}:{port}',
                 'response_time_ms': self.timeout * 1000
             }
-        except Exception as e:
+        except OSError as e:
             return {
                 'is_healthy': False,
                 'error': f'TCP connection failed: {e!s}',
-                'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
+                'response_time_ms': (_now() - start_time).total_seconds() * 1000
             }
-    
+
     async def execute_dns_check(self, config: dict) -> dict:
         """
         Check DNS resolution
-        
+
         Config format:
         {
             'hostname': 'example.com',
@@ -216,49 +231,46 @@ class CustomHealthCheckTool:
         hostname = config.get('hostname')
         expected_ip = config.get('expected_ip')
         record_type = config.get('record_type', 'A')
-        
+
         if not hostname:
             return {
                 'is_healthy': False,
                 'error': 'Missing hostname'
             }
-        
-        start_time = datetime.utcnow()
-        
+
+        start_time = _now()
+
         try:
-            # Resolve DNS
             resolver = dns.resolver.Resolver()
             resolver.timeout = self.timeout
             resolver.lifetime = self.timeout
-            
+
             answers = await asyncio.to_thread(
                 resolver.resolve,
                 hostname,
                 record_type
             )
-            
-            response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
-            
-            # Extract IPs
+
+            response_time = (_now() - start_time).total_seconds() * 1000
+
             resolved_ips = [str(rdata) for rdata in answers]
-            
-            # Check if expected IP matches
+
             is_healthy = True
             if expected_ip and expected_ip not in resolved_ips:
                 is_healthy = False
-            
+
             return {
                 'is_healthy': is_healthy,
                 'response_time_ms': response_time,
                 'resolved_ips': resolved_ips,
                 'details': f'DNS resolved {hostname} to {", ".join(resolved_ips)}'
             }
-            
+
         except dns.resolver.NXDOMAIN:
             return {
                 'is_healthy': False,
                 'error': f'DNS domain not found: {hostname}',
-                'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
+                'response_time_ms': (_now() - start_time).total_seconds() * 1000
             }
         except dns.resolver.Timeout:
             return {
@@ -266,11 +278,11 @@ class CustomHealthCheckTool:
                 'error': f'DNS resolution timeout for {hostname}',
                 'response_time_ms': self.timeout * 1000
             }
-        except Exception as e:
+        except dns.exception.DNSException as e:
             return {
                 'is_healthy': False,
                 'error': f'DNS resolution failed: {e!s}',
-                'response_time_ms': (datetime.utcnow() - start_time).total_seconds() * 1000
+                'response_time_ms': (_now() - start_time).total_seconds() * 1000
             }
 
 
@@ -278,8 +290,7 @@ class CustomHealthCheckTool:
 if __name__ == "__main__":
     async def test_custom_checks():
         tool = CustomHealthCheckTool(timeout_seconds=10)
-        
-        # Test Python script check
+
         print("Testing Python script check...")
         result = await tool.execute_script_check({
             'script': 'import sys\nprint("OK")\nsys.exit(0)',
@@ -287,20 +298,18 @@ if __name__ == "__main__":
             'expected_output': 'OK'
         })
         print(f"Result: {result}\n")
-        
-        # Test TCP check
+
         print("Testing TCP check...")
         result = await tool.execute_tcp_check({
             'host': 'google.com',
             'port': 443
         })
         print(f"Result: {result}\n")
-        
-        # Test DNS check
+
         print("Testing DNS check...")
         result = await tool.execute_dns_check({
             'hostname': 'google.com'
         })
         print(f"Result: {result}")
-    
+
     asyncio.run(test_custom_checks())
