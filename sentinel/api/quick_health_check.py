@@ -1,5 +1,7 @@
 """Quick Health Check - Viral Feature for Instant Value"""
 
+from __future__ import annotations
+
 import asyncio
 import ipaddress
 import socket
@@ -8,6 +10,47 @@ from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 
 import aiohttp
+from fastapi import APIRouter, Query
+
+FORBIDDEN_INTERNAL = "Forbidden: Access to internal or restricted IP ranges is not allowed."
+FORBIDDEN_SCHEME = "Forbidden: Only http and https URLs are allowed."
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def ip_is_public(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """True only for globally routable addresses, including unwrapped IPv6 embeddings."""
+    if isinstance(addr, ipaddress.IPv6Address):
+        if addr.ipv4_mapped is not None:
+            return ip_is_public(addr.ipv4_mapped)
+        if addr.sixtofour is not None:
+            return ip_is_public(addr.sixtofour)
+        teredo = addr.teredo
+        if teredo is not None:
+            return ip_is_public(teredo[0]) and ip_is_public(teredo[1])
+    return bool(addr.is_global)
+
+
+def issuer_organization(cert: dict) -> str:
+    """Read organizationName from ssl.getpeercert() issuer RDNs."""
+    issuer: dict[str, str] = {}
+    issuer_entries = cert.get("issuer", ())
+    if not isinstance(issuer_entries, (list, tuple)):
+        return "Unknown"
+    for rdn in issuer_entries:
+        pair = rdn
+        if isinstance(rdn, (list, tuple)) and rdn and isinstance(rdn[0], (list, tuple)):
+            pair = rdn[0]
+        if (
+            isinstance(pair, (list, tuple))
+            and len(pair) == 2
+            and isinstance(pair[0], str)
+            and isinstance(pair[1], str)
+        ):
+            issuer[pair[0]] = pair[1]
+    return issuer.get("organizationName", "Unknown")
 
 
 class QuickHealthCheck:
@@ -17,28 +60,39 @@ class QuickHealthCheck:
     _BLOCKED_HOSTS = {"localhost", "0.0.0.0", "::1", "metadata.google.internal"}
 
     async def _is_safe_hostname(self, hostname: str | None) -> bool:
-        """Reject loopback, private, link-local, and other non-public resolved IPs."""
+        """Reject loopback, private, link-local, CGNAT, and other non-public IPs."""
         if not hostname:
             return False
-        if hostname.lower().rstrip(".") in self._BLOCKED_HOSTS:
+        normalized = hostname.lower().rstrip(".")
+        if normalized in self._BLOCKED_HOSTS or normalized.endswith(".localhost"):
             return False
         try:
             loop = asyncio.get_running_loop()
             addr_info = await loop.run_in_executor(None, lambda: socket.getaddrinfo(hostname, None))
-            for info in addr_info:
-                addr = ipaddress.ip_address(info[4][0])
-                if (
-                    addr.is_loopback
-                    or addr.is_private
-                    or addr.is_link_local
-                    or addr.is_multicast
-                    or addr.is_reserved
-                    or addr.is_unspecified
-                ):
-                    return False
-            return True
+            if not addr_info:
+                return False
+            return all(ip_is_public(ipaddress.ip_address(info[4][0])) for info in addr_info)
         except (OSError, ValueError):
             return False
+
+    def _forbidden_result(self, url: str, error: str) -> dict:
+        return {
+            "url": url,
+            "checked_at": _utc_now().isoformat(),
+            "status": "error",
+            "error": error,
+            "healthy": False,
+            "suggestions": ["Please provide a valid public URL"],
+            "cta": self._cta(),
+        }
+
+    @staticmethod
+    def _cta() -> dict:
+        return {
+            "message": "Want continuous monitoring?",
+            "action": "Sign up for free - monitor 3 services",
+            "link": "/signup",
+        }
 
     async def check_url(self, url: str, timeout: int | None = None) -> dict:
         """
@@ -52,59 +106,44 @@ class QuickHealthCheck:
             Complete health check result
         """
         timeout_seconds: int = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-
-        if "://" in url and not url.startswith(("http://", "https://")):
-            return {
-                "url": url,
-                "checked_at": datetime.now(timezone.utc).isoformat(),
-                "status": "error",
-                "error": "Forbidden: Only http and https URLs are allowed.",
-                "healthy": False,
-                "suggestions": ["Please provide a valid public URL"],
-            }
-
-        # Normalize URL
-        if not url.startswith(("http://", "https://")):
+        scheme, separator, rest = url.partition("://")
+        if separator:
+            if scheme.lower() not in {"http", "https"}:
+                return self._forbidden_result(url, FORBIDDEN_SCHEME)
+            url = f"{scheme.lower()}://{rest}"
+        else:
             url = f"https://{url}"
 
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not await self._is_safe_hostname(
             parsed.hostname
         ):
-            return {
-                "url": url,
-                "checked_at": datetime.now(timezone.utc).isoformat(),
-                "status": "error",
-                "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
-                "healthy": False,
-                "suggestions": ["Please provide a valid public URL"],
-            }
+            return self._forbidden_result(url, FORBIDDEN_INTERNAL)
 
         result = {
             "url": url,
-            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "checked_at": _utc_now().isoformat(),
             "status": "unknown",
             "healthy": False,
         }
 
         try:
-            # Perform HTTP check
             http_result = await self._check_http(url, timeout_seconds)
+            if http_result.get("blocked"):
+                return self._forbidden_result(url, str(http_result.get("error") or FORBIDDEN_INTERNAL))
             result.update(http_result)
 
-            # Check SSL if HTTPS
             if url.startswith("https://"):
                 ssl_result = await self._check_ssl(url)
                 result["ssl"] = ssl_result
+                if "Forbidden" in str(ssl_result.get("error", "")):
+                    return self._forbidden_result(url, str(ssl_result.get("error") or FORBIDDEN_INTERNAL))
 
-            # Determine overall health
             result["healthy"] = result.get("status_code", 0) in range(200, 400) and result.get(
                 "ssl", {}
             ).get("valid", True)
 
             result["status"] = "healthy" if result["healthy"] else "unhealthy"
-
-            # Generate suggestions
             result["suggestions"] = self._generate_suggestions(result)
 
         except asyncio.TimeoutError:
@@ -129,18 +168,12 @@ class QuickHealthCheck:
             result["status"] = "error"
             result["error"] = str(e)
 
-        # Add call-to-action
-        result["cta"] = {
-            "message": "Want continuous monitoring?",
-            "action": "Sign up for free - monitor 3 services",
-            "link": "/signup",
-        }
-
+        result["cta"] = self._cta()
         return result
 
     async def _check_http(self, url: str, timeout: int) -> dict:
         """Perform HTTP request and measure response with safe redirect following."""
-        start_time = datetime.now(timezone.utc)
+        start_time = _utc_now()
         current_url = url
         redirect_count = 0
         max_redirects = 5
@@ -152,8 +185,8 @@ class QuickHealthCheck:
                     parsed.hostname
                 ):
                     return {
-                        "status_code": 403,
-                        "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
+                        "blocked": True,
+                        "error": FORBIDDEN_INTERNAL,
                         "healthy": False,
                     }
 
@@ -161,7 +194,7 @@ class QuickHealthCheck:
                     current_url,
                     timeout=aiohttp.ClientTimeout(total=timeout),
                     allow_redirects=False,
-                    ssl=False,
+                    ssl=False,  # HTTP reachability is measured separately from cert validity.
                 ) as response:
                     if (
                         response.status in (301, 302, 303, 307, 308)
@@ -173,8 +206,7 @@ class QuickHealthCheck:
                             redirect_count += 1
                             continue
 
-                    end_time = datetime.now(timezone.utc)
-                    elapsed_ms = (end_time - start_time).total_seconds() * 1000
+                    elapsed_ms = (_utc_now() - start_time).total_seconds() * 1000
                     content_length = str(response.headers.get("Content-Length", "0"))
                     try:
                         content_length_value = int(content_length)
@@ -194,7 +226,7 @@ class QuickHealthCheck:
                     }
 
     async def _check_ssl(self, url: str) -> dict:
-        """Check SSL certificate validity"""
+        """Check SSL certificate validity by connecting to an already-validated public IP."""
         try:
             parsed = urlparse(url)
             hostname = parsed.hostname
@@ -203,46 +235,39 @@ class QuickHealthCheck:
             if not await self._is_safe_hostname(hostname):
                 return {
                     "valid": False,
-                    "error": "Forbidden: Access to internal or restricted IP ranges is not allowed.",
+                    "error": FORBIDDEN_INTERNAL,
                 }
 
-            # Create SSL context
             context = ssl.create_default_context()
-
-            # Connect and get certificate
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             def get_cert() -> dict[str, object]:
+                addr_info = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+                safe_ip = None
+                for info in addr_info:
+                    addr = ipaddress.ip_address(info[4][0])
+                    if ip_is_public(addr):
+                        safe_ip = info[4][0]
+                        break
+                if not safe_ip:
+                    raise ValueError("No safe public IP address found for host")
+
                 with (
-                    socket.create_connection((hostname, port), timeout=5) as sock,
+                    socket.create_connection((safe_ip, port), timeout=5) as sock,
                     context.wrap_socket(sock, server_hostname=hostname) as ssock,
                 ):
                     cert = ssock.getpeercert()
                     return dict(cert or {})
 
             cert = await loop.run_in_executor(None, get_cert)
-
-            # Parse certificate
             not_after = str(cert.get("notAfter", ""))
-            issuer_entries = cert.get("issuer", [])
-            issuer: dict[str, str] = {}
-            if isinstance(issuer_entries, (list, tuple)):
-                for item in issuer_entries:
-                    if (
-                        isinstance(item, (list, tuple))
-                        and len(item) == 2
-                        and isinstance(item[0], str)
-                        and isinstance(item[1], str)
-                    ):
-                        issuer[item[0]] = item[1]
-
             normalized_expiry = not_after.replace(" GMT", " +0000")
             expiry_date = datetime.strptime(normalized_expiry, "%b %d %H:%M:%S %Y %z")
-            days_until_expiry = (expiry_date - datetime.now(timezone.utc)).days
+            days_until_expiry = (expiry_date - _utc_now()).days
 
             return {
                 "valid": True,
-                "issuer": issuer.get("organizationName", "Unknown"),
+                "issuer": issuer_organization(cert),
                 "expires": not_after,
                 "days_until_expiry": days_until_expiry,
                 "warning": days_until_expiry < 30,
@@ -261,7 +286,6 @@ class QuickHealthCheck:
         response_time = result.get("response_time_ms", 0)
         ssl_info = result.get("ssl", {})
 
-        # Status code suggestions
         if status_code >= 500:
             suggestions.append("Server error detected - check server logs")
         elif status_code == 404:
@@ -273,7 +297,6 @@ class QuickHealthCheck:
         elif status_code >= 400:
             suggestions.append(f"Client error (HTTP {status_code}) - check request")
 
-        # Response time suggestions
         if response_time > 3000:
             suggestions.append("Very slow response (>3s) - optimize performance")
         elif response_time > 1000:
@@ -281,14 +304,12 @@ class QuickHealthCheck:
         elif response_time < 200:
             suggestions.append("Excellent response time!")
 
-        # SSL suggestions
         if ssl_info.get("warning"):
             days = ssl_info.get("days_until_expiry", 0)
             suggestions.append(f"SSL certificate expires in {days} days - renew soon")
         elif not ssl_info.get("valid", True):
             suggestions.append("SSL certificate invalid - fix immediately")
 
-        # Healthy suggestion
         if result.get("healthy") and not suggestions:
             suggestions.append("Everything looks good! Add to monitoring?")
 
@@ -305,9 +326,6 @@ class QuickHealthCheck:
             for i, r in enumerate(results)
         ]
 
-
-# FastAPI endpoint
-from fastapi import APIRouter, Query
 
 router = APIRouter(tags=["quick-check"])
 
@@ -338,28 +356,3 @@ async def quick_check_batch(urls: list[str], timeout: int = Query(10, le=30)):
 
     checker = QuickHealthCheck()
     return await checker.check_multiple(urls, timeout)
-
-
-# Demo
-if __name__ == "__main__":
-
-    async def demo():
-        checker = QuickHealthCheck()
-
-        # Check a URL
-        result = await checker.check_url("https://google.com")
-
-        print(f"URL: {result['url']}")
-        print(f"Status: {result['status']}")
-        print(f"Response Time: {result.get('response_time_ms', 'N/A')}ms")
-        print(f"Healthy: {result['healthy']}")
-
-        if result.get("ssl"):
-            print(f"SSL Valid: {result['ssl'].get('valid')}")
-            print(f"SSL Expires: {result['ssl'].get('days_until_expiry')} days")
-
-        print("Suggestions:")
-        for suggestion in result.get("suggestions", []):
-            print(f"  - {suggestion}")
-
-    asyncio.run(demo())

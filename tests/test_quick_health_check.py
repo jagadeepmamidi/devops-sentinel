@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.api.quick_health_check import QuickHealthCheck
+from sentinel.api.quick_health_check import QuickHealthCheck
 
 
 class TestQuickHealthCheck:
@@ -18,91 +18,101 @@ class TestQuickHealthCheck:
     @pytest.fixture
     def checker(self):
         return QuickHealthCheck()
+
+    @pytest.fixture
+    def public_checker(self, checker):
+        """Bypass DNS so behavioral tests can mock HTTP/SSL without network."""
+        checker._is_safe_hostname = AsyncMock(return_value=True)
+        return checker
     
     def test_init(self, checker):
         """Should initialize with default timeout"""
         assert checker.DEFAULT_TIMEOUT == 10
     
     @pytest.mark.asyncio
-    async def test_check_url_normalizes_bare_domain(self, checker):
+    async def test_check_url_normalizes_bare_domain(self, public_checker):
         """Should add https:// to bare domain"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(public_checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
             mock_http.return_value = {
                 'status_code': 200,
                 'response_time_ms': 100
             }
+            mock_ssl.return_value = {'valid': True}
             
-            result = await checker.check_url("example.com")
+            result = await public_checker.check_url("example.com")
             
             # Should have normalized to https://
             assert result['url'] == "https://example.com"
     
     @pytest.mark.asyncio
-    async def test_check_url_preserves_https(self, checker):
+    async def test_check_url_preserves_https(self, public_checker):
         """Should preserve https:// if specified"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(public_checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
             mock_http.return_value = {
                 'status_code': 200,
                 'response_time_ms': 100
             }
+            mock_ssl.return_value = {'valid': True}
             
-            result = await checker.check_url("https://example.com")
+            result = await public_checker.check_url("https://example.com")
             
             assert result['url'] == "https://example.com"
     
     @pytest.mark.asyncio
-    async def test_check_url_healthy_response(self, checker):
+    async def test_check_url_healthy_response(self, public_checker):
         """Should return healthy for 200 response"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(public_checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
             mock_http.return_value = {
                 'status_code': 200,
                 'response_time_ms': 100
             }
             mock_ssl.return_value = {'valid': True}
 
-            result = await checker.check_url("https://example.com")
+            result = await public_checker.check_url("https://example.com")
 
             assert result['status'] == 'healthy'
             assert result['healthy'] is True
     
     @pytest.mark.asyncio
-    async def test_check_url_unhealthy_500(self, checker):
+    async def test_check_url_unhealthy_500(self, public_checker):
         """Should return unhealthy for 500 response"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(public_checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
             mock_http.return_value = {
                 'status_code': 500,
                 'response_time_ms': 100
             }
+            mock_ssl.return_value = {'valid': True}
             
-            result = await checker.check_url("https://example.com")
+            result = await public_checker.check_url("https://example.com")
             
             assert result['status'] == 'unhealthy'
             assert result['healthy'] is False
     
     @pytest.mark.asyncio
-    async def test_check_url_timeout(self, checker):
+    async def test_check_url_timeout(self, public_checker):
         """Should handle timeout gracefully"""
         import asyncio
         
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http:
             mock_http.side_effect = asyncio.TimeoutError()
             
-            result = await checker.check_url("https://slow-site.com")
+            result = await public_checker.check_url("https://slow-site.com")
             
             assert result['status'] == 'timeout'
             assert 'error' in result
             assert 'suggestions' in result
     
     @pytest.mark.asyncio
-    async def test_check_url_includes_cta(self, checker):
+    async def test_check_url_includes_cta(self, public_checker):
         """Should include call-to-action"""
-        with patch.object(checker, '_check_http', new_callable=AsyncMock) as mock_http:
+        with patch.object(public_checker, '_check_http', new_callable=AsyncMock) as mock_http, patch.object(public_checker, '_check_ssl', new_callable=AsyncMock) as mock_ssl:
             mock_http.return_value = {
                 'status_code': 200,
                 'response_time_ms': 100
             }
+            mock_ssl.return_value = {'valid': True}
             
-            result = await checker.check_url("https://example.com")
+            result = await public_checker.check_url("https://example.com")
             
             assert 'cta' in result
             assert 'message' in result['cta']

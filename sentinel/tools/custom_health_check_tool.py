@@ -284,32 +284,3 @@ class CustomHealthCheckTool:
                 'error': f'DNS resolution failed: {e!s}',
                 'response_time_ms': (_now() - start_time).total_seconds() * 1000
             }
-
-
-# Example usage
-if __name__ == "__main__":
-    async def test_custom_checks():
-        tool = CustomHealthCheckTool(timeout_seconds=10)
-
-        print("Testing Python script check...")
-        result = await tool.execute_script_check({
-            'script': 'import sys\nprint("OK")\nsys.exit(0)',
-            'script_type': 'python',
-            'expected_output': 'OK'
-        })
-        print(f"Result: {result}\n")
-
-        print("Testing TCP check...")
-        result = await tool.execute_tcp_check({
-            'host': 'google.com',
-            'port': 443
-        })
-        print(f"Result: {result}\n")
-
-        print("Testing DNS check...")
-        result = await tool.execute_dns_check({
-            'hostname': 'google.com'
-        })
-        print(f"Result: {result}")
-
-    asyncio.run(test_custom_checks())
