@@ -38,7 +38,7 @@ export default function LiveFailureDemo() {
   const liveUrl = probe ? `${origin}${DEMO_LIVE_PATH}/${probe}` : ''
   const failUrl = `${origin}${DEMO_FAIL_PATH}`
   const monitorCommand = liveUrl
-    ? `sentinel services add site-demo ${liveUrl}\nsentinel monitor site-demo --failure-threshold 1`
+    ? `sentinel services add site-demo ${liveUrl} --interval 5\nsentinel monitor site-demo --failure-threshold 1`
     : ''
 
   const [copied, setCopied] = useState(false)
@@ -46,6 +46,7 @@ export default function LiveFailureDemo() {
   const [result, setResult] = useState(null)
   const [usedFailFallback, setUsedFailFallback] = useState(false)
   const [spaMiss, setSpaMiss] = useState(false)
+  const [memoryOnlyBreak, setMemoryOnlyBreak] = useState(false)
 
   const resultTone = useMemo(() => {
     if (!result) return 'text-muted-foreground'
@@ -80,9 +81,11 @@ export default function LiveFailureDemo() {
     setBusy('break')
     setUsedFailFallback(false)
     setSpaMiss(false)
+    setMemoryOnlyBreak(false)
     try {
-      const posted = await fetch(liveUrl, { method: 'POST' })
+      const posted = await fetch(liveUrl, { method: 'POST', cache: 'no-store' })
       const postedBody = await readJson(posted)
+      setMemoryOnlyBreak(postedBody?.durable === false)
       if (isSpaDocument(posted, postedBody) || posted.status === 405) {
         setSpaMiss(true)
         setResult({
@@ -96,11 +99,11 @@ export default function LiveFailureDemo() {
         })
         return
       }
-      let response = await fetch(liveUrl)
+      let response = await fetch(liveUrl, { cache: 'no-store' })
       let body = await readJson(response)
       let fallback = false
       if (response.ok || isSpaDocument(response, body)) {
-        response = await fetch(failUrl)
+        response = await fetch(failUrl, { cache: 'no-store' })
         body = await readJson(response)
         fallback = !isSpaDocument(response, body)
         if (!fallback) {
@@ -131,9 +134,10 @@ export default function LiveFailureDemo() {
     setBusy('restore')
     setUsedFailFallback(false)
     setSpaMiss(false)
+    setMemoryOnlyBreak(false)
     try {
-      await fetch(liveUrl, { method: 'DELETE' })
-      const response = await fetch(liveUrl)
+      await fetch(liveUrl, { method: 'DELETE', cache: 'no-store' })
+      const response = await fetch(liveUrl, { cache: 'no-store' })
       const body = await readJson(response)
       if (isSpaDocument(response, body)) {
         setSpaMiss(true)
@@ -194,7 +198,9 @@ export default function LiveFailureDemo() {
         <p className="text-sm leading-6 text-muted-foreground">
           <span className="text-primary">3.</span> Leave{' '}
           <code className="text-foreground">sentinel monitor</code> running, then break the
-          endpoint. Sentinel should print <code className="text-foreground">DEGRADED | 503</code>.
+          endpoint. The next check (every 5s) should print{' '}
+          <code className="text-foreground">DEGRADED | 503</code>. The live URL stays broken for
+          five minutes.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button type="button" variant="destructive" onClick={breakEndpoint} disabled={!liveUrl || Boolean(busy)}>
@@ -222,6 +228,12 @@ export default function LiveFailureDemo() {
             This host did not keep the live-probe switch. Use the always-fail URL so the CLI still
             sees HTTP 503:{' '}
             <code className="text-foreground">{failUrl}</code>
+          </p>
+        ) : memoryOnlyBreak ? (
+          <p className="text-xs leading-6 text-destructive">
+            Break only stuck in this browser isolate. If the CLI still prints HEALTHY 200, point it
+            at the always-on 503:{' '}
+            <code className="text-foreground">{failUrl || DEMO_FAIL_PATH}</code>
           </p>
         ) : (
           <p className="text-xs leading-6 text-muted-foreground">

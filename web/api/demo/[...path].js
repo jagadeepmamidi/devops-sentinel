@@ -5,7 +5,9 @@ export default async function handler(req, res) {
   if (!result) {
     res.statusCode = 404
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
-    res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+    res.setHeader('CDN-Cache-Control', 'no-store')
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store')
     res.end(JSON.stringify({ status: 'error', demo: true, error: 'unknown_demo_endpoint' }))
     return
   }

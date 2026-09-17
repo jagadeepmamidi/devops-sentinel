@@ -167,6 +167,8 @@ sentinel demo`}</Code>
               Local <Inline>sentinel demo</Inline> spins up its own <Inline>/fail</Inline>. This
               page hosts a public probe so you can configure the CLI, press a button here, and
               watch HTTP 503 land in your terminal. The live URL stays 200 until you break it.{' '}
+              After Break it returns 503 for five minutes. Leave monitor running first — the
+              copyable command checks every 5 seconds.{' '}
               <Inline>/api/demo/fail</Inline> is an always-on 503 if you just want a dummy error
               endpoint. On Windows PowerShell, run the two commands as separate lines —{' '}
               <Inline>&&</Inline> is not a statement separator there.
@@ -263,7 +265,7 @@ SUPABASE_ANON_KEY=your-anon-key`}</Code>
                   {[
                     ['sentinel init [--mode local|supabase]', 'Create .env, sentinel.yaml, and local identity or BYO Supabase config'],
                     ['sentinel demo', 'Local 503 loop: open an incident and print the next commands'],
-                    ['GET /api/demo/live/:id  (this site)', 'Healthy until you press Break on the website; then HTTP 503 for two minutes'],
+                    ['GET /api/demo/live/:id  (this site)', 'Healthy until you press Break on the website; then HTTP 503 for five minutes'],
                     ['sentinel up [--once]', 'Register services from sentinel.yaml and monitor them'],
                     ['sentinel login [--local|--device|--token]', 'Local identity, or auth against your Supabase'],
                     ['sentinel schema [--print]', 'Show or print the SQL your project needs'],

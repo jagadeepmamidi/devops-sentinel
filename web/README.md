@@ -15,7 +15,7 @@ Public CLI demo endpoints (used by the “Break this endpoint” control):
 
 - `GET /api/demo/ok` — HTTP 200
 - `GET /api/demo/fail` — HTTP 503
-- `GET /api/demo/live/:id` — HTTP 200 until `POST` breaks it (503 for two minutes); `DELETE` restores it
+- `GET /api/demo/live/:id` — HTTP 200 until `POST` breaks it (503 for five minutes); `DELETE` restores it
 
 Optional local operator console:
 
