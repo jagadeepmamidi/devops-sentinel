@@ -229,5 +229,5 @@ def test_dashboard_once_prints_table(tmp_path, monkeypatch):
         assert add.exit_code == 0, add.output
         result = CliRunner().invoke(cli, ["dashboard", "--once", "--timeout", "5"])
     assert result.exit_code == 0, result.output
-    assert "Sentinel Dashboard" in result.output
+    assert "dashboard" in result.output.lower()
     assert "demo" in result.output

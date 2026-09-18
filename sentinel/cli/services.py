@@ -8,11 +8,10 @@ from datetime import datetime, timezone
 
 import click
 import httpx
-from rich.console import Console
-from rich.table import Table
 
 from .auth import get_current_user, is_logged_in
 from .db import get_db
+from .render import console, print_check_line, services_table
 
 
 def _json(ctx):
@@ -51,19 +50,7 @@ def services_list(ctx, project):
     if _json(ctx):
         click.echo(json.dumps(data, indent=2, default=str))
     else:
-        table = Table(title="Monitored Services")
-        table.add_column("Name", style="bold")
-        table.add_column("URL")
-        table.add_column("Status")
-        table.add_column("Latency")
-        for item in data:
-            table.add_row(
-                str(item.get("name", "Unnamed")),
-                str(item.get("url", "")),
-                str(item.get("last_status", "unknown")),
-                f"{item.get('last_response_time_ms') or 0}ms",
-            )
-        Console().print(table)
+        console().print(services_table(data))
 
 
 @services.command("add")
@@ -191,21 +178,9 @@ def services_check(ctx, service_id, timeout):
         return payload
 
     result = asyncio.run(run())
-    from sentinel.core.detect import format_detect_fields
-
     if _json(ctx):
         click.echo(json.dumps(result, indent=2))
-    elif result["healthy"] and result.get("watch"):
-        click.echo(
-            f"WATCH {result.get('status_code')} | {result.get('latency_ms', 0)}ms | {format_detect_fields(result)}"
-        )
-    elif result["healthy"]:
-        click.echo(
-            f"HEALTHY {result.get('status_code')} | {result.get('latency_ms', 0)}ms | {format_detect_fields(result)}"
-        )
     else:
-        click.echo(
-            f"DOWN | {result.get('error') or result.get('status_code')} | {format_detect_fields(result)}"
-        )
+        print_check_line(result, service=url)
     if not result["healthy"]:
         raise click.exceptions.Exit(1)
