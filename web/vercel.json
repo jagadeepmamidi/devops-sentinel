@@ -3,18 +3,24 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "regions": ["iad1"],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/api/demo/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
     }
   ],
   "functions": {
     "api/demo/[...path].js": {
-      "includeFiles": "demo-api.mjs"
+      "includeFiles": "demo-api.mjs",
+      "maxDuration": 10
     }
   }
 }

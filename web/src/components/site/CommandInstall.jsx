@@ -22,15 +22,11 @@ export default function CommandInstall({
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        className="flex max-w-full items-center gap-2 border border-border bg-card px-3 py-2 font-mono text-sm"
-        role="group"
-        aria-label="Install command"
-      >
-        <span className="text-primary" aria-hidden="true">
+      <div className="terminal-prompt-row" role="group" aria-label="Install command">
+        <span className="terminal-cmd-prompt" aria-hidden="true">
           $
         </span>
-        <code className="min-w-0 flex-1 overflow-x-auto text-foreground">{command}</code>
+        <code className="min-w-0 flex-1 overflow-x-auto text-[13px] text-foreground">{command}</code>
         <Button type="button" variant="ghost" size="sm" onClick={copyCommand}>
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           {copied ? 'Copied' : 'Copy'}

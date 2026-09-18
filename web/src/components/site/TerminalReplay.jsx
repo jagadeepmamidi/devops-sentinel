@@ -1,3 +1,5 @@
+import TerminalWindow from './TerminalWindow'
+
 const DEFAULT_LINES = [
   { tone: 'dim', text: '$ sentinel init' },
   { tone: 'ok', text: 'OK  Local mode ready. No Supabase or login required.' },
@@ -22,15 +24,8 @@ export default function TerminalReplay({
   lines = DEFAULT_LINES,
 }) {
   return (
-    <div className="terminal-frame">
-      <div className="terminal-frame-header">
-        <span>{title}</span>
-        <span>{meta}</span>
-      </div>
-      <pre
-        className="m-0 overflow-x-auto pt-8 font-mono text-[13px] leading-7"
-        aria-label="Sample Sentinel terminal session"
-      >
+    <TerminalWindow title={title} meta={meta}>
+      <pre className="terminal-session whitespace-pre-wrap break-all" aria-label="Sample Sentinel terminal session">
         {lines.map((line, index) => (
           <span
             key={`${line.text}-${index}`}
@@ -40,7 +35,11 @@ export default function TerminalReplay({
             {line.text}
           </span>
         ))}
+        <span className="terminal-line mt-1 block text-primary" style={{ animationDelay: `${0.08 + lines.length * 0.1}s` }}>
+          ${' '}
+          <span className="terminal-caret" aria-hidden="true" />
+        </span>
       </pre>
-    </div>
+    </TerminalWindow>
   )
 }

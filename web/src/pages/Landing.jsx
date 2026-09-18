@@ -187,8 +187,8 @@ export default function Landing() {
               After <code className="text-foreground">pip install</code> and{' '}
               <code className="text-foreground">sentinel init</code>, point the CLI at the live
               probe on this page. It stays HTTP 200 until you press the button. Then it returns
-              503 so <code className="text-foreground">sentinel monitor</code> can open an
-              incident in the terminal you already have open.
+              503 for five minutes so <code className="text-foreground">sentinel monitor</code> can
+              open an incident in the terminal you already have open.
             </p>
             <Button asChild variant="link" className="mt-4 h-auto px-0">
               <Link to="/docs#live-demo">Same walkthrough in the docs</Link>

@@ -1,6 +1,6 @@
 /** Shared HTTP handlers for the public CLI demo endpoints. */
 
-export const DEMO_LIVE_TTL_SECONDS = 120
+export const DEMO_LIVE_TTL_SECONDS = 300
 const LIVE_TTL_MS = DEMO_LIVE_TTL_SECONDS * 1000
 const liveBrokenUntil = new Map()
 
@@ -8,8 +8,40 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'no-store',
+  'Cache-Control': 'no-store, no-cache, must-revalidate',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
   'Content-Type': 'application/json; charset=utf-8',
+}
+
+let cacheOverride = null
+
+export function setDemoCacheForTests(cache) {
+  cacheOverride = cache
+}
+
+export function forgetLocalBrokenState(probe) {
+  if (probe) liveBrokenUntil.delete(probe)
+  else liveBrokenUntil.clear()
+}
+
+export function parseBrokenUntil(stored) {
+  if (stored == null || stored === false) return 0
+  if (typeof stored === 'number') return Number.isFinite(stored) ? stored : 0
+  if (typeof stored === 'bigint') {
+    const asNumber = Number(stored)
+    return Number.isFinite(asNumber) ? asNumber : 0
+  }
+  if (typeof stored === 'string') {
+    const trimmed = stored.trim()
+    if (!trimmed) return 0
+    const n = Number(trimmed)
+    return Number.isFinite(n) ? n : 0
+  }
+  if (typeof stored === 'object') {
+    return parseBrokenUntil(stored.value ?? stored.until ?? stored.data)
+  }
+  return 0
 }
 
 function json(status, payload) {
@@ -25,13 +57,14 @@ function cacheKey(probe) {
 }
 
 async function runtimeCache() {
+  if (cacheOverride) return cacheOverride
   try {
     const mod = await import('@vercel/functions')
     if (typeof mod.getCache === 'function') {
       return mod.getCache({ namespace: 'sentinel-demo' })
     }
   } catch {
-    // Local Vite / Node: in-memory Map is enough.
+    // Local Vite / Node: in-memory Map is enough for a single process.
   }
   return null
 }
@@ -42,9 +75,8 @@ async function readBrokenUntil(probe) {
   const cache = await runtimeCache()
   if (!cache) return 0
   try {
-    const stored = await cache.get(cacheKey(probe))
-    const until = typeof stored === 'number' ? stored : Number(stored)
-    if (Number.isFinite(until) && until > Date.now()) {
+    const until = parseBrokenUntil(await cache.get(cacheKey(probe)))
+    if (until > Date.now()) {
       liveBrokenUntil.set(probe, until)
       return until
     }
@@ -57,16 +89,19 @@ async function readBrokenUntil(probe) {
 async function writeBrokenUntil(probe, until) {
   liveBrokenUntil.set(probe, until)
   const cache = await runtimeCache()
-  if (!cache) return
+  if (!cache) return { durable: false }
   const ttl = Math.max(1, Math.ceil((until - Date.now()) / 1000))
   try {
-    await cache.set(cacheKey(probe), until, {
+    await cache.set(cacheKey(probe), String(until), {
       ttl,
       tags: ['sentinel-demo-live', `probe:${probe}`],
       name: 'demo-live-probe',
     })
+    const readBack = parseBrokenUntil(await cache.get(cacheKey(probe)))
+    return { durable: readBack >= until - 1000 }
   } catch {
     // Keep the in-memory write even if Runtime Cache is unavailable.
+    return { durable: false }
   }
 }
 
@@ -146,12 +181,13 @@ export async function handleDemoRequest(requestUrl, method = 'GET') {
 
   if (methodUpper === 'POST' || methodUpper === 'PUT') {
     const until = now + LIVE_TTL_MS
-    await writeBrokenUntil(probe, until)
+    const { durable } = await writeBrokenUntil(probe, until)
     return json(200, {
       status: 'broken',
       demo: true,
       probe,
       broken_for_seconds: DEMO_LIVE_TTL_SECONDS,
+      durable,
       message: 'Next GET requests return HTTP 503 until the TTL expires.',
     })
   }
