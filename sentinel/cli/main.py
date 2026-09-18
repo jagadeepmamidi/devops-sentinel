@@ -52,8 +52,8 @@ load_dotenv(dotenv_path=Path.cwd() / ".env")
 load_user_config_into_env()
 
 
-def _render(name, *args):
-    return getattr(import_module("sentinel.cli.render"), name)(*args)
+def _render(renderer, *args, **kwargs):
+    return getattr(import_module("sentinel.cli.render"), renderer)(*args, **kwargs)
 
 
 def console():
@@ -93,23 +93,7 @@ def notify_slack_incident(result: dict) -> None:
 
 
 def print_incident_card(result: dict) -> None:
-    incident_id = result.get("incident_id")
-    click.echo()
-    click.echo(click.style("  INCIDENT OPENED", fg="red", bold=True))
-    click.echo(f"  id:       {incident_id}")
-    click.echo(f"  severity: {result.get('incident_severity') or 'unknown'}")
-    click.echo(f"  service:  {result.get('service')}")
-    click.echo(f"  detail:   {result.get('error') or 'threshold exceeded'}")
-    if result.get("diag") or result.get("model_id"):
-        click.echo(
-            f"  detect:   diag={result.get('diag') or 'unknown'} "
-            f"model={result.get('model_id') or 'warmup'}"
-        )
-    click.echo("  next:")
-    click.echo(f"    sentinel incidents show {incident_id}")
-    click.echo(f"    sentinel incidents ack {incident_id}")
-    click.echo(f"    sentinel postmortem generate {incident_id}")
-    click.echo()
+    _render("print_incident_card", result)
 
 
 def incidents_table(items):
@@ -133,36 +117,7 @@ def classify_incident(response_code: int | None, error: str = "") -> tuple[str, 
 
 def print_banner():
     """Print branded startup banner for an interactive terminal session."""
-    banner = r"""
-+--------------------------------------------+
-|        WELCOME TO DEVOPS SENTINEL          |
-|                                            |
-|  Observe services - Investigate incidents  |
-|  Coordinate agents - Ship safer            |
-+--------------------------------------------+
-"""
-    click.echo(click.style(banner, fg="cyan"))
-    mode = get_storage_mode()
-    if mode == "none":
-        click.echo("  Not initialized. Next:")
-        click.echo("    sentinel init                 # local SQLite, no account")
-        click.echo("    sentinel init --mode supabase # your Supabase project")
-    elif mode == "local":
-        click.echo("  Local SQLite identity is active. Login is not required.")
-        click.echo("    sentinel demo")
-        click.echo("    sentinel health https://example.com")
-        click.echo("    sentinel services add api https://example.com/health")
-    else:
-        click.echo("  Supabase compatibility mode uses YOUR project, not a Sentinel-hosted DB.")
-        if is_logged_in():
-            click.echo("    sentinel services list")
-            click.echo("    sentinel monitor --all")
-        else:
-            click.echo("    sentinel login")
-            click.echo("    sentinel schema --print")
-    click.echo("    sentinel doctor")
-    click.echo("    sentinel --help")
-    click.echo()
+    _render("print_banner")
 
 
 @click.group(invoke_without_command=True)
@@ -325,30 +280,20 @@ def monitor(
                 if notify and result.get("incident_opened"):
                     notify_slack_incident(result)
                 return
-            state = (
-                "WATCH"
-                if result.get("watch") and result.get("healthy")
-                else (
-                    "HEALTHY"
-                    if result["healthy"]
-                    else ("DEGRADED" if result.get("status_code") else "DOWN")
-                )
-            )
-            extra_err = f" | {result['error']}" if result.get("error") else ""
-            from ..core.detect import format_detect_fields
-
-            watch_color = "yellow" if state == "WATCH" else ("green" if result["healthy"] else "yellow")
-            click.echo(
-                f"{result['service']} {click.style(state, fg=watch_color)} | "
-                f"{result.get('status_code') or result.get('error', '')} | "
-                f"{result.get('latency_ms', 0):.0f}ms | check #{result['check']} | "
-                f"{format_detect_fields(result)}{extra_err}"
-            )
+            _render("print_check_line", result, service=result["service"])
             if result.get("incident_opened"):
                 print_incident_card(result)
                 if notify:
                     notify_slack_incident(result)
 
+        if not output_json:
+            _render(
+                "print_monitor_header",
+                name=service.get("name", service["url"]),
+                interval=runner.interval,
+                failure_threshold=runner.thresholds.failure_threshold,
+                recovery_threshold=runner.thresholds.recovery_threshold,
+            )
         await runner.run_forever(render, once=once)
 
     async def run_all():
@@ -372,7 +317,7 @@ def monitor(
 @click.pass_context
 def health(ctx, url, timeout, expect_status, body, json_path, json_equals, ssl_min_days):
     """Run one health check. Exit 1 when unhealthy or unreachable."""
-    from ..core.detect import default_model_dir, detect_check, format_detect_fields
+    from ..core.detect import default_model_dir, detect_check
 
     check_url_once = _monitor_components()[1]
     expect = _parse_expect(expect_status, body, json_path, json_equals, ssl_min_days)
@@ -408,32 +353,10 @@ def health(ctx, url, timeout, expect_status, body, json_path, json_equals, ssl_m
             anomaly_score=detection.anomaly_score,
             model_id=detection.model_id,
         )
-    detect_suffix = f" | {format_detect_fields(result)}"
     if ctx.obj.get("json"):
         click.echo(json.dumps(result, indent=2, default=str))
-    elif result["healthy"] and result.get("watch"):
-        extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
-        hint = f" | {result['error']}" if result.get("error") else ""
-        click.echo(
-            f"{click.style('WATCH', fg='yellow')} {url} | HTTP {result['status_code']} | "
-            f"{result['latency_ms']:.0f}ms{extra}{detect_suffix}{hint}"
-        )
-    elif result["healthy"]:
-        extra = f" | TLS {result['ssl_days']}d" if result.get("ssl_days") is not None else ""
-        hint = f" | {result['error']}" if result.get("error") else ""
-        click.echo(
-            f"{click.style('OK', fg='green')} {url} | HTTP {result['status_code']} | "
-            f"{result['latency_ms']:.0f}ms{extra}{detect_suffix}{hint}"
-        )
-    elif result.get("status_code"):
-        click.echo(
-            f"{click.style('WARN', fg='yellow')} {url} | HTTP {result['status_code']} | "
-            f"{result['latency_ms']:.0f}ms | {result.get('error', '')}{detect_suffix}"
-        )
     else:
-        click.echo(
-            f"{click.style('X', fg='red')} {url} | UNREACHABLE | {result.get('error', '')}{detect_suffix}"
-        )
+        _render("print_check_line", result, service=url)
     if not result["healthy"]:
         raise click.exceptions.Exit(1)
 
@@ -642,9 +565,7 @@ def dashboard(ctx, interval, once, timeout):
         raise click.ClickException(
             "Storage or identity unavailable. Run `sentinel init --mode local`."
         )
-    from rich.console import Console
     from rich.live import Live
-    from rich.table import Table
 
     async def build_table():
         data = db.list_services(user["id"])
@@ -655,28 +576,13 @@ def dashboard(ctx, interval, once, timeout):
             return result
 
         results = await asyncio.gather(*(check(service) for service in data))
-        table = Table(title="Sentinel Dashboard")
-        table.add_column("Service", style="bold")
-        table.add_column("URL")
-        table.add_column("Status")
-        table.add_column("Latency")
-        for result in results:
-            healthy = result["healthy"]
-            style = "green" if healthy else ("yellow" if result.get("status_code") else "red")
-            state = "healthy" if healthy else "down"
-            table.add_row(
-                result["name"],
-                result["url"],
-                f"[{style}]{state}[/{style}]",
-                f"{result.get('latency_ms') or 0:.0f}ms",
-            )
-        return table
+        return _render("dashboard_table", results)
 
     async def run_dashboard():
         if once or not sys.stdout.isatty():
-            Console().print(await build_table())
+            console().print(await build_table())
             return
-        with Live("Loading...", refresh_per_second=4) as live:
+        with Live("Loading...", refresh_per_second=4, console=console()) as live:
             while True:
                 live.update(await build_table())
                 await asyncio.sleep(interval)
@@ -730,34 +636,25 @@ def status(ctx):
     llm_configured = bool(os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY"))
     slack_configured = bool(os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_CLIENT_ID"))
 
-    def status_icon(ok):
-        return click.style("OK", fg="green") if ok else click.style("X", fg="red")
-
+    rows = []
     if storage_mode == "none":
-        click.echo(f"  {status_icon(False)} Initialized: no. Run `sentinel init`.")
-        click.echo(f"  {status_icon(False)} Storage: not configured")
+        rows.append(("DEGRADED", "Initialized", "no. Run `sentinel init`."))
+        rows.append(("DEGRADED", "Storage", "not configured"))
     elif storage_mode == "local":
-        click.echo(
-            f"  {status_icon(True)} API Server: optional (`sentinel serve` for the operator UI)"
-        )
-        click.echo(
-            f"  {status_icon(True)} Storage [SQLite (local)]: Ready"
-        )
+        rows.append(("HEALTHY", "API Server", "optional (`sentinel serve` for the operator UI)"))
+        rows.append(("HEALTHY", "Storage [SQLite (local)]", "Ready"))
     else:
-        click.echo(
-            f"  {status_icon(api_ok)} API Server: {'Connected' if api_ok else 'Not running'}"
+        rows.append(("HEALTHY" if api_ok else "DEGRADED", "API Server", "Connected" if api_ok else "Not running"))
+        rows.append(
+            (
+                "HEALTHY" if storage_configured else "WATCH",
+                "Storage [Supabase (your project)]",
+                "Ready" if storage_configured else "Not configured",
+            )
         )
-        click.echo(
-            f"  {status_icon(storage_configured)} Storage [Supabase (your project)]: "
-            f"{'Ready' if storage_configured else 'Not configured'}"
-        )
-    click.echo(
-        f"  {status_icon(llm_configured)} LLM Provider: {'Configured' if llm_configured else 'Not configured'}"
-    )
-    click.echo(
-        f"  {status_icon(slack_configured)} Slack: {'Configured' if slack_configured else 'Not configured'}"
-    )
-    click.echo()
+    rows.append(("HEALTHY" if llm_configured else "WATCH", "LLM Provider", "Configured" if llm_configured else "Not configured"))
+    rows.append(("HEALTHY" if slack_configured else "WATCH", "Slack", "Configured" if slack_configured else "Not configured"))
+    _render("print_section", "status", rows)
 
 
 @cli.group(invoke_without_command=True)
@@ -843,7 +740,7 @@ def config_remove(key):
 @click.option("--anon-key", "anon_key", help="Your Supabase anon key")
 def init(mode, supabase_url, anon_key):
     """Initialize local SQLite or connect YOUR Supabase project."""
-    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Initializing DevOps Sentinel...")
+    click.echo("Initializing DevOps Sentinel...")
 
     env_path = Path(".env")
     created = not env_path.exists()
@@ -938,15 +835,11 @@ def doctor(ctx, strict):
         click.echo(json.dumps(result, indent=2))
         raise SystemExit(1 if not passed else 0)
 
-    icons = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}
-    colors = {"ok": "green", "warn": "yellow", "fail": "red"}
-
-    click.echo(f"\n{click.style('Sentinel Doctor', bold=True)}")
-    click.echo("-" * 40)
-    for item in checks:
-        marker = click.style(icons[item["status"]], fg=colors[item["status"]], bold=True)
-        click.echo(f"  {marker:<6} {item['name']}: {item['detail']}")
-    click.echo()
+    rows = [
+        (_render("lamp_state_for_check", item["status"]), item["name"], item["detail"])
+        for item in checks
+    ]
+    _render("print_section", "doctor", rows)
 
     if not passed:
         if failed:
@@ -1021,8 +914,8 @@ def demo(ctx, keep_going):
     from .db import reset_db
 
     MonitorRunner, check_once = _monitor_components()
-    click.echo("DevOps Sentinel demo — local SQLite, no cloud, no API key.")
-    click.echo("Starting an in-process HTTP server with /ok (200) and /fail (503)…")
+    click.echo("DevOps Sentinel demo - local SQLite, no cloud, no API key.")
+    click.echo("Starting an in-process HTTP server with /ok (200) and /fail (503)...")
     with DemoServer() as server:
         ctx.invoke(init, mode="local", supabase_url=None, anon_key=None)
         reset_db()
@@ -1034,7 +927,7 @@ def demo(ctx, keep_going):
         if not service:
             raise click.ClickException("Could not register demo service.")
         click.echo("")
-        click.echo(f"Polling {server.fail_url} once (expect 503 → incident)…")
+        click.echo(f"Polling {server.fail_url} once (expect 503 -> incident)...")
         runner = MonitorRunner(
             server.fail_url,
             interval=1,
@@ -1048,20 +941,13 @@ def demo(ctx, keep_going):
 
         def render(result):
             result["service"] = service.get("name", "demo-fail")
-            state = "WATCH" if result.get("watch") and result.get("healthy") else (
-                "DOWN" if not result.get("healthy") else "HEALTHY"
-            )
-            from ..core.detect import format_detect_fields
-
-            click.echo(
-                f"{result['service']} {click.style(state, fg='green' if result.get('healthy') and not result.get('watch') else 'yellow')} | {result.get('status_code') or result.get('error', '')} | {result.get('latency_ms', 0):.0f}ms | {format_detect_fields(result)}"
-            )
+            _render("print_check_line", result, service=result["service"])
             if result.get("incident_opened"):
                 print_incident_card(result)
 
         asyncio.run(runner.run_forever(render, once=True))
         click.echo("Healthy contrast check:")
-        from ..core.detect import default_model_dir, detect_check, format_detect_fields
+        from ..core.detect import default_model_dir, detect_check
 
         ok_result = asyncio.run(check_once(server.ok_url, 5)).as_dict()
         ok_detection = detect_check(
@@ -1074,10 +960,7 @@ def demo(ctx, keep_going):
             model_dir=default_model_dir(db) if db.connected else None,
         )
         ok_result.update(ok_detection.as_dict())
-        click.echo(
-            f"{click.style('OK', fg='green')} {server.ok_url} | HTTP {ok_result.get('status_code')} | "
-            f"{ok_result.get('latency_ms') or 0:.0f}ms | {format_detect_fields(ok_result)}"
-        )
+        _render("print_check_line", ok_result, service=server.ok_url)
         if keep_going:
             click.echo("keep-going: Ctrl+C to stop.")
             try:
@@ -1107,14 +990,15 @@ def supabase_doctor_cmd(ctx, project_url, anon_key):
         click.echo(json.dumps(report, indent=2))
         raise SystemExit(0 if report.get("passed") else 1)
 
-    icons = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}
-    colors = {"ok": "green", "warn": "yellow", "fail": "red"}
-    click.echo(f"\n{click.style('Supabase doctor', bold=True)} (your project, not hosted by Sentinel)")
-    click.echo("-" * 40)
-    for item in report.get("checks") or []:
-        marker = click.style(icons.get(item["status"], item["status"]), fg=colors.get(item["status"], "white"))
-        click.echo(f"  {marker}  {item['name']}: {item['detail']}")
-    click.echo()
+    rows = [
+        (
+            _render("lamp_state_for_check", item.get("status")),
+            item["name"],
+            item["detail"],
+        )
+        for item in report.get("checks") or []
+    ]
+    _render("print_section", "supabase doctor", rows)
     if not report.get("passed"):
         click.echo("Run `sentinel schema --print` and apply the SQL in your project.")
         raise SystemExit(1)
@@ -1139,7 +1023,7 @@ def mcp_server():
 @click.pass_context
 def setup(ctx):
     """Guided first-run setup for CLI users."""
-    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Guided setup")
+    click.echo("Guided setup")
     click.echo("  This will configure optional keys, first service, and a quick verification.\n")
 
     if not Path(".env").exists():
@@ -1279,7 +1163,7 @@ def serve(host, port, reload):
     ]
     if reload:
         cmd.append("--reload")
-    click.echo(f"\n{click.style('[SENTINEL]', fg='cyan')} Starting API server on {host}:{port}")
+    click.echo(f"Starting API server on {host}:{port}")
     raise SystemExit(subprocess.call(cmd))
 
 

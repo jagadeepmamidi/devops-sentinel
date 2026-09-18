@@ -5,11 +5,9 @@ from __future__ import annotations
 import json
 
 import click
-from rich.console import Console
-from rich.table import Table
-
 from .auth import get_current_user, is_logged_in
 from .db import get_db
+from .render import console, projects_table
 
 
 def _json(ctx):
@@ -47,17 +45,7 @@ def projects_list(ctx):
     if _json(ctx):
         click.echo(json.dumps(data, indent=2, default=str))
     else:
-        table = Table(title="Projects")
-        table.add_column("Name", style="bold")
-        table.add_column("Description")
-        table.add_column("Created")
-        for item in data:
-            table.add_row(
-                str(item.get("name", "Unnamed")),
-                str(item.get("description", "")),
-                str(item.get("created_at", ""))[:10],
-            )
-        Console().print(table)
+        console().print(projects_table(data))
 
 
 @projects.command("create")
