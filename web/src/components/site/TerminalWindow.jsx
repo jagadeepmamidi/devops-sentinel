@@ -24,7 +24,7 @@ export default function TerminalWindow({
         <span className="terminal-window-title">{title}</span>
         <span className="terminal-window-meta">
           {status ? <StatusLamp tone={status.tone} label={status.label} /> : meta}
-          {actions}
+          {actions ? <span className="terminal-window-actions">{actions}</span> : null}
         </span>
       </figcaption>
       <div className={cn('terminal-window-body', bodyClassName)}>{children}</div>

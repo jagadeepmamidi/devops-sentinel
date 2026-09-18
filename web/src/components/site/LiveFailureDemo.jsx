@@ -192,7 +192,23 @@ export default function LiveFailureDemo() {
         : `# always-on 503 (no button): ${failUrl || DEMO_FAIL_PATH}`
 
   return (
-    <TerminalWindow title="try it / live 503" status={status}>
+    <TerminalWindow
+      title="try it / live 503"
+      status={status}
+      actions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-[11px] normal-case tracking-normal"
+          onClick={copyMonitor}
+          disabled={!monitorCommand}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
+      }
+    >
       <div className="terminal-session">
         <p className="terminal-comment"># install and init</p>
         <Prompt>{INSTALL_COMMAND}</Prompt>
@@ -201,29 +217,12 @@ export default function LiveFailureDemo() {
         <p className="terminal-comment mt-3">
           # point the CLI at this probe. PowerShell: run each line separately. && is invalid there.
         </p>
-        <div
-          className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-3"
-          role="group"
-          aria-label="CLI commands to monitor the live demo endpoint"
-        >
-          <div className="grid min-w-0 gap-1">
-            {monitorLines.length ? (
-              monitorLines.map((line) => <Prompt key={line}>{line}</Prompt>)
-            ) : (
-              <Prompt>…</Prompt>
-            )}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="justify-self-start sm:mt-0.5"
-            onClick={copyMonitor}
-            disabled={!monitorCommand}
-          >
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
+        <div className="grid min-w-0 gap-1" role="group" aria-label="CLI commands to monitor the live demo endpoint">
+          {monitorLines.length ? (
+            monitorLines.map((line) => <Prompt key={line}>{line}</Prompt>)
+          ) : (
+            <Prompt>…</Prompt>
+          )}
         </div>
 
         <p className="terminal-comment mt-3">

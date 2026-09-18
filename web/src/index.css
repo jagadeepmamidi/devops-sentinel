@@ -205,6 +205,11 @@ body > nav[aria-label="Source links"] {
     gap: 0.65rem;
   }
 
+  .terminal-window-actions {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .terminal-window-body {
     position: relative;
     flex: 1;
