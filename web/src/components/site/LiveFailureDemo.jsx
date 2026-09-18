@@ -39,7 +39,7 @@ function Prompt({ children }) {
       <span className="terminal-cmd-prompt" aria-hidden="true">
         $
       </span>
-      <code className="min-w-0 overflow-x-auto whitespace-pre-wrap text-foreground">{children}</code>
+      <code className="min-w-0 overflow-x-auto whitespace-pre-wrap break-all text-foreground">{children}</code>
     </div>
   )
 }
@@ -241,7 +241,7 @@ export default function LiveFailureDemo() {
         </div>
 
         {result ? (
-          <pre className={`mt-3 overflow-x-auto ${resultTone}`} aria-live="polite">
+          <pre className={`mt-3 overflow-x-hidden whitespace-pre-wrap break-all ${resultTone}`} aria-live="polite">
             {`HTTP ${result.status || 'ERR'}  ${result.url}\n${JSON.stringify(result.body, null, 2)}`}
           </pre>
         ) : (

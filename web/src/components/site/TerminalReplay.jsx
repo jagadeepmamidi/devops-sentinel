@@ -25,7 +25,7 @@ export default function TerminalReplay({
 }) {
   return (
     <TerminalWindow title={title} meta={meta}>
-      <pre className="terminal-session" aria-label="Sample Sentinel terminal session">
+      <pre className="terminal-session whitespace-pre-wrap break-all" aria-label="Sample Sentinel terminal session">
         {lines.map((line, index) => (
           <span
             key={`${line.text}-${index}`}
