@@ -62,7 +62,13 @@ def _lamp_glyph() -> str:
 
 def console() -> Console:
     no_color = "NO_COLOR" in os.environ or os.getenv("TERM") == "dumb"
-    return Console(theme=THEME, highlight=False, soft_wrap=True, no_color=no_color)
+    return Console(
+        theme=THEME,
+        highlight=False,
+        soft_wrap=True,
+        no_color=no_color,
+        legacy_windows=True,
+    )
 
 
 def status_lamp(state: str) -> Text:
@@ -190,34 +196,63 @@ def print_monitor_header(
     console().print(_session_panel(body, title="sentinel monitor", meta=meta))
 
 
+def _rule(width: int) -> Text:
+    glyph = "─" if _want_unicode() else "-"
+    return Text(glyph * max(24, min(width, 72)), style="muted")
+
+
+def _comment(text: str) -> Text:
+    line = Text()
+    line.append("#", style="muted")
+    line.append(" ")
+    line.append(text, style="muted")
+    return line
+
+
 def print_banner() -> None:
+    """Startup screen: site-style titlebar + session prompts. No welcome poster."""
+    from .. import __version__
     from .auth import get_storage_mode, is_logged_in
 
     mode = get_storage_mode()
-    lines: list[Text] = []
+    con = console()
+    title = Text()
+    title.append("sentinel", style="ok")
+    title.append("  ")
+    title.append(f"v{__version__}", style="muted")
+    title.append("    ")
+    idle = Text()
+    idle.append(_lamp_glyph(), style="muted" if mode == "none" else "ok")
+    idle.append(" idle", style="muted")
+    title.append_text(idle)
     if mode == "none":
-        meta = "not initialized"
-        lines.append(Text("No store yet. Next:", style="muted"))
-        lines.append(_prompt_line("sentinel init"))
-        lines.append(_prompt_line("sentinel init --mode supabase"))
+        title.append("  not initialized", style="muted")
+        comment = "no store yet"
+        prompts = [
+            "sentinel init",
+            "sentinel init --mode supabase",
+        ]
     elif mode == "local":
-        meta = "local sqlite"
-        lines.append(Text("Local identity is active. Login is not required.", style="muted"))
-        lines.append(_prompt_line("sentinel demo"))
-        lines.append(_prompt_line("sentinel health https://example.com"))
-        lines.append(_prompt_line("sentinel services add api https://example.com/health"))
+        title.append("  local sqlite", style="muted")
+        comment = "login is not required"
+        prompts = [
+            "sentinel demo",
+            "sentinel health https://example.com",
+            "sentinel services add api https://example.com/health",
+        ]
     else:
-        meta = "supabase (your project)"
-        lines.append(Text("Uses YOUR Supabase project, not a Sentinel-hosted DB.", style="muted"))
+        title.append("  supabase (your project)", style="muted")
+        comment = "uses YOUR project, not a Sentinel-hosted DB"
         if is_logged_in():
-            lines.append(_prompt_line("sentinel services list"))
-            lines.append(_prompt_line("sentinel monitor --all"))
+            prompts = ["sentinel services list", "sentinel monitor --all"]
         else:
-            lines.append(_prompt_line("sentinel login"))
-            lines.append(_prompt_line("sentinel schema --print"))
-    lines.append(_prompt_line("sentinel doctor"))
-    lines.append(_prompt_line("sentinel --help"))
-    console().print(_session_panel(Group(*lines), title="sentinel", meta=meta))
+            prompts = ["sentinel login", "sentinel schema --print"]
+    prompts.extend(["sentinel doctor", "sentinel --help"])
+    con.print(title)
+    con.print(_rule(con.width))
+    con.print(_comment(comment))
+    for command in prompts:
+        con.print(_prompt_line(command))
 
 
 def print_incident_card(result: dict) -> None:

@@ -11,9 +11,12 @@ def test_banner_is_session_not_ascii_box():
     result = CliRunner().invoke(cli, [])
     assert result.exit_code == 0, result.output
     assert "sentinel" in result.output.lower()
+    assert "v0.1.7" in result.output
     assert "WELCOME TO DEVOPS SENTINEL" not in result.output
+    assert "Observe services" not in result.output
+    assert "SSSSSSS" not in result.output
     assert "+-----" not in result.output
-    assert "sentinel doctor" in result.output
+    assert "$ sentinel doctor" in result.output or "sentinel doctor" in result.output
     assert "sentinel --help" in result.output
 
 

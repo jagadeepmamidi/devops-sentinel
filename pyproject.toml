@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-sentinel-next"
-version = "0.1.6"
+version = "0.1.7"
 description = "Local-first SRE CLI: HTTP checks, thresholded incidents, local detect/diagnose, and postmortems"
 readme = "README.md"
 license = { text = "MIT" }
